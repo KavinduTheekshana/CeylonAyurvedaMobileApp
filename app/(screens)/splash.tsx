@@ -10,35 +10,26 @@ export default function splash() {
     useEffect(() => {
         const timeout = setTimeout(() => {
             router.replace("/(tabs)"); // ✅ Use replace instead of push
-        }, 2000);
+        }, 200000);
 
         return () => clearTimeout(timeout);
     }, []);
 
     return (
-        <View>
+        <View className='flex-1 items-center justify-center'>
             {/* Top Right SVG */}
-            <images.topRight  style={styles.topRight} width={233} height={233}/>
+            <images.topRight style={styles.topRight} className='absolute top-0 right-0' width={233} height={233}/>
 
             <images.splashLogo width={width * 0.5} height={height * 0.3} />
 
             {/* Bottom Left SVG */}
-            <images.bottomLeft style={styles.bottomLeft} width={233} height={233}/>
+            <images.bottomLeft style={styles.bottomLeft} className='absolute bottom-0 left-0' width={233} height={233}/>
         </View>
     )
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#FAFAFA',
-    },
-    text: {
-        fontSize: 20,
-        fontWeight: 'bold',
-    },
+
     topRight: {
         position: 'absolute',
         top: 0,
