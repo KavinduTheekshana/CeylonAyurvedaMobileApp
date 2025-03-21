@@ -10,7 +10,7 @@ export default function splash() {
     useEffect(() => {
         const timeout = setTimeout(() => {
             router.replace("/(auth)"); // ✅ Use replace instead of push
-        }, 100);
+        }, 2000);
 
         return () => clearTimeout(timeout);
     }, []);
