@@ -15,7 +15,10 @@ import {images} from "@/constants/Image";
 import {useRouter} from "expo-router";
 import {SafeAreaProvider} from "react-native-safe-area-context";
 import {Feather, FontAwesome} from "@expo/vector-icons";
-import logo from '@/assets/images/logo.png'; // Import the PNG file
+import logo from '@/assets/images/logo.png';
+import TopRightImage from "@/app/components/TopRightImage";
+import Logo from "@/app/components/Logo";
+import BottomLeftImage from "@/app/components/BottomLeftImage"; // Import the PNG file
 
 export default function splash() {
     const router = useRouter();
@@ -31,7 +34,7 @@ export default function splash() {
         >
             <View className='flex-1 px-6 pt-10 bg-[#FAFAFA]'>
                 {/* Top Right SVG */}
-                <images.topRight style={styles.topRight} className='absolute top-0 right-0' width={233} height={233}/>
+                <TopRightImage/>
 
                 <SafeAreaProvider>
                     <SafeAreaView className='flex-1 justify-center px-6 pt-10'>
@@ -48,9 +51,7 @@ export default function splash() {
                             >
                                 <View className='flex-1 justify-center'>
                                     {/*logo*/}
-                                    <View className='mb-5'>
-                                        <images.logo width={width * 0.6} height={height * 0.1}/>
-                                    </View>
+                                 <Logo/>
                                     {/*text*/}
                                     <Text className='text-2xl font-bold text-black  mt-[-10px]'>Login Account</Text>
                                     <Text className='text-gray-500 mb-6'>Please login into your account</Text>
@@ -127,28 +128,10 @@ export default function splash() {
 
 
                 {/* Bottom Left SVG */}
-                <images.bottomLeft style={styles.bottomLeft} className='absolute bottom-0 left-0' width={233}
-                                   height={233}/>
+               <BottomLeftImage/>
             </View>
         </TouchableWithoutFeedback>
     );
 
 }
 
-const styles = StyleSheet.create({
-
-    topRight: {
-        position: 'absolute',
-        top: 0,
-        right: 0,
-    },
-    bottomLeft: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-    },
-    logo: {
-        width: 100,
-        height: 100,
-    },
-});

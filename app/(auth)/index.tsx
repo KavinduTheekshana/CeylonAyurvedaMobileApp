@@ -3,6 +3,6 @@ import { Redirect } from 'expo-router'
 
 export default function AuthScreens() {
     return (
-        <Redirect href="/login" />
+        <Redirect href="/forgot" />
     )
 }
