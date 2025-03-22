@@ -5,7 +5,7 @@ import {images} from "../../constants/Image";
 const BottomLeftImage = () => {
     return (
 
-    <images.bottomLeft style={styles.bottomLeft} className='absolute bottom-0 left-0' width={233}
+    <images.bottomLeft style={styles.bottomLeft} className='absolute bottom-0 left-0 z-[-1]' width={233}
                        height={233}/>
     );
 };
@@ -16,6 +16,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 0,
         left: 0,
+        zIndex: -1, // Pushes it to the background
     },
 });
 

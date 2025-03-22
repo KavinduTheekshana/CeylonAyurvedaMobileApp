@@ -19,11 +19,13 @@ import logo from '@/assets/images/logo.png';
 import TopRightImage from "@/app/components/TopRightImage";
 import BottomLeftImage from "@/app/components/BottomLeftImage";
 import Logo from "@/app/components/Logo"; // Import the PNG file
+import { useNavigation } from '@react-navigation/native';
 
 export default function splash() {
     const router = useRouter();
     const [emailFocus, setEmailFocus] = useState(false);
     const [passwordFocus, setPasswordFocus] = useState(false);
+    const navigation = useNavigation();
 
 
     return (
@@ -49,12 +51,19 @@ export default function splash() {
                                 showsHorizontalScrollIndicator={false} // Hide horizontal scrollbar (optional)
                             >
 
-                                <View className='flex-1 justify-center'>
-                                    {/*logo*/}
-                                    <Logo/>
+                                <View className='flex-1 justify-center items-center'>
+                                  <View className='w-[52] rounded-[12px] h-[52] mb-10 bg-primary justify-center items-center'>
+                                      <FontAwesome
+                                          name="lock"
+                                          size={28}
+                                          color={'#ffffff'}
+
+                                      />
+                                  </View>
+
                                     {/*text*/}
-                                    <Text className='text-2xl font-bold text-black  mt-[-10px]'>Login Account</Text>
-                                    <Text className='text-gray-500 mb-6'>Please login into your account</Text>
+                                    <Text className='text-2xl font-bold text-center text-black  mt-[-10px]'>Forgot Your Password?</Text>
+                                    <Text className='text-gray-500 text-center mt-3 mb-6'>Please enter your email address account to send the OTP verification to reset your password</Text>
 
 
                                     <View
@@ -77,46 +86,28 @@ export default function splash() {
                                         />
                                     </View>
 
-                                    {/* Password Input */}
-                                    <View
-                                        className={`flex-row items-center bg-[#FFFFFF] mb-4 rounded-[14px] p-4 py-5 border ${
-                                            passwordFocus ? 'border-primary' : 'border-[#DFDFDF]'
-                                        }`}>
-                                        <FontAwesome
-                                            name="key"
-                                            size={20}
-                                            color={passwordFocus ? '#9A563A' : '#DFDFDF'} // Replace #primaryColor with your actual primary color
-                                            className='mr-3'
-                                        />
-                                        <TextInput
-                                            placeholder="Password"
-                                            secureTextEntry
-                                            className='flex-1 text-base text-black mb-0.5'
-                                            onFocus={() => setPasswordFocus(true)}
-                                            onBlur={() => setPasswordFocus(false)}
-                                            placeholderTextColor="gray" // Ensures placeholder is visible
-                                        />
-                                        <Feather name="eye-off" size={20} color="gray"/>
-                                    </View>
 
-                                    {/* Forgot Password */}
-                                    <TouchableOpacity onPress={() => router.push('/forgot')}>
-                                        <Text className='text-right mb-6 py-1 color-primary'>Forgot Password?</Text>
-                                    </TouchableOpacity>
+                                    <View className='flex-row justify-center items-center mt-4'>
 
-                                    {/*button */}
-                                    <TouchableOpacity className='bg- py-4 items-center bg-primary rounded-[14px] py-5'>
-                                        <Text className='text-white text-lg font-semibold'>Login Account</Text>
-                                    </TouchableOpacity>
-
-
-                                    <View className='flex-row justify-center items-center mt-6'>
-                                        <Text className='text-gray-400'>Don't have an account?</Text>
-                                        <TouchableOpacity onPress={() => router.push('/register')}>
-                                            <Text className='text-brown-700 font-semibold color-primary ml-1'>Create
-                                                Account</Text>
+                                        <TouchableOpacity  onPress={() => router.back()}>
+                                            <Text className='text-brown-200  color-primary ml-1'>Need Help?</Text>
                                         </TouchableOpacity>
                                     </View>
+
+
+                                    {/*button */}
+                                    <View className="absolute bottom-6 left-0 right-0 px-4 z-20">
+                                        {/* Continue Button */}
+                                        <TouchableOpacity className="bg-primary py-4 items-center rounded-[14px]">
+                                            <Text className="text-white text-lg font-semibold">Continue</Text>
+                                        </TouchableOpacity>
+
+                                        {/* Back Button */}
+                                        <TouchableOpacity  onPress={() => router.back()}>
+                                            <Text className='text-black text-center mt-4  mb-3'>Back</Text>
+                                        </TouchableOpacity>
+                                    </View>
+
 
 
                                 </View>
