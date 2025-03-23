@@ -21,10 +21,9 @@ import BottomLeftImage from "@/app/components/BottomLeftImage";
 import Logo from "@/app/components/Logo"; // Import the PNG file
 import { useNavigation } from '@react-navigation/native';
 
-export default function splash() {
+export default function forgot() {
     const router = useRouter();
     const [emailFocus, setEmailFocus] = useState(false);
-    const [passwordFocus, setPasswordFocus] = useState(false);
     const navigation = useNavigation();
 
 
@@ -98,7 +97,7 @@ export default function splash() {
                                     {/*button */}
                                     <View className="absolute bottom-6 left-0 right-0 px-4 z-20">
                                         {/* Continue Button */}
-                                        <TouchableOpacity className="bg-primary py-4 items-center rounded-[14px]">
+                                        <TouchableOpacity className="bg-primary py-4 items-center rounded-[14px]" onPress={() => router.push('/verify')}>
                                             <Text className="text-white text-lg font-semibold">Continue</Text>
                                         </TouchableOpacity>
 

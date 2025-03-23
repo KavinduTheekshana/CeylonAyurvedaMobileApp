@@ -20,7 +20,7 @@ import TopRightImage from "@/app/components/TopRightImage";
 import Logo from "@/app/components/Logo";
 import BottomLeftImage from "@/app/components/BottomLeftImage"; // Import the PNG file
 
-export default function splash() {
+export default function login() {
     const router = useRouter();
     const {width, height} = Dimensions.get("window");
     const [emailFocus, setEmailFocus] = useState(false);
