@@ -1,13 +1,13 @@
-// import { View, Text } from "react-native";
-import React from "react";
-import { Stack } from "expo-router";
+import { View, Text } from 'react-native'
+import React from 'react'
+import { Stack } from 'expo-router'
 
-
-export default function RootLayout() {
+const _layouts = () => {
   return (
-    <Stack>
-      <Stack.Screen name="index"/>
-        <Stack.Screen name="splash" options={{headerShown:false}}/>
-    </Stack>
-  );
+      <Stack>
+          {/* <Stack.Screen name="index"/> */}
+        </Stack>
+  )
 }
+
+export default _layouts
