@@ -11,8 +11,8 @@ export default function splash() {
 
     useEffect(() => {
         const timeout = setTimeout(() => {
-            router.replace("/(tabs)"); // ✅ Use replace instead of push
-        }, 300);
+            router.replace("/(auth)"); // ✅ Use replace instead of push
+        }, 3000);
 
         return () => clearTimeout(timeout);
     }, []);

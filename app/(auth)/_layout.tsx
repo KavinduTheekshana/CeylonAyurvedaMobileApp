@@ -12,6 +12,7 @@ export default function RootLayout() {
       <Stack.Screen name="forgot" options={{headerShown:false}}/>
         <Stack.Screen name="verify" options={{headerShown:false}}/>
         <Stack.Screen name="newPassword" options={{headerShown:false}}/>
+        <Stack.Screen name="LoginScreen" options={{headerShown:false}}/>
     </Stack>
   );
 }

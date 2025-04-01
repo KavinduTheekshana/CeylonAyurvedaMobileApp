@@ -47,7 +47,7 @@ const TreatmentsScreen = () => {
 
   if (loading) {
     return (
-      <ActivityIndicator size="large" color="#0000ff" style={styles.loader} />
+      <ActivityIndicator size="large" color="#9A563A" style={styles.loader} />
     );
   }
 
@@ -94,11 +94,20 @@ const styles = StyleSheet.create({
     flex: 1,
     margin: 10,
     alignItems: "center", // Center text under image
+    backgroundColor: '#fff',
+    padding: 5,
+    borderRadius: 4,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.22,
+    shadowRadius: 2.22,
   },
+
   image: {
     width: "100%", // Full width
     height: 130, // Adjust height
-    borderRadius: 10,
+    borderRadius: 4,
   },
   title: {
     fontSize: 15,
