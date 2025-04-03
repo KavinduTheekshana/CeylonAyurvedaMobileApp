@@ -11,6 +11,7 @@ import {
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { HeaderBackButton } from '@react-navigation/elements';
+import {API_BASE_URL} from "@/config/api";
 
 // Define your Service type
 type Service = {
@@ -59,7 +60,7 @@ type BookingTimeScreenRouteProp = RouteProp<RootStackParamList, 'BookingTimeScre
 type BookingTimeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 // API URL for available time slots
-const API_URL = 'https://app.ceylonayurvedahealth.co.uk/api/timeslots/';
+const API_URL = `${API_BASE_URL}/api/timeslots`;
 
 const BookingTimeScreen = () => {
     const route = useRoute<BookingTimeScreenRouteProp>();

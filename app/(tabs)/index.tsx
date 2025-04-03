@@ -10,9 +10,10 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useRouter } from "expo-router";
+import {API_BASE_URL} from "@/config/api";
 
 // Define API endpoint
-const API_URL = "https://app.ceylonayurvedahealth.co.uk/api/treatments";
+const API_URL = `${API_BASE_URL}/api/treatments`;
 
 // Define the TypeScript interface for the Treatment object
 interface Treatment {
@@ -35,7 +36,7 @@ const TreatmentsScreen = () => {
           const updatedData = data.data.map((item: Treatment) => ({
             ...item,
             image: item.image
-              ? `https://app.ceylonayurvedahealth.co.uk/storage/${item.image}`
+              ? `${API_BASE_URL}/storage/${item.image}`
               : null,
           }));
           setTreatments(updatedData);

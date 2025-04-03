@@ -15,6 +15,8 @@ import {
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { HeaderBackButton } from '@react-navigation/elements';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {API_BASE_URL} from "@/config/api";
 
 // Define your Service type
 type Service = {
@@ -63,6 +65,7 @@ type RootStackParamList = {
     BookingConfirmationScreen: {
         bookingId: number;
     };
+    AddAddressScreen: undefined; // Add this new screen
 };
 
 // Type for the route
@@ -71,10 +74,10 @@ type BookingCheckoutScreenRouteProp = RouteProp<RootStackParamList, 'BookingChec
 // Type for the navigation
 type BookingCheckoutScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
-// API URLs
-const SERVICE_API_URL = 'https://app.ceylonayurvedahealth.co.uk/api/services/';
-const ADDRESS_API_URL = 'https://app.ceylonayurvedahealth.co.uk/api/addresses/';
-const BOOKING_API_URL = 'https://app.ceylonayurvedahealth.co.uk/api/bookings/';
+// API URLs - Fixed URL paths
+const SERVICE_API_URL = `${API_BASE_URL}/api/services`;
+const ADDRESS_API_URL = `${API_BASE_URL}/api/addresses`;
+const BOOKING_API_URL = `${API_BASE_URL}/api/bookings`;
 
 const BookingCheckoutScreen = () => {
     const route = useRoute<BookingCheckoutScreenRouteProp>();
@@ -89,6 +92,7 @@ const BookingCheckoutScreen = () => {
     const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
     const [showAddressForm, setShowAddressForm] = useState<boolean>(false);
     const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
     // Form fields
     const [name, setName] = useState<string>('');
@@ -102,6 +106,9 @@ const BookingCheckoutScreen = () => {
     const [saveAddress, setSaveAddress] = useState<boolean>(true);
 
     useEffect(() => {
+        // Check if user is authenticated
+        checkAuthentication();
+
         // Fetch service details and saved addresses in parallel
         Promise.all([
             fetchServiceDetails(),
@@ -114,17 +121,39 @@ const BookingCheckoutScreen = () => {
         });
     }, [serviceId]);
 
+    // Add listener for when screen comes into focus to refresh addresses
+    useEffect(() => {
+        const unsubscribe = navigation.addListener('focus', () => {
+            if (isAuthenticated) {
+                fetchSavedAddresses();
+            }
+        });
+
+        return unsubscribe;
+    }, [navigation, isAuthenticated]);
+
+    const checkAuthentication = async () => {
+        const token = await AsyncStorage.getItem('access_token');
+        setIsAuthenticated(!!token);
+    };
+
     const fetchServiceDetails = async () => {
         try {
-            // Get the service details from the API
-            const response = await fetch(`${SERVICE_API_URL}detail/${serviceId}`);
+            // Get the service details from the API - FIXED URL PATH
+            const response = await fetch(`${SERVICE_API_URL}/detail/${serviceId}`);
+
+            console.log('Fetching service details from:', `${SERVICE_API_URL}/detail/${serviceId}`);
+
             const data = await response.json();
+            console.log('Service data response:', data);
 
             if (data.success && data.data) {
                 setServiceDetails(data.data);
             } else {
                 // If API returns an error
+                console.error('API error response:', data);
                 setError('Could not retrieve service details. Please try again.');
+
                 // Create a placeholder service for testing
                 setServiceDetails({
                     id: serviceId,
@@ -139,6 +168,7 @@ const BookingCheckoutScreen = () => {
         } catch (error) {
             console.error('Error fetching service details:', error);
             setError('Network error. Please check your connection and try again.');
+
             // Create a placeholder service for testing
             setServiceDetails({
                 id: serviceId,
@@ -154,15 +184,26 @@ const BookingCheckoutScreen = () => {
 
     const fetchSavedAddresses = async () => {
         try {
-            // Get the user's saved addresses
-            // You'll need to include authentication token here
+            // Get the authentication token from AsyncStorage
+            const token = await AsyncStorage.getItem('access_token');
+            console.log('Token for address fetch:', token ? 'Token found' : 'No token');
+
+            if (!token) {
+                console.log('No authentication token found');
+                setShowAddressForm(true);
+                return;
+            }
+
+            // Get the user's saved addresses with authentication token
             const response = await fetch(ADDRESS_API_URL, {
                 headers: {
-                    // Add your authentication headers here
-                    // 'Authorization': `Bearer ${userToken}`
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
                 }
             });
+
             const data = await response.json();
+            console.log('Address data response:', data.success ? 'Success' : 'Failed');
 
             if (data.success && Array.isArray(data.data)) {
                 setSavedAddresses(data.data);
@@ -188,23 +229,6 @@ const BookingCheckoutScreen = () => {
             console.error('Error fetching saved addresses:', error);
             // If error fetching addresses, show the form
             setShowAddressForm(true);
-
-            // For testing purposes, you can add some dummy addresses
-            /*
-            setSavedAddresses([
-              {
-                id: 1,
-                name: 'John Doe',
-                phone: '07123456789',
-                email: 'john@example.com',
-                address_line1: '123 Main St',
-                address_line2: 'Apt 4B',
-                city: 'London',
-                postcode: 'E1 6AN',
-                is_default: true
-              }
-            ]);
-            */
         }
     };
 
@@ -224,6 +248,10 @@ const BookingCheckoutScreen = () => {
         if (selectedAddress) {
             prefillAddressForm(selectedAddress);
         }
+    };
+
+    const navigateToAddAddressScreen = () => {
+        navigation.navigate('AddAddressScreen');
     };
 
     React.useLayoutEffect(() => {
@@ -280,13 +308,14 @@ const BookingCheckoutScreen = () => {
         return true;
     };
 
+
     const handleSubmitBooking = async () => {
         if (!validateForm()) return;
         if (!serviceDetails) return;
 
         setSubmitting(true);
 
-        // Prepare the booking data
+        // Prepare the booking data to match your backend structure
         const bookingData = {
             service_id: serviceId,
             date: selectedDate,
@@ -294,49 +323,92 @@ const BookingCheckoutScreen = () => {
             name,
             email,
             phone,
-            address: {
-                address_line1: addressLine1,
-                address_line2: addressLine2,
-                city,
-                postcode
-            },
+            address_line1: addressLine1,
+            address_line2: addressLine2,
+            city,
+            postcode,
             notes,
-            save_address: saveAddress
+            save_address: saveAddress // Make sure this is being sent as a boolean
         };
 
+        console.log('Booking data being sent:', JSON.stringify(bookingData));
+
         try {
+            // Get the authentication token
+            const token = await AsyncStorage.getItem('access_token');
+
+            // Set up request headers
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json'
+            };
+
+            // Add auth token if available
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+                console.log('Sending request with auth token');
+            } else {
+                console.log('No auth token available - addresses will not be saved');
+            }
+
+            console.log('Submitting booking to:', BOOKING_API_URL);
+
             // Send booking data to the API
             const response = await fetch(BOOKING_API_URL, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // Add auth headers if needed
-                    // 'Authorization': `Bearer ${userToken}`
-                },
+                headers,
                 body: JSON.stringify(bookingData),
             });
 
             const data = await response.json();
+            console.log('Booking response:', data);
 
-            if (data.success) {
+            if (data.success && data.data && data.data.id) {
                 // Navigate to confirmation screen
-                navigation.navigate('BookingConfirmationScreen', {
-                    bookingId: data.data.id
-                });
+                try {
+                    navigation.navigate('BookingConfirmationScreen', {
+                        bookingId: data.data.id
+                    });
+                } catch (navError) {
+                    console.error('Navigation error:', navError);
+                    // Fallback if navigation fails
+                    Alert.alert(
+                        'Booking Successful',
+                        'Your appointment has been booked successfully. You will receive a confirmation email shortly.',
+                        [
+                            {
+                                text: 'OK',
+                                onPress: () => navigation.navigate('Home')
+                            }
+                        ]
+                    );
+                }
             } else {
                 Alert.alert('Error', data.message || 'Failed to create booking. Please try again.');
             }
         } catch (error) {
             console.error('Booking submission error:', error);
 
-            // For testing, show success message
+            // Show error alert but offer test success option in development
             Alert.alert(
-                'Booking Successful',
-                'Your appointment has been booked successfully. You will receive a confirmation email shortly.',
+                'Error',
+                'There was an error processing your booking. Would you like to see a test confirmation?',
                 [
                     {
-                        text: 'OK',
-                        onPress: () => navigation.navigate('Home')
+                        text: 'Try Again',
+                        style: 'cancel'
+                    },
+                    {
+                        text: 'See Test Confirmation',
+                        onPress: () => {
+                            try {
+                                navigation.navigate('BookingConfirmationScreen', {
+                                    bookingId: 999 // Test booking ID
+                                });
+                            } catch (navError) {
+                                console.error('Navigation error during test:', navError);
+                                Alert.alert('Navigation Error', 'Could not navigate to confirmation screen.');
+                            }
+                        }
                     }
                 ]
             );
@@ -413,6 +485,20 @@ const BookingCheckoutScreen = () => {
                         </View>
                     </View>
 
+                    {/* Add Address Button for Authenticated Users without Addresses */}
+                    {isAuthenticated && savedAddresses.length === 0 && (
+                        <View style={styles.card}>
+                            <Text style={styles.sectionTitle}>Your Addresses</Text>
+                            <Text style={styles.noAddressText}>You don't have any saved addresses.</Text>
+                            <TouchableOpacity
+                                style={styles.addNewAddressButton}
+                                onPress={navigateToAddAddressScreen}
+                            >
+                                <Text style={styles.addNewAddressButtonText}>Add New Address</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
                     {/* Saved Addresses */}
                     {savedAddresses.length > 0 && (
                         <View style={styles.card}>
@@ -441,11 +527,22 @@ const BookingCheckoutScreen = () => {
                                 </TouchableOpacity>
                             ))}
 
+                            {/* Add New Address button for users with existing addresses */}
                             <TouchableOpacity
                                 style={styles.addAddressButton}
-                                onPress={() => setShowAddressForm(true)}
+                                onPress={navigateToAddAddressScreen}
                             >
-                                <Text style={styles.addAddressButtonText}>+ Use a New Address</Text>
+                                <Text style={styles.addAddressButtonText}>+ Add New Address</Text>
+                            </TouchableOpacity>
+
+                            {/* Use a different address without saving */}
+                            <TouchableOpacity
+                                style={styles.useNewAddressButton}
+                                onPress={() => setShowAddressForm(!showAddressForm)}
+                            >
+                                <Text style={styles.useNewAddressButtonText}>
+                                    {showAddressForm ? 'Use Saved Address' : 'Use a Different Address'}
+                                </Text>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -534,15 +631,17 @@ const BookingCheckoutScreen = () => {
                                 />
                             </View>
 
-                            <View style={styles.checkboxRow}>
-                                <TouchableOpacity
-                                    style={[styles.checkbox, saveAddress && styles.checkboxChecked]}
-                                    onPress={() => setSaveAddress(!saveAddress)}
-                                >
-                                    {saveAddress && <Text style={styles.checkmark}>✓</Text>}
-                                </TouchableOpacity>
-                                <Text style={styles.checkboxLabel}>Save this address for future bookings</Text>
-                            </View>
+                            {isAuthenticated && (
+                                <View style={styles.checkboxRow}>
+                                    <TouchableOpacity
+                                        style={[styles.checkbox, saveAddress && styles.checkboxChecked]}
+                                        onPress={() => setSaveAddress(!saveAddress)}
+                                    >
+                                        {saveAddress && <Text style={styles.checkmark}>✓</Text>}
+                                    </TouchableOpacity>
+                                    <Text style={styles.checkboxLabel}>Save this address for future bookings</Text>
+                                </View>
+                            )}
                         </View>
                     )}
 
@@ -738,6 +837,24 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: 'bold',
     },
+    noAddressText: {
+        fontSize: 14,
+        color: '#555',
+        marginBottom: 16,
+        fontStyle: 'italic',
+    },
+    addNewAddressButton: {
+        backgroundColor: '#9A563A',
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    addNewAddressButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
     addAddressButton: {
         padding: 12,
         borderWidth: 1,
@@ -746,11 +863,24 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
+        marginBottom: 12,
     },
     addAddressButtonText: {
         color: '#9A563A',
         fontSize: 16,
         fontWeight: '500',
+    },
+    useNewAddressButton: {
+        padding: 12,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    useNewAddressButtonText: {
+        color: '#555',
+        fontSize: 14,
+        fontWeight: '500',
+        textDecorationLine: 'underline',
     },
     checkboxRow: {
         flexDirection: 'row',

@@ -6,10 +6,11 @@
 import { createStackNavigator } from '@react-navigation/stack';
 
 // Import your screens
-import HomeScreen from './path/to/HomeScreen';
+import HomeScreen from '/app/(tabs)';
 import ServicesScreen from './path/to/ServicesScreen';
 import ServiceDetailsScreen from './path/to/ServiceDetailsScreen'; // New screen
 import BookingScreen from './path/to/BookingScreen'; // New screen
+
 
 const Stack = createStackNavigator();
 

@@ -72,9 +72,9 @@ export default function Login() {
         // Perform login
         setIsLoading(true);
         try {
-        // console.log(`${API_BASE_URL}`);
+        console.log(`${API_BASE_URL}`);
         // const response = await axios.post('https://app.ceylonayurvedahealth.co.uk/api/register', userData);
-            const response = await axios.post(`${API_BASE_URL}/login`, {
+            const response = await axios.post(`${API_BASE_URL}/api/login`, {
                 email,
                 password
             });

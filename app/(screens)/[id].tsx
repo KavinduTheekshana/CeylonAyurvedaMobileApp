@@ -3,7 +3,8 @@ import { View, Text, FlatList, Image, ActivityIndicator, StyleSheet, Dimensions,
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { HeaderBackButton } from '@react-navigation/elements';
-import ServiceDetailsScreen from './ServiceDetails'; // Import directly where needed
+import ServiceDetailsScreen from './ServiceDetails';
+import {API_BASE_URL} from "@/config/api"; // Import directly where needed
 
 // API URL
 const API_URL = 'https://app.ceylonayurvedahealth.co.uk/api/services/';
@@ -64,13 +65,13 @@ const ServicesScreen = () => {
             ),
         });
 
-        fetch(`${API_URL}${treatmentId}`) // Fetch services based on treatment ID
+        fetch(`${API_BASE_URL}/api/services/${treatmentId}`) // Fetch services based on treatment ID
             .then(response => response.json())
             .then(data => {
                 if (data.success && Array.isArray(data.data)) {
                     const updatedData = data.data.map((item: { image: any; }) => ({
                         ...item,
-                        image: item.image ? `https://app.ceylonayurvedahealth.co.uk/storage/${item.image}` : null
+                        image: item.image ? `${API_BASE_URL}/storage/${item.image}` : null
                     }));
                     setServices(updatedData);
                 }
