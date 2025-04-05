@@ -2,7 +2,7 @@ import { View, Text } from 'react-native'
 import React from 'react'
 import ColorList from "@/constants/ColorList";
 
-const saved = () => {
+const bookings = () => {
     return (
         <View>
             <ColorList color="#ffbbaa"/>
@@ -10,4 +10,4 @@ const saved = () => {
     )
 }
 
-export default saved
+export default bookings

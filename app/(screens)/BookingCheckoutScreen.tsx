@@ -109,7 +109,7 @@ const BookingCheckoutScreen = () => {
         // Check if user is authenticated
         checkAuthentication();
 
-        // Fetch service details and saved addresses in parallel
+        // Fetch service details and bookings addresses in parallel
         Promise.all([
             fetchServiceDetails(),
             fetchSavedAddresses()
@@ -194,7 +194,7 @@ const BookingCheckoutScreen = () => {
                 return;
             }
 
-            // Get the user's saved addresses with authentication token
+            // Get the user's bookings addresses with authentication token
             const response = await fetch(ADDRESS_API_URL, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -222,11 +222,11 @@ const BookingCheckoutScreen = () => {
                     setShowAddressForm(true);
                 }
             } else {
-                // If no saved addresses or error, show the form
+                // If no bookings addresses or error, show the form
                 setShowAddressForm(true);
             }
         } catch (error) {
-            console.error('Error fetching saved addresses:', error);
+            console.error('Error fetching bookings addresses:', error);
             // If error fetching addresses, show the form
             setShowAddressForm(true);
         }
@@ -347,7 +347,7 @@ const BookingCheckoutScreen = () => {
                 headers['Authorization'] = `Bearer ${token}`;
                 console.log('Sending request with auth token');
             } else {
-                console.log('No auth token available - addresses will not be saved');
+                console.log('No auth token available - addresses will not be bookings');
             }
 
             console.log('Submitting booking to:', BOOKING_API_URL);

@@ -1,215 +1,129 @@
 import {
     View,
     Text,
+    StyleSheet,
     Dimensions,
     SafeAreaView,
     TextInput,
     TouchableOpacity,
-    Keyboard,
-    TouchableWithoutFeedback,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    Alert,
-    ActivityIndicator
+    Image,
+    Keyboard, TouchableWithoutFeedback, KeyboardAvoidingView, Platform, ScrollView, Alert
 } from 'react-native';
-import React, { useState } from 'react';
-import { useRouter } from "expo-router";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Feather, FontAwesome } from "@expo/vector-icons";
+import React, {useEffect, useState} from 'react';
+import {images} from "@/constants/Image";
+import {useRouter} from "expo-router";
+import {SafeAreaProvider} from "react-native-safe-area-context";
+import {Feather, FontAwesome} from "@expo/vector-icons";
+import logo from '@/assets/images/logo.png';
+import {useNavigation} from "@react-navigation/native";
+import axios, {AxiosError} from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
 import TopRightImage from "@/app/components/TopRightImage";
 import Logo from "@/app/components/Logo";
 import BottomLeftImage from "@/app/components/BottomLeftImage";
-import { API_BASE_URL } from '@/config/api'; // Create this config file for environment-specific URLs
+import {API_BASE_URL} from "@/config/api";
+import { StackNavigationProp } from '@react-navigation/stack'
 
-// Define types for form data and fields
-type FormField = 'name' | 'email' | 'password' | 'confirmPassword';
-type FormData = {
-    name: string;
-    email: string;
-    password: string;
-    confirmPassword: string;
-};
-type FocusStates = {
-    name: boolean;
-    email: boolean;
-    password: boolean;
-    confirmPassword: boolean;
-};
-type PasswordVisibility = {
-    password: boolean;
-    confirmPassword: boolean;
-};
-type FormErrors = {
-    [key in FormField]?: string;
-};
 
-// Custom hook for form management
-const useRegistrationForm = () => {
-    const [formData, setFormData] = useState<FormData>({
-        name: '',
-        email: '',
-        password: '',
-        confirmPassword: ''
-    });
-    const [focusStates, setFocusStates] = useState<FocusStates>({
-        name: false,
-        email: false,
-        password: false,
-        confirmPassword: false
-    });
-    const [passwordVisibility, setPasswordVisibility] = useState<PasswordVisibility>({
-        password: false,
-        confirmPassword: false
-    });
-    const [errors, setErrors] = useState<FormErrors>({});
-    const [isLoading, setIsLoading] = useState(false);
-
-    const updateFormData = (field: FormField, value: string) => {
-        setFormData(prev => ({ ...prev, [field]: value }));
-        // Clear error when typing
-        if (errors[field]) {
-            setErrors(prev => {
-                const newErrors = { ...prev };
-                delete newErrors[field];
-                return newErrors;
-            });
-        }
-    };
-
-    const updateFocus = (field: FormField, isFocused: boolean) => {
-        setFocusStates(prev => ({ ...prev, [field]: isFocused }));
-    };
-
-    const togglePasswordVisibility = (field: 'password' | 'confirmPassword') => {
-        setPasswordVisibility(prev => ({ ...prev, [field]: !prev[field] }));
-    };
-
-    const validateForm = (): boolean => {
-        const newErrors: FormErrors = {};
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        if (!formData.name.trim()) newErrors.name = 'Name is required';
-        if (!formData.email.trim()) newErrors.email = 'Email is required';
-        else if (!emailRegex.test(formData.email)) newErrors.email = 'Invalid email format';
-        if (!formData.password) newErrors.password = 'Password is required';
-        else if (formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
-        if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
-    return {
-        formData,
-        focusStates,
-        passwordVisibility,
-        errors,
-        isLoading,
-        setIsLoading,
-        updateFormData,
-        updateFocus,
-        togglePasswordVisibility,
-        validateForm
-    };
-};
-
-// Define types for API
-type UserData = {
-    name: string;
-    email: string;
-    password: string;
-    password_confirmation: string;
-};
-
-// API service
-const apiService = {
-    register: async (userData: UserData) => {
-        try {
-            return await axios.post(`${API_BASE_URL}/register`, userData);
-        } catch (error) {
-            throw error;
-        }
-    }
-};
-
-// Error handling utility
-const handleApiError = (error: unknown): string => {
-    if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
-
-        switch (status) {
-            case 422:
-                // Validation errors
-                if (error.response?.data?.errors) {
-                    const errorMessages = Object.values(error.response.data.errors as Record<string, string[]>).flat().join('\n');
-                    return errorMessages;
-                }
-                return 'Validation failed. Please check your input.';
-            case 401:
-                return 'Invalid credentials';
-            case 429:
-                return 'Too many attempts. Please try again later.';
-            case 500:
-                return 'Server error. Please try again later.';
-            default:
-                return error.response?.data?.message || 'Registration failed. Please try again.';
-        }
-    } else if (error instanceof Error) {
-        return error.message;
-    } else {
-        return 'An unexpected error occurred.';
-    }
-};
 
 const RegisterScreen = () => {
     const router = useRouter();
-    const {
-        formData,
-        focusStates,
-        passwordVisibility,
-        errors,
-        isLoading,
-        setIsLoading,
-        updateFormData,
-        updateFocus,
-        togglePasswordVisibility,
-        validateForm
-    } = useRegistrationForm();
+    const {width, height} = Dimensions.get("window");
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [nameFocus, setNameFocus] = useState(false);
+    const [emailFocus, setEmailFocus] = useState(false);
+    const [passwordFocus, setPasswordFocus] = useState(false);
+    const [passwordConfirmationFocus, setPasswordConfirmationFocus] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const navigation = useNavigation();
 
     const handleRegister = async () => {
-        if (!validateForm()) return;
+        if (password !== confirmPassword) {
+            Alert.alert('Error', 'Passwords do not match');
+            return;
+        }
 
         const userData = {
-            name: formData.name,
-            email: formData.email,
-            password: formData.password,
-            password_confirmation: formData.confirmPassword,
+            name,
+            email,
+            password,
+            password_confirmation: confirmPassword,
         };
 
-        setIsLoading(true);
         try {
-            const response = await apiService.register(userData);
+            const response = await axios.post(`${API_BASE_URL}/api/register`, userData);
             console.log('Registration successful:', response.data);
 
+            // Store token
             if (response.data.access_token) {
                 await AsyncStorage.setItem('access_token', response.data.access_token);
             }
 
-            Alert.alert(
-                'Success',
-                'Registration successful!',
-                [{ text: 'OK', onPress: () => router.push('/login') }]
-            );
+            // Store email for verification screen
+            await AsyncStorage.setItem('user_email', email);
+
+            // Check if verification is required
+            if (response.data.requires_verification === true) {
+                // Store the verification code if it's in the response
+                if (response.data.user && response.data.user.verification_code) {
+                    await AsyncStorage.setItem('verification_code', response.data.user.verification_code);
+                }
+
+                // Use Alert with callback to ensure navigation happens after alert is dismissed
+                Alert.alert(
+                    'Success',
+                    'Registration successful! Please verify your email.',
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => {
+                                // Try multiple navigation methods to ensure it works
+                                try {
+                                    router.push('/VerifyScreen');
+                                } catch (e) {
+                                    console.log('Router push failed, trying navigation:', e);
+                                    // Fall back to navigation if router fails
+                                    // navigation.navigate('VerifyScreen');
+                                }
+                            }
+                        }
+                    ]
+                );
+            } else {
+                Alert.alert(
+                    'Success',
+                    'Registration successful!',
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => {
+                                router.push('/login');
+                            }
+                        }
+                    ]
+                );
+            }
         } catch (error) {
-            const errorMessage = handleApiError(error);
-            Alert.alert('Error', errorMessage);
-        } finally {
-            setIsLoading(false);
+            if (axios.isAxiosError(error)) {
+                if (error.response?.status === 422) {
+                    const errorMessages = Object.values(error.response.data.errors).flat().join('\n');
+                    Alert.alert('Error', errorMessages);
+                } else if (error.response?.data?.message) {
+                    Alert.alert('Error', error.response.data.message);
+                } else {
+                    Alert.alert('Error', 'Registration failed. Please try again.');
+                }
+            } else if (error instanceof Error) {
+                Alert.alert('Error', error.message);
+            } else {
+                Alert.alert('Error', 'An unexpected error occurred.');
+            }
         }
     };
+
 
     return (
         <TouchableWithoutFeedback
@@ -234,140 +148,120 @@ const RegisterScreen = () => {
                                 showsHorizontalScrollIndicator={false}
                             >
                                 <View className='flex-1 justify-center'>
-                                    {/* Logo */}
+                                    {/*logo*/}
                                     <Logo/>
-                                    {/* Header text */}
-                                    <Text className='text-2xl font-bold text-black mt-[-10px]'>Registration Account</Text>
+                                    {/*text*/}
+                                    <Text className='text-2xl font-bold text-black  mt-[-10px]'>Registration
+                                        Account</Text>
                                     <Text className='text-gray-500 mb-6'>Let's create your account first</Text>
 
-                                    {/* Name Input */}
+
                                     <View
                                         className={`flex-row items-center bg-[#FFFFFF] mb-4 rounded-[14px] p-4 py-5 border ${
-                                            focusStates.name ? 'border-primary' : errors.name ? 'border-red-500' : 'border-[#DFDFDF]'
+                                            nameFocus ? 'border-primary' : 'border-[#DFDFDF]'
                                         }`}>
                                         <FontAwesome
                                             name="user"
                                             size={20}
-                                            color={focusStates.name ? '#9A563A' : errors.name ? 'red' : '#DFDFDF'}
+                                            color={nameFocus ? '#9A563A' : '#DFDFDF'}
                                             className='mr-3'
                                         />
                                         <TextInput
                                             placeholder="Full Name"
                                             keyboardType="default"
                                             className='flex-1 text-base text-black mb-0.5'
-                                            onFocus={() => updateFocus('name', true)}
-                                            onBlur={() => updateFocus('name', false)}
+                                            onFocus={() => setNameFocus(true)}
+                                            onBlur={() => setNameFocus(false)}
                                             placeholderTextColor="gray"
-                                            value={formData.name}
-                                            onChangeText={(text) => updateFormData('name', text)}
+                                            value={name}
+                                            onChangeText={setName}
                                         />
                                     </View>
-                                    {errors.name && <Text className="text-red-500 text-sm mb-2 ml-2">{errors.name}</Text>}
 
-                                    {/* Email Input */}
                                     <View
                                         className={`flex-row items-center bg-[#FFFFFF] mb-4 rounded-[14px] p-4 py-5 border ${
-                                            focusStates.email ? 'border-primary' : errors.email ? 'border-red-500' : 'border-[#DFDFDF]'
+                                            emailFocus ? 'border-primary' : 'border-[#DFDFDF]'
                                         }`}>
                                         <FontAwesome
                                             name="envelope"
                                             size={20}
-                                            color={focusStates.email ? '#9A563A' : errors.email ? 'red' : '#DFDFDF'}
+                                            color={emailFocus ? '#9A563A' : '#DFDFDF'}
                                             className='mr-3'
                                         />
                                         <TextInput
                                             placeholder="Email"
                                             keyboardType="email-address"
                                             className='flex-1 text-base text-black mb-0.5'
-                                            onFocus={() => updateFocus('email', true)}
-                                            onBlur={() => updateFocus('email', false)}
+                                            onFocus={() => setEmailFocus(true)}
+                                            onBlur={() => setEmailFocus(false)}
                                             placeholderTextColor="gray"
-                                            value={formData.email}
-                                            onChangeText={(text) => updateFormData('email', text)}
-                                            autoCapitalize="none"
+                                            value={email}
+                                            onChangeText={setEmail}
                                         />
                                     </View>
-                                    {errors.email && <Text className="text-red-500 text-sm mb-2 ml-2">{errors.email}</Text>}
 
-                                    {/* Password Input */}
                                     <View
                                         className={`flex-row items-center bg-[#FFFFFF] mb-4 rounded-[14px] p-4 py-5 border ${
-                                            focusStates.password ? 'border-primary' : errors.password ? 'border-red-500' : 'border-[#DFDFDF]'
+                                            passwordFocus ? 'border-primary' : 'border-[#DFDFDF]'
                                         }`}>
                                         <FontAwesome
                                             name="key"
                                             size={20}
-                                            color={focusStates.password ? '#9A563A' : errors.password ? 'red' : '#DFDFDF'}
+                                            color={passwordFocus ? '#9A563A' : '#DFDFDF'}
                                             className='mr-3'
                                         />
                                         <TextInput
                                             placeholder="Password"
-                                            secureTextEntry={!passwordVisibility.password}
+                                            secureTextEntry={!showPassword}
                                             className='flex-1 text-base text-black mb-0.5'
-                                            onFocus={() => updateFocus('password', true)}
-                                            onBlur={() => updateFocus('password', false)}
+                                            onFocus={() => setPasswordFocus(true)}
+                                            onBlur={() => setPasswordFocus(false)}
                                             placeholderTextColor="gray"
-                                            value={formData.password}
-                                            onChangeText={(text) => updateFormData('password', text)}
+                                            value={password}
+                                            onChangeText={setPassword}
                                         />
-                                        <TouchableOpacity onPress={() => togglePasswordVisibility('password')}>
+                                        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                                             <Feather
-                                                name={passwordVisibility.password ? 'eye' : 'eye-off'}
+                                                name={showPassword ? 'eye' : 'eye-off'}
                                                 size={20}
-                                                color={passwordVisibility.password ? '#9A563A' : 'gray'}
+                                                color={showPassword ? '#9A563A' : 'gray'}
                                             />
                                         </TouchableOpacity>
                                     </View>
-                                    {errors.password && <Text className="text-red-500 text-sm mb-2 ml-2">{errors.password}</Text>}
 
-                                    {/* Confirm Password Input */}
                                     <View
                                         className={`flex-row items-center bg-[#FFFFFF] mb-4 rounded-[14px] p-4 py-5 border ${
-                                            focusStates.confirmPassword ? 'border-primary' : errors.confirmPassword ? 'border-red-500' : 'border-[#DFDFDF]'
+                                            passwordConfirmationFocus ? 'border-primary' : 'border-[#DFDFDF]'
                                         }`}>
                                         <FontAwesome
                                             name="key"
                                             size={20}
-                                            color={focusStates.confirmPassword ? '#9A563A' : errors.confirmPassword ? 'red' : '#DFDFDF'}
+                                            color={passwordConfirmationFocus ? '#9A563A' : '#DFDFDF'}
                                             className='mr-3'
                                         />
                                         <TextInput
                                             placeholder="Confirm password"
-                                            secureTextEntry={!passwordVisibility.confirmPassword}
+                                            secureTextEntry={!showPassword}
                                             className='flex-1 text-base text-black mb-0.5'
-                                            onFocus={() => updateFocus('confirmPassword', true)}
-                                            onBlur={() => updateFocus('confirmPassword', false)}
+                                            onFocus={() => setPasswordConfirmationFocus(true)}
+                                            onBlur={() => setPasswordConfirmationFocus(false)}
                                             placeholderTextColor="gray"
-                                            value={formData.confirmPassword}
-                                            onChangeText={(text) => updateFormData('confirmPassword', text)}
+                                            value={confirmPassword}
+                                            onChangeText={setConfirmPassword}
                                         />
-                                        <TouchableOpacity onPress={() => togglePasswordVisibility('confirmPassword')}>
-                                            <Feather
-                                                name={passwordVisibility.confirmPassword ? 'eye' : 'eye-off'}
-                                                size={20}
-                                                color={passwordVisibility.confirmPassword ? '#9A563A' : 'gray'}
-                                            />
-                                        </TouchableOpacity>
                                     </View>
-                                    {errors.confirmPassword && <Text className="text-red-500 text-sm mb-2 ml-2">{errors.confirmPassword}</Text>}
 
-                                    {/* Register Button */}
                                     <TouchableOpacity
                                         className='bg-primary py-5 items-center rounded-[14px]'
-                                        onPress={handleRegister}
-                                        disabled={isLoading}>
-                                        {isLoading ? (
-                                            <ActivityIndicator color="white" />
-                                        ) : (
-                                            <Text className='text-white text-lg font-semibold'>Create Account</Text>
-                                        )}
+                                        onPress={handleRegister}>
+                                        <Text className='text-white text-lg font-semibold'>Create Account</Text>
                                     </TouchableOpacity>
 
-                                    {/* Login Link */}
                                     <View className='flex-row justify-center items-center mt-6'>
                                         <Text className='text-gray-400'>Already have an account?</Text>
                                         <TouchableOpacity onPress={() => router.push('/login')}>
-                                            <Text className='text-brown-700 font-semibold color-primary ml-1'>Login Account</Text>
+                                            <Text className='text-brown-700 font-semibold color-primary ml-1'>Login
+                                                Account</Text>
                                         </TouchableOpacity>
                                     </View>
                                 </View>
@@ -381,6 +275,6 @@ const RegisterScreen = () => {
             </View>
         </TouchableWithoutFeedback>
     );
-};
+}
 
 export default RegisterScreen;

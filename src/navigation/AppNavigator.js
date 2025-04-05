@@ -7,6 +7,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 
 // Import your screens
 import HomeScreen from '/app/(tabs)';
+import VerifyScreen from '/app/(auth)/VerifyScreen';
 import ServicesScreen from './path/to/ServicesScreen';
 import ServiceDetailsScreen from './path/to/ServiceDetailsScreen'; // New screen
 import BookingScreen from './path/to/BookingScreen'; // New screen
@@ -20,6 +21,7 @@ function AppNavigator() {
         <Stack.Navigator>
             {/* Your existing screens */}
             <Stack.Screen name="Home" component={HomeScreen} />
+            <Stack.Screen name="VerifyScreen" component={VerifyScreen} />
             <Stack.Screen name="Services" component={ServicesScreen} />
 
             {/* Add these new screens */}

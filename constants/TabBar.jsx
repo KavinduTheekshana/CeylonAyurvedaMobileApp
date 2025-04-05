@@ -9,7 +9,7 @@ const TabBar = ({ state, descriptors, navigation }) => {
 
     const icons = {
         index: (props) => <AntDesign name="home" size={26} {...props} />,
-        saved: (props) => <Feather name="compass" size={26} {...props} />,
+        bookings: (props) => <Feather name="calendar" size={26} {...props} />,
         search: (props) => <AntDesign name="pluscircleo" size={26} {...props} />,
         profiles: (props) => <AntDesign name="user" size={26} {...props} />,
     };

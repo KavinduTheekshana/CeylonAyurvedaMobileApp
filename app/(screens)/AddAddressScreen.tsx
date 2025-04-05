@@ -134,7 +134,7 @@ const AddAddressScreen = () => {
             if (data.success && data.data) {
                 Alert.alert(
                     'Success',
-                    'Address saved successfully',
+                    'Address bookings successfully',
                     [
                         {
                             text: 'OK',

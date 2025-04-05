@@ -21,6 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import TopRightImage from "@/app/components/TopRightImage";
 import Logo from "@/app/components/Logo";
 import BottomLeftImage from "@/app/components/BottomLeftImage";
+import {API_BASE_URL} from "@/config/api";
 
 
 const RegisterScreen = () => {
@@ -51,7 +52,7 @@ const RegisterScreen = () => {
         };
 
         try {
-            const response = await axios.post('https://app.ceylonayurvedahealth.co.uk/api/register', userData);
+            const response = await axios.post(`${API_BASE_URL}/api/register`, userData);
             console.log('Registration successful:', response.data);
             Alert.alert('Success', 'Registration successful!');
             if (response.data.access_token) {

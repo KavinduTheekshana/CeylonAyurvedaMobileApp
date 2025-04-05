@@ -72,14 +72,36 @@ export default function Login() {
         // Perform login
         setIsLoading(true);
         try {
-        console.log(`${API_BASE_URL}`);
-        // const response = await axios.post('https://app.ceylonayurvedahealth.co.uk/api/register', userData);
+            console.log(`${API_BASE_URL}`);
             const response = await axios.post(`${API_BASE_URL}/api/login`, {
                 email,
                 password
             });
-            // console.log(response);
-            // Store token
+
+            // Check if email verification is required
+            if (response.data.requires_verification) {
+                // Store email for verification screen
+                await AsyncStorage.setItem('user_email', email);
+
+                // Show alert about verification
+                Alert.alert(
+                    'Verification Required',
+                    'Please verify your email to continue. A new verification code has been sent to your email.',
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => {
+                                // Navigate to verification screen
+                                router.push('/VerifyScreen');
+                                // router.push('/verify');
+                            }
+                        }
+                    ]
+                );
+                return;
+            }
+
+            // Normal login flow
             if (response.data.access_token) {
                 await AsyncStorage.setItem('access_token', response.data.access_token);
                 // Optionally store user data if needed
@@ -232,7 +254,7 @@ export default function Login() {
                                     {/* Register Link */}
                                     <View className='flex-row justify-center items-center mt-6'>
                                         <Text className='text-gray-400'>Don't have an account?</Text>
-                                        <TouchableOpacity onPress={() => router.push('/register')}>
+                                        <TouchableOpacity onPress={() => router.push('/RegisterScreen')}>
                                             <Text className='text-brown-700 font-semibold color-primary ml-1'>Create
                                                 Account</Text>
                                         </TouchableOpacity>

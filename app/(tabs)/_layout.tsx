@@ -14,9 +14,9 @@ export default function TabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="saved"
+                name="bookings"
                 options={{
-                    title: "Saved"
+                    title: "Bookings"
                 }}
             />
             <Tabs.Screen
