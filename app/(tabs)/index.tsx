@@ -53,6 +53,7 @@ const TreatmentsScreen = () => {
   }
 
   return (
+
     <View style={styles.container}>
       <Text className="w-full text-3xl pb-3 text-black font-bold">
         Treatments

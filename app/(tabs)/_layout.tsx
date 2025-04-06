@@ -1,11 +1,12 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import {Tabs} from 'expo-router';
 import TabBar from "@/constants/TabBar";
+import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
 export default function TabLayout() {
     return (
         <Tabs
-            tabBar={props=> <TabBar {...props} />}
+            tabBar={(props: BottomTabBarProps) => <TabBar {...props} />}
         >
             <Tabs.Screen
                 name="index"

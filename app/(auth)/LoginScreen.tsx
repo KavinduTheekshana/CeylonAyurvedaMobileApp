@@ -5,7 +5,6 @@ import {
     SafeAreaView,
     TextInput,
     TouchableOpacity,
-    Image,
     Keyboard,
     TouchableWithoutFeedback,
     Platform,
@@ -14,10 +13,10 @@ import {
     Alert,
     ActivityIndicator
 } from 'react-native';
-import React, {useState} from 'react';
-import {useRouter} from "expo-router";
-import {SafeAreaProvider} from "react-native-safe-area-context";
-import {Feather, FontAwesome} from "@expo/vector-icons";
+import React, { useState } from 'react';
+import { useRouter } from "expo-router";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Feather, FontAwesome } from "@expo/vector-icons";
 import TopRightImage from "@/app/components/TopRightImage";
 import Logo from "@/app/components/Logo";
 import BottomLeftImage from "@/app/components/BottomLeftImage";
@@ -25,11 +24,11 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // You should create this file to store your API URLs
-import {API_BASE_URL} from '@/config/api';
+import { API_BASE_URL } from '@/config/api';
 
 export default function Login() {
     const router = useRouter();
-    const {width, height} = Dimensions.get("window");
+    const { width, height } = Dimensions.get("window");
 
     // Form state
     const [email, setEmail] = useState('');
@@ -40,16 +39,16 @@ export default function Login() {
     const [passwordFocus, setPasswordFocus] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [errors, setErrors] = useState({email: '', password: ''});
+    const [errors, setErrors] = useState({ email: '', password: '' });
 
     // Handle login
     const handleLogin = async () => {
         // Reset errors
-        setErrors({email: '', password: ''});
+        setErrors({ email: '', password: '' });
 
         // Basic validation
         let hasError = false;
-        const newErrors = {email: '', password: ''};
+        const newErrors = { email: '', password: '' };
 
         if (!email.trim()) {
             newErrors.email = 'Email is required';
@@ -93,7 +92,6 @@ export default function Login() {
                             onPress: () => {
                                 // Navigate to verification screen
                                 router.push('/VerifyScreen');
-                                // router.push('/verify');
                             }
                         }
                     ]
@@ -103,11 +101,19 @@ export default function Login() {
 
             // Normal login flow
             if (response.data.access_token) {
+                // Store token
                 await AsyncStorage.setItem('access_token', response.data.access_token);
-                // Optionally store user data if needed
+
+                // Store user data if needed
                 if (response.data.user) {
                     await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
                 }
+
+                // Set session expiration (90 days from now)
+                const expirationDate = new Date();
+                expirationDate.setDate(expirationDate.getDate() + 90);
+                await AsyncStorage.setItem('session_expiry', expirationDate.toISOString());
+
                 // Navigate to home or dashboard
                 router.replace("/(tabs)");
             } else {
@@ -120,7 +126,7 @@ export default function Login() {
                 } else if (error.response?.status === 422) {
                     if (error.response?.data?.errors) {
                         const validationErrors = error.response.data.errors;
-                        const newErrors = {email: '', password: ''};
+                        const newErrors = { email: '', password: '' };
 
                         if (validationErrors.email) {
                             newErrors.email = validationErrors.email[0];
@@ -151,7 +157,7 @@ export default function Login() {
         >
             <View className='flex-1 px-6 pt-10 bg-[#FAFAFA]'>
                 {/* Top Right SVG */}
-                <TopRightImage/>
+                <TopRightImage />
 
                 <SafeAreaProvider>
                     <SafeAreaView className='flex-1 justify-center px-6 pt-10'>
@@ -161,14 +167,14 @@ export default function Login() {
                             keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
                         >
                             <ScrollView
-                                contentContainerStyle={{flexGrow: 1}}
+                                contentContainerStyle={{ flexGrow: 1 }}
                                 keyboardShouldPersistTaps="handled"
                                 showsVerticalScrollIndicator={false}
                                 showsHorizontalScrollIndicator={false}
                             >
                                 <View className='flex-1 justify-center'>
                                     {/* Logo */}
-                                    <Logo/>
+                                    <Logo />
                                     {/* Header text */}
                                     <Text className='text-2xl font-bold text-black mt-[-10px]'>Login Account</Text>
                                     <Text className='text-gray-500 mb-6'>Please login into your account</Text>
@@ -234,7 +240,7 @@ export default function Login() {
                                     ) : null}
 
                                     {/* Forgot Password */}
-                                    <TouchableOpacity onPress={() => router.push('/forgot')}>
+                                    <TouchableOpacity onPress={() => router.push('/ForgotPasswordScreen')}>
                                         <Text className='text-right mb-6 py-1 color-primary'>Forgot Password?</Text>
                                     </TouchableOpacity>
 
@@ -245,7 +251,7 @@ export default function Login() {
                                         disabled={isLoading}
                                     >
                                         {isLoading ? (
-                                            <ActivityIndicator color="white"/>
+                                            <ActivityIndicator color="white" />
                                         ) : (
                                             <Text className='text-white text-lg font-semibold'>Login Account</Text>
                                         )}
@@ -266,7 +272,7 @@ export default function Login() {
                 </SafeAreaProvider>
 
                 {/* Bottom Left SVG */}
-                <BottomLeftImage/>
+                <BottomLeftImage />
             </View>
         </TouchableWithoutFeedback>
     );

@@ -1,5 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Image, ActivityIndicator, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import {
+    View,
+    Text,
+    FlatList,
+    Image,
+    ActivityIndicator,
+    StyleSheet,
+    Dimensions,
+    TouchableOpacity,
+    StatusBar
+} from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { HeaderBackButton } from '@react-navigation/elements';
@@ -94,6 +104,8 @@ const ServicesScreen = () => {
             style={[styles.itemContainer, { width: itemWidth }]}
             onPress={() => handleServicePress(item)}
         >
+
+
             {item.image && <Image source={{ uri: item.image }} style={styles.image} />}
             <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
             <Text style={styles.price}>From: £{item.price}</Text>
