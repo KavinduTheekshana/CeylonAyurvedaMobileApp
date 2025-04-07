@@ -11,6 +11,8 @@ const Stack = createStackNavigator();
 
 // Define the main App component
 function App() {
+
+
     return (
         <NavigationContainer>
             <Stack.Navigator

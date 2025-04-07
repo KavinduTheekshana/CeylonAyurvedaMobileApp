@@ -7,6 +7,8 @@ const Layout = () => {
         <>
             <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
             <Stack>
+                <Stack.Screen name="EditProfileScreen" options={{headerShown:false}}/>
+                <Stack.Screen name="SecurityScreen" options={{headerShown:false}}/>
                 {/* <Stack.Screen name="index"/> */}
             </Stack>
         </>

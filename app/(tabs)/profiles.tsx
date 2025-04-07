@@ -1,5 +1,5 @@
-// App.js
-import React from 'react';
+// ProfileScreen.tsx - With useFocusEffect for automatic refresh
+import React, { useState } from 'react';
 import {
     SafeAreaView,
     StyleSheet,
@@ -7,7 +7,10 @@ import {
     Text,
     Image,
     TouchableOpacity,
-    ScrollView
+    ScrollView,
+    Alert,
+    ActivityIndicator,
+    ImageURISource
 } from 'react-native';
 import {
     Feather,
@@ -16,36 +19,165 @@ import {
     FontAwesome,
     AntDesign
 } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback } from 'react';
 
-export default function App() {
-    const menuItems = [
+// Define TypeScript interfaces
+interface UserData {
+    id: string;
+    name: string;
+    email: string;
+    profile_photo_path?: string; // Updated to match database schema
+}
+
+interface MenuItem {
+    icon: React.ReactNode;
+    label: string;
+    rightIcon: React.ReactNode;
+    isBold?: boolean;
+    color?: string;
+    onPress?: () => void; // Add this line
+}
+
+interface MenuSection {
+    title: string;
+    items: MenuItem[];
+}
+
+export default function ProfileScreen() {
+    const router = useRouter();
+    const [userData, setUserData] = useState<UserData>({
+        id: '',
+        name: '',
+        email: '',
+        profile_photo_path: '',
+    });
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+    // Define default avatar as a number (the way require works in RN)
+    const defaultAvatar = require('../../assets/images/default-avatar.jpg');
+
+    // Fetch user data whenever the screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            const loadUserData = async (): Promise<void> => {
+                try {
+                    setIsLoading(true);
+
+                    // Get individual user data items
+                    const userId = await AsyncStorage.getItem('user_id') || '';
+                    const userName = await AsyncStorage.getItem('user_name') || '';
+                    const userEmail = await AsyncStorage.getItem('user_email') || '';
+                    const userProfilePhoto = await AsyncStorage.getItem('user_profile_photo_path') || ''; // Updated key
+                    console.log('Profile photo path:', userProfilePhoto);
+
+                    // Try to get complete user data as fallback
+                    let completeUserData: Partial<UserData> = {};
+                    const userDataString = await AsyncStorage.getItem('user_data');
+                    if (userDataString) {
+                        completeUserData = JSON.parse(userDataString);
+                    }
+
+                    setUserData({
+                        id: userId || completeUserData.id || '',
+                        name: userName || completeUserData.name || '',
+                        email: userEmail || completeUserData.email || '',
+                        profile_photo_path: userProfilePhoto || completeUserData.profile_photo_path,
+                    });
+                } catch (error) {
+                    console.error('Error loading user data:', error);
+                    Alert.alert('Error', 'Failed to load profile data');
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            loadUserData();
+
+            // Optional cleanup function
+            return () => {
+                // Any cleanup if needed
+            };
+        }, []) // Empty dependency array means this effect runs only when the screen focuses
+    );
+
+    // Handle logout
+    const handleLogout = (): void => {
+        Alert.alert(
+            "Logout",
+            "Are you sure you want to logout?",
+            [
+                {
+                    text: "Cancel",
+                    style: "cancel"
+                },
+                {
+                    text: "Logout",
+                    onPress: () => performLogout(),
+                    style: "destructive"
+                }
+            ]
+        );
+    };
+
+    // Perform the actual logout
+    const performLogout = async (): Promise<void> => {
+        try {
+            // Clear all user data from AsyncStorage
+            await AsyncStorage.multiRemove([
+                'access_token',
+                'user_id',
+                'user_name',
+                'user_email',
+                'user_profile_photo_path', // Updated key
+                'user_phone',
+                'user_data',
+                'session_expiry'
+            ]);
+
+            // Navigate to login screen
+            router.replace('/(auth)');
+        } catch (error) {
+            console.error('Error during logout:', error);
+            Alert.alert('Error', 'Failed to logout. Please try again.');
+        }
+    };
+
+    // Menu sections
+    const menuItems: MenuSection[] = [
         {
             title: 'Activity',
             items: [
                 {
-                    icon: <Feather name="bookmark" size={24} color="black"/>,
+                    icon: <Feather name="bookmark" size={24} color="#ccc"/>,
                     label: 'Archive Goals',
+                    color: "#ccc",
                     rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>
                 },
                 {
-                    icon: <Feather name="repeat" size={24} color="black"/>,
+                    icon: <Feather name="repeat" size={24} color="#ccc"/>,
                     label: 'Link Bank Account',
+                    color: "#ccc",
                     rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>
                 },
                 {
-                    icon: <FontAwesome name="circle-o" size={24} color="black"/>,
+                    icon: <FontAwesome name="circle-o" size={24} color="#ccc"/>,
                     label: 'Billing & Subscriptions',
+                    color: "#ccc",
                     rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>
                 },
                 {
-                    icon: <FontAwesome name="credit-card" size={24} color="black"/>,
+                    icon: <FontAwesome name="credit-card" size={24} color="#ccc"/>,
                     label: 'Payment Methods',
+                    color: "#ccc",
                     rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>
                 },
                 {
                     icon: <Feather name="shield" size={24} color="black"/>,
                     label: 'Account & Security',
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>
+                    color: "black",
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    onPress: () => router.push('/SecurityScreen') // Navigate to security screen
                 },
             ]
         },
@@ -53,29 +185,40 @@ export default function App() {
             title: 'General',
             items: [
                 {
-                    icon: <Ionicons name="settings-outline" size={24} color="black"/>,
+                    icon: <Ionicons name="settings-outline" size={24} color="#ccc"/>,
                     label: 'Preferences',
+                    color: "#ccc",
                     rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>
                 },
                 {
-                    icon: <Ionicons name="eye-outline" size={24} color="black"/>,
+                    icon: <Ionicons name="eye-outline" size={24} color="#ccc"/>,
                     label: 'App Appearance',
+                    color: "#ccc",
                     rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>
                 },
                 {
-                    icon: <Feather name="help-circle" size={24} color="black"/>,
+                    icon: <Feather name="help-circle" size={24} color="#ccc"/>,
                     label: 'Help & Support',
+                    color: "#ccc",
                     rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>
                 },
                 {
-                    icon: <AntDesign name="like2" size={24} color="black"/>,
+                    icon: <AntDesign name="like2" size={24} color="#ccc"/>,
                     label: 'Rate Us',
+                    color: "#ccc",
                     rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>
                 },
-
             ]
         }
     ];
+
+    if (isLoading) {
+        return (
+            <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#9A563A" />
+            </View>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -83,9 +226,16 @@ export default function App() {
                 {/* Profile Header */}
                 <View style={styles.profileHeader}>
                     <View style={styles.avatarContainer}>
-                        <View style={styles.avatar}>
-                            <Feather name="user" size={40} color="black"/>
-                        </View>
+                        {userData.profile_photo_path ? (
+                            <Image
+                                source={{ uri: userData.profile_photo_path }}
+                                style={styles.avatar}
+                            />
+                        ) : (
+                            <View style={styles.avatar}>
+                                <Feather name="user" size={40} color="black"/>
+                            </View>
+                        )}
                     </View>
 
                     {/* PRO Badge */}
@@ -96,12 +246,12 @@ export default function App() {
                         </View>
                     </View>
 
-                    <Text style={styles.userName}>Steve Young</Text>
-                    <Text style={styles.userEmail}>steve.young@gmail.com</Text>
+                    <Text style={styles.userName}>{userData.name || 'User'}</Text>
+                    <Text style={styles.userEmail}>{userData.email || 'email@example.com'}</Text>
 
-                    {/*<TouchableOpacity style={styles.infoButton}>*/}
-                    {/*    <Text style={styles.infoButtonText}>Personal Info</Text>*/}
-                    {/*</TouchableOpacity>*/}
+                    <TouchableOpacity style={styles.infoButton} onPress={() => router.push('/EditProfileScreen')}>
+                        <Text style={styles.infoButtonText}>Edit Profile</Text>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Menu Sections */}
@@ -116,12 +266,15 @@ export default function App() {
                                     styles.menuItem,
                                     itemIndex === section.items.length - 1 && styles.lastMenuItem
                                 ]}
+                                onPress={item.onPress} // Add this line to handle the press event
                             >
                                 <View style={styles.menuItemLeft}>
                                     {item.icon}
-                                    <Text style={
-                                        styles.menuItemText
-                                    }>
+                                    <Text style={[
+                                        styles.menuItemText,
+                                        item.isBold && styles.boldText,
+                                        item.color && {color: item.color}
+                                    ]}>
                                         {item.label}
                                     </Text>
                                 </View>
@@ -133,9 +286,12 @@ export default function App() {
 
                 {/* Logout Button */}
                 <View style={styles.logoutContainer}>
-                    <TouchableOpacity style={styles.logoutButton}>
+                    <TouchableOpacity
+                        style={styles.logoutButton}
+                        onPress={handleLogout}
+                    >
                         <Text style={styles.logoutText}>Logout</Text>
-                        <Feather name="log-out" size={20} color="#f56342"/>
+                        <Feather name="log-out" size={20} color="#9A563A"/>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
@@ -144,6 +300,12 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f5f5f5',
+    },
     container: {
         flex: 1,
         backgroundColor: '#f5f5f5',
@@ -177,7 +339,7 @@ const styles = StyleSheet.create({
     proBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f56342',
+        backgroundColor: '#9e9e9e',
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 20,
@@ -231,7 +393,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         paddingVertical: 15,
         paddingHorizontal: 15,
-        // borderBottomWidth: 1,
         borderBottomColor: '#f0f0f0',
     },
     lastMenuItem: {
@@ -260,7 +421,7 @@ const styles = StyleSheet.create({
         borderColor: '#f0f0f0',
     },
     logoutText: {
-        color: '#f56342',
+        color: '#9A563A',
         fontSize: 16,
         fontWeight: 'bold',
         marginRight: 8,

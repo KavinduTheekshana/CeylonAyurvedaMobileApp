@@ -26,29 +26,77 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // You should create this file to store your API URLs
 import { API_BASE_URL } from '@/config/api';
 
+// Define TypeScript interfaces
+interface UserData {
+    id: number;
+    name: string;
+    email: string;
+    profile_photo_path?: string;
+    phone?: string;
+    [key: string]: any; // Allow for additional properties
+}
+interface LoginErrors {
+    email: string;
+    password: string;
+}
+
+interface LoginResponse {
+    access_token: string;
+    user: UserData;
+    requires_verification?: boolean;
+    [key: string]: any;
+}
+
 export default function Login() {
     const router = useRouter();
     const { width, height } = Dimensions.get("window");
 
     // Form state
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [email, setEmail] = useState<string>('');
+    const [password, setPassword] = useState<string>('');
 
     // UI state
-    const [emailFocus, setEmailFocus] = useState(false);
-    const [passwordFocus, setPasswordFocus] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [errors, setErrors] = useState({ email: '', password: '' });
+    const [emailFocus, setEmailFocus] = useState<boolean>(false);
+    const [passwordFocus, setPasswordFocus] = useState<boolean>(false);
+    const [showPassword, setShowPassword] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [errors, setErrors] = useState<LoginErrors>({ email: '', password: '' });
+
+    // Store all user data function
+    const storeUserData = async (userData: UserData): Promise<void> => {
+        try {
+            // Store each piece of user data separately for easier access
+            await AsyncStorage.setItem('user_id', userData.id.toString());
+            await AsyncStorage.setItem('user_name', userData.name || '');
+            await AsyncStorage.setItem('user_email', userData.email || '');
+
+            // Optional fields - check if they exist
+            // Updated to use profile_photo_path instead of profile_image
+            if (userData.profile_photo_path) {
+                await AsyncStorage.setItem('user_profile_photo_path', `${API_BASE_URL}/storage/${userData.profile_photo_path}`);
+            }
+
+            if (userData.phone) {
+                await AsyncStorage.setItem('user_phone', userData.phone);
+            }
+
+            // Also store the complete user object for any additional fields
+            await AsyncStorage.setItem('user_data', JSON.stringify(userData));
+
+            console.log('All user data stored successfully');
+        } catch (error) {
+            console.error('Error storing user data:', error);
+        }
+    };
 
     // Handle login
-    const handleLogin = async () => {
+    const handleLogin = async (): Promise<void> => {
         // Reset errors
         setErrors({ email: '', password: '' });
 
         // Basic validation
         let hasError = false;
-        const newErrors = { email: '', password: '' };
+        const newErrors: LoginErrors = { email: '', password: '' };
 
         if (!email.trim()) {
             newErrors.email = 'Email is required';
@@ -72,7 +120,7 @@ export default function Login() {
         setIsLoading(true);
         try {
             console.log(`${API_BASE_URL}`);
-            const response = await axios.post(`${API_BASE_URL}/api/login`, {
+            const response = await axios.post<LoginResponse>(`${API_BASE_URL}/api/login`, {
                 email,
                 password
             });
@@ -81,7 +129,6 @@ export default function Login() {
             if (response.data.requires_verification) {
                 // Store email for verification screen
                 await AsyncStorage.setItem('user_email', email);
-
 
                 // Show alert about verification
                 Alert.alert(
@@ -105,17 +152,17 @@ export default function Login() {
                 // Store token
                 await AsyncStorage.setItem('access_token', response.data.access_token);
 
-                console.log('Stored Token:', await AsyncStorage.getItem('access_token'));
-                // Store user data if needed
+                // Store user data
                 if (response.data.user) {
-                    await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
+                    // Store complete user data
+                    await storeUserData(response.data.user);
                 }
 
                 // Set session expiration (90 days from now)
                 const expirationDate = new Date();
                 expirationDate.setDate(expirationDate.getDate() + 90);
                 await AsyncStorage.setItem('session_expiry', expirationDate.toISOString());
-                console.log('Stored Token Expiry:', await AsyncStorage.getItem('session_expiry'));
+
                 // Navigate to home or dashboard
                 router.replace("/(tabs)");
             } else {
@@ -128,7 +175,7 @@ export default function Login() {
                 } else if (error.response?.status === 422) {
                     if (error.response?.data?.errors) {
                         const validationErrors = error.response.data.errors;
-                        const newErrors = { email: '', password: '' };
+                        const newErrors: LoginErrors = { email: '', password: '' };
 
                         if (validationErrors.email) {
                             newErrors.email = validationErrors.email[0];
