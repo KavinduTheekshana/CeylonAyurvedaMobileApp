@@ -2,9 +2,14 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import {Tabs} from 'expo-router';
 import TabBar from "@/constants/TabBar";
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import {StatusBar} from "react-native";
+import React from "react";
 
 export default function TabLayout() {
     return (
+        <>
+            <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+
         <Tabs
             tabBar={(props: BottomTabBarProps) => <TabBar {...props} />}
         >
@@ -29,9 +34,11 @@ export default function TabLayout() {
             <Tabs.Screen
                 name="profiles"
                 options={{
-                    title: "Profiles"
+                    title: "Profile Info",
+                    headerShown:false,
                 }}
             />
         </Tabs>
+        </>
     );
 }
