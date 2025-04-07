@@ -82,6 +82,7 @@ export default function Login() {
                 // Store email for verification screen
                 await AsyncStorage.setItem('user_email', email);
 
+
                 // Show alert about verification
                 Alert.alert(
                     'Verification Required',
@@ -104,6 +105,7 @@ export default function Login() {
                 // Store token
                 await AsyncStorage.setItem('access_token', response.data.access_token);
 
+                console.log('Stored Token:', await AsyncStorage.getItem('access_token'));
                 // Store user data if needed
                 if (response.data.user) {
                     await AsyncStorage.setItem('user', JSON.stringify(response.data.user));
@@ -113,7 +115,7 @@ export default function Login() {
                 const expirationDate = new Date();
                 expirationDate.setDate(expirationDate.getDate() + 90);
                 await AsyncStorage.setItem('session_expiry', expirationDate.toISOString());
-
+                console.log('Stored Token Expiry:', await AsyncStorage.getItem('session_expiry'));
                 // Navigate to home or dashboard
                 router.replace("/(tabs)");
             } else {
