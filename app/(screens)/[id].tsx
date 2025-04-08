@@ -17,7 +17,7 @@ import ServiceDetailsScreen from './ServiceDetails';
 import {API_BASE_URL} from "@/config/api"; // Import directly where needed
 
 // API URL
-const API_URL = 'https://app.ceylonayurvedahealth.co.uk/api/services/';
+const API_URL = `${API_BASE_URL}/api/services/`;
 const { width } = Dimensions.get('window');
 const itemWidth = (width - 45) / 2; // 45 accounts for container padding and space between items
 

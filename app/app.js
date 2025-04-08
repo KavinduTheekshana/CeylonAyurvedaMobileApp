@@ -1,18 +1,16 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack'; // Fix this import
 import HomeScreen from './(tabs)/index';
 import ServicesScreen from './(screens)/[id]';
 import ServiceDetailsScreen from './(screens)/ServiceDetails';
-import {createStackNavigator} from "@react-navigation/native/src/__stubs__/createStackNavigator"; // Add this import
-import BookingScreen from './(screens)/BookingScreen'; // Add this import
+import BookingScreen from './(screens)/BookingScreen';
+import BookingDetailsScreen from './(screens)/BookingDetailsScreen';
 
 const Stack = createStackNavigator();
 
-
 // Define the main App component
 function App() {
-
-
     return (
         <NavigationContainer>
             <Stack.Navigator
@@ -37,6 +35,12 @@ function App() {
                     component={ServicesScreen}
                     // Title is set dynamically based on the treatment name
                 />
+
+                <Stack.Screen
+                    name="Booking Details"
+                    component={BookingDetailsScreen}
+                    // Title is set dynamically based on the treatment name
+                />
                 <Stack.Screen
                     name="ServiceDetails"
                     component={ServiceDetailsScreen}
@@ -52,5 +56,4 @@ function App() {
     );
 }
 
-// Make sure to export the App component as default
 export default App;

@@ -152,6 +152,8 @@ export default function Login() {
                 // Store token
                 await AsyncStorage.setItem('access_token', response.data.access_token);
 
+                console.log(await AsyncStorage.getItem('access_token'))
+
                 // Store user data
                 if (response.data.user) {
                     // Store complete user data
