@@ -5,16 +5,17 @@ import {
     FlatList,
     Image,
     ActivityIndicator,
-    StyleSheet,
     Dimensions,
     TouchableOpacity,
     StatusBar
 } from 'react-native';
-import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { HeaderBackButton } from '@react-navigation/elements';
+// import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import ServiceDetailsScreen from './ServiceDetails';
-import {API_BASE_URL} from "@/config/api"; // Import directly where needed
+import {API_BASE_URL} from "@/config/api";
+import {Feather} from "@expo/vector-icons";
+import {RouteProp, useNavigation, useRoute} from "@react-navigation/native";
+import {StackNavigationProp} from "@react-navigation/stack";
+import {HeaderBackButton} from "@react-navigation/elements"; // Import directly where needed
 
 // API URL
 const API_URL = `${API_BASE_URL}/api/services/`;
@@ -62,12 +63,10 @@ const ServicesScreen = () => {
             headerLeft: () => (
                 <HeaderBackButton
                     onPress={() => {
-                        // console.log("Back button pressed");
                         if (navigation.canGoBack()) {
                             navigation.goBack();
                         } else {
                             navigation.goBack();
-                            // console.log("ELSE");
                         }
                     }}
                     tintColor="#000"
@@ -96,88 +95,50 @@ const ServicesScreen = () => {
     };
 
     if (loading) {
-        return <ActivityIndicator size="large" color="#9A563A" style={styles.loader} />;
+        return <ActivityIndicator size="large" color="#9A563A" className="flex-1 justify-center items-center" />;
     }
 
     const renderItem = ({ item }: { item: Service }) => (
         <TouchableOpacity
-            style={[styles.itemContainer, { width: itemWidth }]}
+            className="bg-white rounded-[14px] overflow-hidden mb-4 w-[48%] shadow-sm m-1"
+            // style={{ width: itemWidth }}
             onPress={() => handleServicePress(item)}
         >
+            {item.image && <Image source={{ uri: item.image }}   className="w-full h-[120px]" />}
 
 
-            {item.image && <Image source={{ uri: item.image }} style={styles.image} />}
-            <Text style={styles.title} numberOfLines={1}>{item.title}</Text>
-            <Text style={styles.price}>From: £{item.price}</Text>
-            <Text style={styles.duration}>{item.duration} min</Text>
+            <View className="p-3">
+                <Text className="text-base font-semibold text-black mb-1" numberOfLines={1}>{item.title}</Text>
+                {item.subtitle && (
+                    <Text className="text-sm text-gray-600 mb-2" numberOfLines={1}>{item.subtitle}</Text>
+                )}
+                <View className="flex-row items-center justify-between mt-1.5">
+                    {item.price !== null && (
+                        <Text className="text-base font-bold text-primary">${item.price}</Text>
+                    )}
+                    {item.duration !== null && (
+                        <View className="flex-row items-center">
+                            <Feather name="clock" size={14} color="#9A563A" />
+                            <Text className="text-sm text-gray-600 ml-1">{item.duration} min</Text>
+                        </View>
+                    )}
+                </View>
+            </View>
         </TouchableOpacity>
     );
 
     return (
-        <View style={styles.container}>
+        <View className="flex-1 p-4 bg-gray-100">
             <FlatList
                 data={services}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderItem}
                 numColumns={2}
-                columnWrapperStyle={styles.columnWrapper}
-                ListEmptyComponent={<Text style={styles.noData}>No services available for this treatment</Text>}
+                columnWrapperStyle={{ justifyContent: 'space-between', marginBottom: 15 }}
+                ListEmptyComponent={<Text className="text-base text-center mt-5 text-gray-500">No services available for this treatment</Text>}
             />
         </View>
     );
 };
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        padding: 15,
-        backgroundColor: '#f5f5f5',
-    },
-    columnWrapper: {
-        justifyContent: 'space-between',
-        marginBottom: 15,
-    },
-    itemContainer: {
-        backgroundColor: '#fff',
-        padding: 5,
-        borderRadius: 4,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.22,
-        shadowRadius: 2.22,
-    },
-    image: {
-        width: '100%',
-        height: 130,
-        borderRadius: 4,
-        marginBottom: 5,
-    },
-    title: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginTop: 5,
-    },
-    price: {
-        fontSize: 12,
-        color: '#444',
-    },
-    duration: {
-        fontSize: 12,
-        color: '#666',
-        marginTop: 2,
-    },
-    loader: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    noData: {
-        fontSize: 16,
-        textAlign: 'center',
-        marginTop: 20,
-        color: '#888',
-    },
-});
 
 export default ServicesScreen;

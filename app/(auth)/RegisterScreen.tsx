@@ -259,7 +259,7 @@ const RegisterScreen = () => {
 
                                     <View className='flex-row justify-center items-center mt-6'>
                                         <Text className='text-gray-400'>Already have an account?</Text>
-                                        <TouchableOpacity onPress={() => router.push('/login')}>
+                                        <TouchableOpacity onPress={() => router.push('/LoginScreen')}>
                                             <Text className='text-brown-700 font-semibold color-primary ml-1'>Login
                                                 Account</Text>
                                         </TouchableOpacity>

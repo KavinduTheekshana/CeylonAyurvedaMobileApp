@@ -8,7 +8,7 @@ import React from "react";
 export default function TabLayout() {
     return (
         <>
-            <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+            <StatusBar barStyle="dark-content" hidden={false} />
 
         <Tabs
             tabBar={(props: BottomTabBarProps) => <TabBar {...props} />}

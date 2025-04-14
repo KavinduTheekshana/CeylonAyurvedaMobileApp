@@ -6,6 +6,7 @@ import React from "react";
 export default function RootLayout() {
   return (
     <Stack>
+        <StatusBar barStyle="dark-content" hidden={false} />
         <Stack.Screen name="(splash)" options={{ headerShown: false }} />
         <Stack.Screen name="(screens)" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />

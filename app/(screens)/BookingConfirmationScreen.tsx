@@ -153,7 +153,7 @@ const BookingConfirmationScreen = () => {
                         </View>
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Service:</Text>
-                            <Text style={styles.detailValue}>{booking.service?.title || 'N/A'}</Text>
+                            <Text style={styles.detailValue}>{booking.service_name || 'N/A'}</Text>
                         </View>
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Date:</Text>
