@@ -2,7 +2,7 @@
   "expo": {
     "name": "CeylonAyurveda",
     "slug": "CeylonAyurveda",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
@@ -13,6 +13,9 @@
       "bundleIdentifier": "com.theekshana9.CeylonAyurveda",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
@@ -20,7 +23,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.theekshana9.CeylonAyurveda"
+      "package": "com.theekshana9.CeylonAyurvedaHealth",
     },
     "web": {
       "bundler": "metro",
@@ -36,6 +39,16 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0"
+          }
         }
       ]
     ],
