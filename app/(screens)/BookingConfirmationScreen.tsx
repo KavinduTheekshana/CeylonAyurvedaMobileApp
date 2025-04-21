@@ -66,8 +66,17 @@ const BookingConfirmationScreen = () => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        // Add this to hide the back button in the header
+        navigation.setOptions({
+            headerLeft: () => null,
+            headerTitle: "Booking Confirmation",
+            headerBackVisible: false, // For newer React Navigation versions
+            headerBackTitle: null, // For iOS
+            headerLeftContainerStyle: { width: 0 }, // Force no space for the button
+        })
+
         fetchBookingDetails();
-    }, [bookingId]);
+    }, [bookingId, navigation]);
 
     const fetchBookingDetails = async () => {
         try {
@@ -120,8 +129,6 @@ const BookingConfirmationScreen = () => {
         });
     };
 
-
-
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
@@ -153,7 +160,7 @@ const BookingConfirmationScreen = () => {
                         </View>
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Service:</Text>
-                            <Text style={styles.detailValue}>{booking.service_name || 'N/A'}</Text>
+                            <Text style={styles.detailValue} numberOfLines={2} ellipsizeMode="tail">{booking.service_name || 'N/A'}</Text>
                         </View>
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Date:</Text>
@@ -285,11 +292,15 @@ const styles = StyleSheet.create({
     detailLabel: {
         fontSize: 16,
         color: '#555',
+        flex: 1, // Take up 1 part of the space
     },
     detailValue: {
         fontSize: 16,
         fontWeight: '500',
         color: '#333',
+        flex: 2, // Take up 2 parts of the space
+        flexWrap: 'wrap', // Allow text wrapping
+        textAlign: 'right', // Align text to the right
     },
     statusText: {
         color: '#9A563A',
