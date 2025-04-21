@@ -313,7 +313,7 @@ export default function MyBookings() {
                 </Text>
                 <TouchableOpacity
                     className="bg-primary py-3 px-6 rounded-full mt-6 flex-row items-center"
-                    onPress={() => router.push('/(tabs)/Services')}
+                    onPress={() => router.push('/')}
                 >
                     <Feather name="plus" size={18} color="white"/>
                     <Text className="text-white font-bold ml-2">Book a Service</Text>
