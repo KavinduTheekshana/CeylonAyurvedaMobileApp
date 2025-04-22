@@ -23,7 +23,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.theekshana9.CeylonAyurvedaHealth",
+      "package": "com.theekshana9.CeylonAyurvedaHealth"
     },
     "web": {
       "bundler": "metro",

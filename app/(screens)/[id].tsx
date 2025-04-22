@@ -92,11 +92,7 @@ const ServicesScreen = () => {
     }, [treatmentId, treatmentName, navigation]);
 
     const handleServicePress = (service: Service) => {
-        // Navigate to service details screen with service data
-        navigation.navigate('ServiceDetails', { service });
-
-
-        // Or if using router:
+        // Use ONLY router.push (removing the navigation.navigate call entirely)
         router.push({
             pathname: "/(screens)/ServiceDetails",
             params: {

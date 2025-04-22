@@ -5,6 +5,8 @@ import React, { useEffect } from "react";
 import * as SplashScreen from 'expo-splash-screen';
 
 export default function RootLayout() {
+
+  SplashScreen.preventAutoHideAsync();
   useEffect(() => {
     // Hide the splash screen after a short delay
     const hideSplash = async () => {

@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+
 import {
     View,
     Text,
@@ -8,7 +9,10 @@ import {
     TouchableOpacity,
     SafeAreaView
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
+import { Feather } from "@expo/vector-icons";
+import {HeaderBackButton} from "@react-navigation/elements"; // Import directly where needed
+
 
 // Define your Service type
 type Service = {
@@ -24,6 +28,7 @@ type Service = {
 
 const ServiceDetailsScreen = () => {
     const router = useRouter();
+    const navigation = useNavigation();
     const params = useLocalSearchParams();
 
     // Parse the service data from the params
@@ -55,6 +60,42 @@ const ServiceDetailsScreen = () => {
           console.error('Service data missing required properties:', service);
           throw new Error('Incomplete service data');
         }
+
+          // Set the header title to the service title
+          useEffect(() => {
+             navigation.setOptions({
+                        title: service.title,
+                        headerLeft: () => (
+                            <HeaderBackButton
+                                onPress={() => {
+                                    if (navigation.canGoBack()) {
+                                        navigation.goBack();
+                                    } else {
+                                        navigation.goBack();
+                                    }
+                                }}
+                                tintColor="#000"
+                            />
+                        ),
+                    });
+
+            // if (navigation.setOptions) {
+            //   navigation.setOptions({
+            //     title: service.title,
+            //     headerBackTitle: ' ', // This sets the back button title to empty space on iOS
+            //     // The following options set up a custom back button with just an icon
+            //     headerLeft: () => (
+            //       <TouchableOpacity
+            //         style={{ marginLeft: 10, padding: 5 }}
+            //         onPress={() => router.back()}
+            //       >
+            //         <Feather name="arrow-left" size={24} color="#000" />
+            //       </TouchableOpacity>
+            //     )
+            //   });
+            // }
+          }, [navigation, service.title, router]);
+
       } catch (e) {
         console.error('Error handling service data:', e);
         return (

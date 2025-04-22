@@ -12,7 +12,7 @@ export default function splash() {
 
     useEffect(() => {
         const checkLoginStatus = async () => {
-            await new Promise(resolve => setTimeout(resolve, 100)); // ⏳ wait 3 seconds
+            await new Promise(resolve => setTimeout(resolve, 1000)); // ⏳ wait 3 seconds
 
             try {
                 const token = await AsyncStorage.getItem('access_token');
