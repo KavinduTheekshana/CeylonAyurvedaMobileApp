@@ -18,6 +18,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@/config/api';
 import { debounce } from 'lodash';
+import { useRouter } from 'expo-router';
 
 // Define TypeScript interfaces
 interface Service {
@@ -111,11 +112,28 @@ export default function SearchScreen() {
         setSearchQuery(text);
         handleSearch(text);
     };
-
+    const router = useRouter();
     // Navigate to service detail
-    const handleServicePress = (serviceId: number) => {
-        // Using navigation.navigate instead of router.push
-        navigation.navigate('ServiceDetails', { serviceId });
+    const handleServicePress = (service: Service) => {
+        // Create a properly formatted service object with all required fields
+        const serviceData = {
+            id: service.id,
+            title: service.title,
+            subtitle: service.subtitle || '',
+            price: service.price || 0,
+            duration: service.duration || 0,
+            benefits: service.benefits || '',
+            image: service.image.startsWith('http') ? service.image : `${API_BASE_URL}/storage/${service.image}`,
+            description: service.description || ''
+        };
+
+        // Use router.push with this data
+        router.push({
+            pathname: "/(screens)/ServiceDetails",
+            params: {
+                service: JSON.stringify(serviceData)
+            }
+        });
     };
 
     // Fetch services on component mount
@@ -127,7 +145,7 @@ export default function SearchScreen() {
     const renderServiceItem = ({ item }: { item: Service }) => (
         <TouchableOpacity
             className="bg-white rounded-[14px] overflow-hidden mb-4 w-[48%] shadow-sm"
-            onPress={() => handleServicePress(item.id)}
+            onPress={() => handleServicePress(item)}
         >
             <Image
                 source={{ uri: item.image.startsWith('http') ? item.image : `${API_BASE_URL}/storage/${item.image}` }}

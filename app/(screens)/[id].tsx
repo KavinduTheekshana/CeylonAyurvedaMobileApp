@@ -15,6 +15,7 @@ import {API_BASE_URL} from "@/config/api";
 import {Feather} from "@expo/vector-icons";
 import {RouteProp, useNavigation, useRoute} from "@react-navigation/native";
 import {StackNavigationProp} from "@react-navigation/stack";
+import { useRouter } from 'expo-router';
 import {HeaderBackButton} from "@react-navigation/elements"; // Import directly where needed
 
 // API URL
@@ -55,6 +56,7 @@ const ServicesScreen = () => {
 
     const [services, setServices] = useState<Service[]>([]);
     const [loading, setLoading] = useState(true);
+    const router = useRouter();
 
     useEffect(() => {
         // Set the header title using the treatmentName
@@ -92,6 +94,26 @@ const ServicesScreen = () => {
     const handleServicePress = (service: Service) => {
         // Navigate to service details screen with service data
         navigation.navigate('ServiceDetails', { service });
+
+
+        // Or if using router:
+        router.push({
+            pathname: "/(screens)/ServiceDetails",
+            params: {
+                service: JSON.stringify({
+                    id: service.id,
+                    title: service.title,
+                    subtitle: service.subtitle || '',
+                    price: service.price || 0,
+                    duration: service.duration || 0,
+                    benefits: service.benefits || '',
+                    image: service.image ?
+                        (service.image.startsWith('http') ? service.image : `${API_BASE_URL}/storage/${service.image}`)
+                        : null,
+                    description: service.description || ''
+                })
+            }
+        });
     };
 
     if (loading) {

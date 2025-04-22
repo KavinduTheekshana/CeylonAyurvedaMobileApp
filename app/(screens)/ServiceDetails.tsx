@@ -8,9 +8,7 @@ import {
     TouchableOpacity,
     SafeAreaView
 } from 'react-native';
-import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
-import { HeaderBackButton } from '@react-navigation/elements';
-import {StackNavigationProp} from "@react-navigation/stack";
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
 // Define your Service type
 type Service = {
@@ -24,50 +22,66 @@ type Service = {
     description?: string;
 };
 
-// Define your navigation param list for all screens
-type RootStackParamList = {
-    Home: undefined;
-    Services: { treatmentId: string; treatmentName: string };
-    ServiceDetails: { service: Service };
-    BookingScreen: { serviceId: number; serviceName: string };
-    BookingDateScreen: { serviceId: number; serviceName: string; duration: number };
-    BookingTimeScreen: {
-        serviceId: number;
-        serviceName: string;
-        selectedDate: string;
-        duration: number;
-    };
-};
-
-// Type for the route
-type ServiceDetailsRouteProp = RouteProp<RootStackParamList, 'ServiceDetails'>;
-
-// Type for the navigation
-type ServiceDetailsNavigationProp = StackNavigationProp<RootStackParamList>;
-
 const ServiceDetailsScreen = () => {
-    const route = useRoute<ServiceDetailsRouteProp>();
-    const navigation = useNavigation<ServiceDetailsNavigationProp>();
-    const { service } = route.params;
+    const router = useRouter();
+    const params = useLocalSearchParams();
 
-    React.useLayoutEffect(() => {
-        navigation.setOptions({
-            title: service.title,
-            headerLeft: () => (
-                <HeaderBackButton
-                    onPress={() => navigation.goBack()}
-                    tintColor="#000"
-                />
-            ),
-        });
-    }, [navigation, service]);
+    // Parse the service data from the params
+    let service: Service;
+    try {
+        // Check if we have a params.service
+        if (!params.service) {
+          console.log('No service data found in params:', params);
+          throw new Error('No service data provided');
+        }
+
+        // Try to parse the service JSON
+        if (typeof params.service === 'string') {
+          try {
+            service = JSON.parse(params.service);
+            console.log('Successfully parsed service JSON:', service);
+          } catch (parseError) {
+            console.error('Failed to parse service JSON:', parseError, params.service);
+            throw new Error('Invalid service data format');
+          }
+        } else {
+          // Handle case where params.service is already an object
+          service = params.service as any;
+          console.log('Service data is already an object:', service);
+        }
+
+        // Validate that we have the required properties
+        if (!service.id || !service.title) {
+          console.error('Service data missing required properties:', service);
+          throw new Error('Incomplete service data');
+        }
+      } catch (e) {
+        console.error('Error handling service data:', e);
+        return (
+          <SafeAreaView style={styles.container}>
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>Error loading service details: {e.message}</Text>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.back()}>
+                <Text style={styles.backButtonText}>Go Back</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        );
+      }
+
+    // For debugging - check what data we actually have
+    console.log('Service details data:', service);
 
     const handleBookNow = () => {
-        // Changed to navigate to BookingDateScreen instead of BookingScreen
-        navigation.navigate('BookingDateScreen', {
-            serviceId: service.id,
-            serviceName: service.title,
-            duration: service.duration
+        router.push({
+            pathname: "/(screens)/BookingDateScreen",
+            params: {
+                serviceId: service.id,
+                serviceName: service.title,
+                duration: service.duration
+            }
         });
     };
 
@@ -130,6 +144,26 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: '#f5f5f5',
     },
+    errorContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 20,
+    },
+    errorText: {
+        fontSize: 18,
+        color: 'red',
+        marginBottom: 20,
+    },
+    backButton: {
+        backgroundColor: '#9A563A',
+        padding: 12,
+        borderRadius: 8,
+    },
+    backButtonText: {
+        color: '#fff',
+        fontSize: 16,
+    },
     image: {
         width: '100%',
         height: 250,
@@ -182,6 +216,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 2,
         elevation: 1,
+        marginTop: 10,
     },
     descriptionTitle: {
         fontSize: 18,

@@ -1,9 +1,18 @@
 import { Stack } from "expo-router";
 import "./globals.css";
 import {StatusBar} from "react-native";
-import React from "react";
+import React, { useEffect } from "react";
+import * as SplashScreen from 'expo-splash-screen';
 
 export default function RootLayout() {
+  useEffect(() => {
+    // Hide the splash screen after a short delay
+    const hideSplash = async () => {
+      await SplashScreen.hideAsync();
+    };
+
+    hideSplash();
+  }, []);
   return (
     <Stack>
         <StatusBar barStyle="dark-content" hidden={false} />

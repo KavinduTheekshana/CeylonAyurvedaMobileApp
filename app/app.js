@@ -53,6 +53,7 @@ function App() {
           component={ServiceDetailsScreen}
           // Title is set dynamically based on the service name
         />
+
         <Stack.Screen
           name="BookingScreen"
           component={BookingScreen}
