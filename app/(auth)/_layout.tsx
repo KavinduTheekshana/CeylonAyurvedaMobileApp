@@ -11,6 +11,8 @@ export default function RootLayout() {
         <Stack.Screen name="RegisterScreen" options={{headerShown:false}}/>
       <Stack.Screen name="VerifyScreen" options={{headerShown:false}}/>
       <Stack.Screen name="ForgotPasswordScreen" options={{headerShown:false}}/>
+      <Stack.Screen name="ResetVerificationScreen" options={{headerShown:false}}/>
+      <Stack.Screen name="NewPasswordScreen" options={{headerShown:false}}/>
     </Stack>
   );
 }

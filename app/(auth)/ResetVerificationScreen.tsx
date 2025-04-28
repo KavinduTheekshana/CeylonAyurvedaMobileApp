@@ -9,7 +9,8 @@ import {
     KeyboardAvoidingView,
     ScrollView,
     Alert,
-    ActivityIndicator
+    ActivityIndicator,
+    TextInput
 } from 'react-native';
 import React, {useEffect, useRef, useState} from 'react';
 import {useRouter} from "expo-router";
@@ -17,13 +18,83 @@ import {SafeAreaProvider} from "react-native-safe-area-context";
 import {FontAwesome} from "@expo/vector-icons";
 import TopRightImage from "@/app/components/TopRightImage";
 import BottomLeftImage from "@/app/components/BottomLeftImage";
-import OTPInputView from "@twotalltotems/react-native-otp-input/dist";
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {API_BASE_URL} from '@/config/api';
 
-// Import the OTPInputView type from the library
-type OTPRef = OTPInputView;
+// Create a custom OTP input component for better Android compatibility
+const CustomOTPInput = ({
+    pinCount = 6,
+    onCodeChanged,
+    onCodeFilled,
+    autoFocus = false
+}) => {
+    const [code, setCode] = useState('');
+    const inputRef = useRef(null);
+
+    const handleChange = (text) => {
+        // Only allow digits and limit to pinCount
+        const formattedText = text.replace(/[^0-9]/g, '').slice(0, pinCount);
+        setCode(formattedText);
+        onCodeChanged?.(formattedText);
+
+        if (formattedText.length === pinCount) {
+            onCodeFilled?.(formattedText);
+        }
+    };
+
+    // Generate digit boxes
+    const renderDigits = () => {
+        const digits = [];
+        for (let i = 0; i < pinCount; i++) {
+            const digit = code[i] || '';
+            digits.push(
+                <View
+                    key={i}
+                    style={{
+                        width: 50,
+                        height: 55,
+                        borderWidth: 1,
+                        borderColor: "#E5E7EB",
+                        borderRadius: 10,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginHorizontal: 4,
+                        backgroundColor: 'white',
+                        borderColor: i < code.length ? "#9A563A" : "#E5E7EB",
+                    }}
+                >
+                    <Text style={{ fontSize: 20, color: "#1F2937" }}>{digit}</Text>
+                </View>
+            );
+        }
+        return digits;
+    };
+
+    return (
+        <View style={{ width: '100%', height: 80 }}>
+            <TouchableWithoutFeedback onPress={() => inputRef.current?.focus()}>
+                <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
+                    {renderDigits()}
+                    <TextInput
+                        ref={inputRef}
+                        style={{
+                            position: 'absolute',
+                            opacity: 0,
+                            width: 1,
+                            height: 1
+                        }}
+                        value={code}
+                        onChangeText={handleChange}
+                        maxLength={pinCount}
+                        keyboardType="number-pad"
+                        autoFocus={autoFocus}
+                    />
+                </View>
+            </TouchableWithoutFeedback>
+        </View>
+    );
+};
 
 export default function ResetVerification() {
     const router = useRouter();
@@ -34,10 +105,6 @@ export default function ResetVerification() {
     const [isLoading, setIsLoading] = useState(false);
     const [resendLoading, setResendLoading] = useState(false);
     const [countdown, setCountdown] = useState(0);
-
-    // Create ref with correct type
-    const otpInputRef = useRef<OTPRef>(null);
-    const [showOTP, setShowOTP] = useState(false);
 
     // Load email from storage
     useEffect(() => {
@@ -61,23 +128,7 @@ export default function ResetVerification() {
         };
 
         getEmail();
-
-        // First, delay rendering the OTP component to ensure focus works
-        setTimeout(() => {
-            setShowOTP(true);
-        }, 100);
     }, []);
-
-    // Focus on OTP input
-    useEffect(() => {
-        setTimeout(() => {
-            // Using any type as a workaround for TypeScript error
-            const input = otpInputRef.current as any;
-            if (input && typeof input.focusField === 'function') {
-                input.focusField(0);
-            }
-        }, 500);
-    }, [showOTP]);
 
     // Countdown timer for resend function
     useEffect(() => {
@@ -152,11 +203,7 @@ export default function ResetVerification() {
             console.log('Resend response:', response.data);
             Alert.alert('Success', 'A new verification code has been sent to your email');
 
-            // Reset OTP input
-            const input = otpInputRef.current as any;
-            if (input && typeof input.clearAllFields === 'function') {
-                input.clearAllFields();
-            }
+            // Reset code
             setCode('');
 
             // Start countdown for 60 seconds
@@ -220,31 +267,13 @@ export default function ResetVerification() {
                                         <Text className='text-primary text-center font-semibold mb-6'>{email}</Text>
                                     ) : null}
 
-                                    {/* OTP Input */}
-                                    {showOTP && (
-                                        <OTPInputView
-                                            ref={otpInputRef}
-                                            pinCount={6}
-                                            autoFocusOnLoad={false}
-                                            style={{width: "100%", height: 80}}
-                                            codeInputFieldStyle={{
-                                                width: 55,
-                                                height: 55,
-                                                borderWidth: 1,
-                                                borderColor: "#E5E7EB",
-                                                borderRadius: 10,
-                                                fontSize: 20,
-                                                textAlign: "center",
-                                                color: "#1F2937",
-                                            }}
-                                            codeInputHighlightStyle={{
-                                                borderColor: "#9A563A",
-                                            }}
-                                            onCodeFilled={(code) => {
-                                                setCode(code);
-                                            }}
-                                        />
-                                    )}
+                                    {/* Custom OTP Input */}
+                                    <CustomOTPInput
+                                        pinCount={6}
+                                        onCodeChanged={setCode}
+                                        onCodeFilled={setCode}
+                                        autoFocus={true}
+                                    />
 
                                     {/* Resend code button */}
                                     <View className="w-full items-center my-4">
