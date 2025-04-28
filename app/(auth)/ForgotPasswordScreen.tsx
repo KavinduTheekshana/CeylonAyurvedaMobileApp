@@ -125,10 +125,15 @@ export default function ForgotPassword() {
                                         <TextInput
                                             placeholder="Email"
                                             keyboardType="email-address"
-                                            className='flex-1 text-base text-black mb-0.5'
+                                            className='flex-1 text-black mb-0.5'
                                             onFocus={() => setEmailFocus(true)}
                                             onBlur={() => setEmailFocus(false)}
                                             placeholderTextColor="gray"
+                                            style={{
+                                                height: Platform.OS === 'ios' ? 24 : 'auto', // Fixed height for iOS
+                                                paddingVertical: Platform.OS === 'ios' ? 0 : 2, // Remove padding on iOS
+                                                paddingBottom: Platform.OS === 'ios' ? 2 : 2, // Add small bottom padding on iOS
+                                            }}
                                             value={email}
                                             onChangeText={setEmail}
                                         />

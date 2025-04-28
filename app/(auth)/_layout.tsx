@@ -10,6 +10,7 @@ export default function RootLayout() {
         <Stack.Screen name="LoginScreen" options={{headerShown:false}}/>
         <Stack.Screen name="RegisterScreen" options={{headerShown:false}}/>
       <Stack.Screen name="VerifyScreen" options={{headerShown:false}}/>
+      <Stack.Screen name="ForgotPasswordScreen" options={{headerShown:false}}/>
     </Stack>
   );
 }

@@ -169,8 +169,13 @@ const RegisterScreen = () => {
                                         <TextInput
                                             placeholder="Full Name"
                                             keyboardType="default"
-                                            className='flex-1 text-base text-black mb-0.5'
+                                            className='flex-1 text-black mb-0.5'
                                             onFocus={() => setNameFocus(true)}
+                                            style={{
+                                                height: Platform.OS === 'ios' ? 24 : 'auto', // Fixed height for iOS
+                                                paddingVertical: Platform.OS === 'ios' ? 0 : 2, // Remove padding on iOS
+                                                paddingBottom: Platform.OS === 'ios' ? 2 : 2, // Add small bottom padding on iOS
+                                            }}
                                             onBlur={() => setNameFocus(false)}
                                             placeholderTextColor="gray"
                                             value={name}
@@ -191,8 +196,13 @@ const RegisterScreen = () => {
                                         <TextInput
                                             placeholder="Email"
                                             keyboardType="email-address"
-                                            className='flex-1 text-base text-black mb-0.5'
+                                            className='flex-1 text-black mb-0.5'
                                             onFocus={() => setEmailFocus(true)}
+                                            style={{
+                                                height: Platform.OS === 'ios' ? 24 : 'auto', // Fixed height for iOS
+                                                paddingVertical: Platform.OS === 'ios' ? 0 : 2, // Remove padding on iOS
+                                                paddingBottom: Platform.OS === 'ios' ? 2 : 2, // Add small bottom padding on iOS
+                                            }}
                                             onBlur={() => setEmailFocus(false)}
                                             placeholderTextColor="gray"
                                             value={email}
@@ -213,9 +223,14 @@ const RegisterScreen = () => {
                                         <TextInput
                                             placeholder="Password"
                                             secureTextEntry={!showPassword}
-                                            className='flex-1 text-base text-black mb-0.5'
+                                            className='flex-1 text-black mb-0.5'
                                             onFocus={() => setPasswordFocus(true)}
                                             onBlur={() => setPasswordFocus(false)}
+                                            style={{
+                                                height: Platform.OS === 'ios' ? 24 : 'auto', // Fixed height for iOS
+                                                paddingVertical: Platform.OS === 'ios' ? 0 : 2, // Remove padding on iOS
+                                                paddingBottom: Platform.OS === 'ios' ? 2 : 2, // Add small bottom padding on iOS
+                                            }}
                                             placeholderTextColor="gray"
                                             value={password}
                                             onChangeText={setPassword}
@@ -242,10 +257,15 @@ const RegisterScreen = () => {
                                         <TextInput
                                             placeholder="Confirm password"
                                             secureTextEntry={!showPassword}
-                                            className='flex-1 text-base text-black mb-0.5'
+                                            className='flex-1 text-black mb-0.5'
                                             onFocus={() => setPasswordConfirmationFocus(true)}
                                             onBlur={() => setPasswordConfirmationFocus(false)}
                                             placeholderTextColor="gray"
+                                            style={{
+                                                height: Platform.OS === 'ios' ? 24 : 'auto', // Fixed height for iOS
+                                                paddingVertical: Platform.OS === 'ios' ? 0 : 2, // Remove padding on iOS
+                                                paddingBottom: Platform.OS === 'ios' ? 2 : 2, // Add small bottom padding on iOS
+                                            }}
                                             value={confirmPassword}
                                             onChangeText={setConfirmPassword}
                                         />
