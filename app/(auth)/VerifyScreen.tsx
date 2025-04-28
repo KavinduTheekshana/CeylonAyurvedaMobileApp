@@ -1,49 +1,143 @@
 import {
     View,
     Text,
-    Dimensions,
-    SafeAreaView,
-    TextInput,
     TouchableOpacity,
-    Image,
     Keyboard,
     TouchableWithoutFeedback,
     Platform,
     KeyboardAvoidingView,
     ScrollView,
     Alert,
-    ActivityIndicator
+    ActivityIndicator,
+    TextInput
 } from 'react-native';
 import React, {useEffect, useRef, useState} from 'react';
 import {useRouter} from "expo-router";
 import {SafeAreaProvider} from "react-native-safe-area-context";
-import {Feather, FontAwesome} from "@expo/vector-icons";
+import {FontAwesome} from "@expo/vector-icons";
 import TopRightImage from "@/app/components/TopRightImage";
 import BottomLeftImage from "@/app/components/BottomLeftImage";
-import Logo from "@/app/components/Logo";
 import {useNavigation} from '@react-navigation/native';
-import OTPInputView from "@twotalltotems/react-native-otp-input/dist";
-import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {API_BASE_URL} from '@/config/api';
+import axios from 'axios';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-// Import the OTPInputView type from the library
-type OTPRef = OTPInputView;
+// Interface for OTPInputRef
+interface OTPInputRef {
+    clearAllFields: () => void;
+    focusField: (index: number) => void;
+}
+
+// Interface for OTPInput props
+interface OTPInputProps {
+    pinCount: number;
+    onCodeFilled: (code: string) => void;
+    autoFocus?: boolean;
+}
+
+// Custom OTP Input component
+const OTPInput = React.forwardRef<OTPInputRef, OTPInputProps>(({
+    pinCount = 6,
+    onCodeFilled,
+    autoFocus = false
+}, ref) => {
+    const [code, setCode] = useState<string[]>(Array(pinCount).fill(''));
+    const inputRefs = useRef<Array<React.RefObject<TextInput>>>([]);
+
+    // Initialize refs array
+    useEffect(() => {
+        inputRefs.current = Array(pinCount).fill(0).map((_, i) =>
+            inputRefs.current[i] || React.createRef<TextInput>()
+        );
+
+        // Auto focus on first input if needed
+        if (autoFocus && inputRefs.current[0]?.current) {
+            setTimeout(() => {
+                inputRefs.current[0].current?.focus();
+            }, 500);
+        }
+    }, []);
+
+    const handleChange = (text: string, index: number) => {
+        // Update the code array
+        const newCode = [...code];
+        newCode[index] = text;
+        setCode(newCode);
+
+        // Callback when all digits are filled
+        if (newCode.every(digit => digit !== '') && onCodeFilled) {
+            onCodeFilled(newCode.join(''));
+        }
+
+        // Auto advance to next input
+        if (text && index < pinCount - 1) {
+            inputRefs.current[index + 1].current?.focus();
+        }
+    };
+
+    const handleKeyPress = (e: any, index: number) => {
+        // Handle backspace
+        if (e.nativeEvent.key === 'Backspace' && !code[index] && index > 0) {
+            inputRefs.current[index - 1].current?.focus();
+        }
+    };
+
+    // Exposing methods similar to the original component
+    React.useImperativeHandle(ref, () => ({
+        clearAllFields: () => {
+            setCode(Array(pinCount).fill(''));
+            inputRefs.current[0].current?.focus();
+        },
+        focusField: (index: number) => {
+            if (index >= 0 && index < pinCount) {
+                inputRefs.current[index].current?.focus();
+            }
+        }
+    }));
+
+    return (
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginVertical: 10 }}>
+            {Array(pinCount).fill(0).map((_, index) => (
+                <TextInput
+                    key={index}
+                    ref={inputRefs.current[index]}
+                    style={{
+                        width: 45,
+                        height: 55,
+                        borderWidth: 1,
+                        borderColor: code[index] ? "#9A563A" : "#E5E7EB",
+                        borderRadius: 10,
+                        fontSize: 20,
+                        textAlign: "center",
+                        color: "#1F2937",
+                    }}
+                    keyboardType="number-pad"
+                    maxLength={1}
+                    value={code[index]}
+                    onChangeText={(text) => handleChange(text, index)}
+                    onKeyPress={(e) => handleKeyPress(e, index)}
+                    selectionColor="#9A563A"
+                />
+            ))}
+        </View>
+    );
+});
 
 export default function Verify() {
     const router = useRouter();
     const navigation = useNavigation();
 
     // State variables
-    const [email, setEmail] = useState('');
-    const [code, setCode] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [resendLoading, setResendLoading] = useState(false);
-    const [countdown, setCountdown] = useState(0);
+    const [email, setEmail] = useState<string>('');
+    const [code, setCode] = useState<string>('');
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [resendLoading, setResendLoading] = useState<boolean>(false);
+    const [countdown, setCountdown] = useState<number>(0);
 
-    // Create ref with correct type
-    const otpInputRef = useRef<OTPRef>(null);
-    const [showOTP, setShowOTP] = useState(false);
+    // Create ref for OTP input
+    const otpInputRef = useRef<OTPInputRef>(null);
+    const [showOTP, setShowOTP] = useState<boolean>(false);
 
     // Load email from storage
     useEffect(() => {
@@ -76,14 +170,13 @@ export default function Verify() {
 
     // Focus on OTP input
     useEffect(() => {
-        setTimeout(() => {
-            // Using any type as a workaround for TypeScript error
-            // This won't affect functionality
-            const input = otpInputRef.current as any;
-            if (input && typeof input.focusField === 'function') {
-                input.focusField(0);
-            }
-        }, 500);
+        if (showOTP && otpInputRef.current) {
+            setTimeout(() => {
+                if (otpInputRef.current) {
+                    otpInputRef.current.focusField(0);
+                }
+            }, 500);
+        }
     }, [showOTP]);
 
     // Countdown timer for resend function
@@ -175,10 +268,8 @@ export default function Verify() {
             Alert.alert('Success', 'A new verification code has been sent to your email');
 
             // Reset OTP input
-            // Using any as a safe workaround
-            const input = otpInputRef.current as any;
-            if (input && typeof input.clearAllFields === 'function') {
-                input.clearAllFields();
+            if (otpInputRef.current) {
+                otpInputRef.current.clearAllFields();
             }
             setCode('');
 
@@ -206,13 +297,13 @@ export default function Verify() {
             onPress={Keyboard.dismiss}
             accessible={false}
         >
-            <View className='flex-1 px-6 pt-10 bg-[#FAFAFA]'>
+            <View style={{flex: 1, paddingHorizontal: 24, paddingTop: 40, backgroundColor: '#FAFAFA'}}>
                 <TopRightImage/>
                 <SafeAreaProvider>
-                    <SafeAreaView className='flex-1 justify-center px-6 pt-10'>
+                    <SafeAreaView style={{flex: 1, justifyContent: 'center', paddingHorizontal: 24, paddingTop: 40}}>
                         <KeyboardAvoidingView
                             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                            className='flex-1'
+                            style={{flex: 1}}
                             keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
                         >
                             <ScrollView
@@ -221,9 +312,17 @@ export default function Verify() {
                                 showsVerticalScrollIndicator={false}
                                 showsHorizontalScrollIndicator={false}
                             >
-                                <View className='flex-1 justify-center items-center'>
+                                <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
                                     <View
-                                        className='w-[52] rounded-[12px] h-[52] mb-10 bg-primary justify-center items-center'>
+                                        style={{
+                                            width: 52,
+                                            height: 52,
+                                            borderRadius: 12,
+                                            marginBottom: 40,
+                                            backgroundColor: '#9A563A',
+                                            justifyContent: 'center',
+                                            alignItems: 'center'
+                                        }}>
                                         <FontAwesome
                                             name="envelope"
                                             size={28}
@@ -231,78 +330,82 @@ export default function Verify() {
                                         />
                                     </View>
 
-                                    <Text className='text-2xl font-bold text-center text-black mt-[-10px]'>Verify
-                                        Your Email</Text>
-                                    <Text className='text-gray-500 text-center mt-3 mb-6'>To verify your account,
-                                        enter the 6 digit OTP code that we sent to your email.</Text>
+                                    <Text style={{fontSize: 24, fontWeight: 'bold', textAlign: 'center', color: 'black', marginTop: -10}}>
+                                        Verify Your Email
+                                    </Text>
+                                    <Text style={{color: '#6B7280', textAlign: 'center', marginTop: 12, marginBottom: 24}}>
+                                        To verify your account, enter the 6 digit OTP code that we sent to your email.
+                                    </Text>
 
                                     {/* Display email being verified */}
                                     {email ? (
-                                        <Text className='text-primary text-center font-semibold mb-6'>{email}</Text>
+                                        <Text style={{color: '#9A563A', textAlign: 'center', fontWeight: '600', marginBottom: 24}}>
+                                            {email}
+                                        </Text>
                                     ) : null}
 
-                                    {/* OTP Input */}
+                                    {/* Custom OTP Input */}
                                     {showOTP && (
-                                        <OTPInputView
+                                        <OTPInput
                                             ref={otpInputRef}
                                             pinCount={6}
-                                            autoFocusOnLoad={false}
-                                            style={{width: "100%", height: 80}}
-                                            codeInputFieldStyle={{
-                                                width: 55,
-                                                height: 55,
-                                                borderWidth: 1,
-                                                borderColor: "#E5E7EB",
-                                                borderRadius: 10,
-                                                fontSize: 20,
-                                                textAlign: "center",
-                                                color: "#1F2937",
-                                            }}
-                                            codeInputHighlightStyle={{
-                                                borderColor: "#9A563A",
-                                            }}
-                                            onCodeFilled={(code) => {
-                                                setCode(code);
+                                            autoFocus={true}
+                                            onCodeFilled={(newCode) => {
+                                                setCode(newCode);
                                             }}
                                         />
                                     )}
 
                                     {/* Resend code button */}
-                                    <View className="w-full items-center my-4">
+                                    <View style={{width: '100%', alignItems: 'center', marginVertical: 16}}>
                                         {countdown > 0 ? (
-                                            <Text className="text-gray-500">Resend code in {countdown}s</Text>
+                                            <Text style={{color: '#6B7280'}}>
+                                                Resend code in {countdown}s
+                                            </Text>
                                         ) : (
                                             <TouchableOpacity
                                                 onPress={handleResendCode}
                                                 disabled={resendLoading}
-                                                className="py-2"
+                                                style={{paddingVertical: 8}}
                                             >
                                                 {resendLoading ? (
                                                     <ActivityIndicator size="small" color="#9A563A" />
                                                 ) : (
-                                                    <Text className="text-primary font-medium">Resend Code</Text>
+                                                    <Text style={{color: '#9A563A', fontWeight: '500'}}>
+                                                        Resend Code
+                                                    </Text>
                                                 )}
                                             </TouchableOpacity>
                                         )}
                                     </View>
 
-                                    <View className="absolute bottom-6 left-0 right-0 px-4 z-20">
+                                    <View style={{position: 'absolute', bottom: 24, left: 0, right: 0, paddingHorizontal: 16, zIndex: 20}}>
                                         {/* Verify Button */}
                                         <TouchableOpacity
-                                            className="bg-primary py-4 items-center rounded-[14px]"
+                                            style={{
+                                                backgroundColor: '#9A563A',
+                                                paddingVertical: 16,
+                                                alignItems: 'center',
+                                                borderRadius: 14,
+                                                opacity: isLoading || !code || code.length !== 6 ? 0.7 : 1
+                                            }}
                                             onPress={handleVerify}
                                             disabled={isLoading || !code || code.length !== 6}
                                         >
                                             {isLoading ? (
                                                 <ActivityIndicator color="white" />
                                             ) : (
-                                                <Text className="text-white text-lg font-semibold">Verify</Text>
+                                                <Text style={{color: 'white', fontSize: 18, fontWeight: '600'}}>
+                                                    Verify
+                                                </Text>
                                             )}
                                         </TouchableOpacity>
 
                                         {/* Back Button */}
-                                        <TouchableOpacity onPress={() => router.push('/login')}>
-                                            <Text className='text-black text-center mt-4 mb-3'>Back to Login</Text>
+                                        <TouchableOpacity onPress={() => router.back()}>
+                                            <Text style={{color: 'black', textAlign: 'center', marginTop: 16, marginBottom: 12}}>
+                                                Back to Login
+                                            </Text>
                                         </TouchableOpacity>
                                     </View>
                                 </View>
