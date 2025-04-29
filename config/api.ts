@@ -2,9 +2,9 @@
 
 // Default to production URL
 // let API_BASE_URL = 'https://app.ceylonayurvedahealth.co.uk/api';
-// let API_BASE_URL = 'https://app.ceylonayurvedahealth.co.uk';
+let API_BASE_URL = 'https://app.ceylonayurvedahealth.co.uk';
 // let API_BASE_URL = '192.168.0.30:8000';
-let API_BASE_URL = 'http://192.168.0.135:8000';
+// let API_BASE_URL = 'http://192.168.0.135:8000';
 
 
 
