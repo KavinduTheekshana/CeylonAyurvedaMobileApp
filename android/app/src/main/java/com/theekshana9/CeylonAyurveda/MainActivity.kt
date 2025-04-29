@@ -1,4 +1,4 @@
-package com.theekshana9.CeylonAyurvedaHealth
+package com.theekshana9.CeylonAyurveda
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
