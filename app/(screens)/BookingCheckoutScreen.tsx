@@ -10,7 +10,8 @@ import {
     TextInput,
     Alert,
     KeyboardAvoidingView,
-    Platform
+    Platform,
+    Keyboard
 } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -65,7 +66,7 @@ type RootStackParamList = {
     BookingConfirmationScreen: {
         bookingId: number;
     };
-    AddAddressScreen: undefined; // Add this new screen
+    AddAddressScreen: undefined;
 };
 
 // Type for the route
@@ -133,8 +134,15 @@ const BookingCheckoutScreen = () => {
     }, [navigation, isAuthenticated]);
 
     const checkAuthentication = async () => {
-        const token = await AsyncStorage.getItem('access_token');
-        setIsAuthenticated(!!token);
+        try {
+            const token = await AsyncStorage.getItem('access_token');
+            // Log token retrieval status (helpful for debugging Android issues)
+            console.log('Authentication check - token exists:', !!token);
+            setIsAuthenticated(!!token);
+        } catch (error) {
+            console.error('Error checking authentication:', error);
+            setIsAuthenticated(false);
+        }
     };
 
     const fetchServiceDetails = async () => {
@@ -198,7 +206,8 @@ const BookingCheckoutScreen = () => {
             const response = await fetch(ADDRESS_API_URL, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json' // Added for Android compatibility
                 }
             });
 
@@ -308,10 +317,12 @@ const BookingCheckoutScreen = () => {
         return true;
     };
 
-
     const handleSubmitBooking = async () => {
         if (!validateForm()) return;
         if (!serviceDetails) return;
+
+        // Dismiss keyboard before submission (helps on Android)
+        Keyboard.dismiss();
 
         setSubmitting(true);
 
@@ -339,7 +350,8 @@ const BookingCheckoutScreen = () => {
 
             // Set up request headers
             const headers: Record<string, string> = {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json' // Add Accept header for Android compatibility
             };
 
             // Add auth token if available
@@ -347,17 +359,29 @@ const BookingCheckoutScreen = () => {
                 headers['Authorization'] = `Bearer ${token}`;
                 console.log('Sending request with auth token');
             } else {
-                console.log('No auth token available - addresses will not be bookings');
+                console.log('No auth token available - addresses will not be saved');
             }
 
             console.log('Submitting booking to:', BOOKING_API_URL);
 
-            // Send booking data to the API
+            // Send booking data to the API with timeout for Android
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
             const response = await fetch(BOOKING_API_URL, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(bookingData),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
+
+            // Check for network issues
+            if (!response.ok) {
+                console.error('Server response not ok:', response.status, response.statusText);
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
 
             const data = await response.json();
             console.log('Booking response:', data);
@@ -388,10 +412,19 @@ const BookingCheckoutScreen = () => {
         } catch (error) {
             console.error('Booking submission error:', error);
 
+            // More detailed error handling for Android
+            let errorMessage = 'Network error occurred.';
+
+            if (error instanceof TypeError) {
+                errorMessage = 'Network connection issue. Please check your internet connection.';
+            } else if (error instanceof Error) {
+                errorMessage = error.message;
+            }
+
             // Show error alert but offer test success option in development
             Alert.alert(
                 'Error',
-                'There was an error processing your booking. Would you like to see a test confirmation?',
+                `There was an error processing your booking: ${errorMessage}. Would you like to see a test confirmation?`,
                 [
                     {
                         text: 'Try Again',
@@ -448,11 +481,14 @@ const BookingCheckoutScreen = () => {
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 40}
         >
             <SafeAreaView style={styles.container}>
-                <ScrollView style={styles.content}>
+                <ScrollView
+                    style={styles.content}
+                    keyboardShouldPersistTaps="handled" // Important for Android
+                >
                     <Text style={styles.title}>Booking Summary</Text>
 
                     {/* Service Details */}
@@ -558,6 +594,7 @@ const BookingCheckoutScreen = () => {
                                 value={name}
                                 onChangeText={setName}
                                 placeholder="Enter your full name"
+                                returnKeyType="next"
                             />
                         </View>
 
@@ -570,6 +607,7 @@ const BookingCheckoutScreen = () => {
                                 placeholder="Enter your email"
                                 keyboardType="email-address"
                                 autoCapitalize="none"
+                                returnKeyType="next"
                             />
                         </View>
 
@@ -581,6 +619,7 @@ const BookingCheckoutScreen = () => {
                                 onChangeText={setPhone}
                                 placeholder="Enter your phone number"
                                 keyboardType="phone-pad"
+                                returnKeyType="next"
                             />
                         </View>
                     </View>
@@ -597,6 +636,7 @@ const BookingCheckoutScreen = () => {
                                     value={addressLine1}
                                     onChangeText={setAddressLine1}
                                     placeholder="Street address, house number"
+                                    returnKeyType="next"
                                 />
                             </View>
 
@@ -607,6 +647,7 @@ const BookingCheckoutScreen = () => {
                                     value={addressLine2}
                                     onChangeText={setAddressLine2}
                                     placeholder="Apartment, suite, unit, etc. (optional)"
+                                    returnKeyType="next"
                                 />
                             </View>
 
@@ -617,6 +658,7 @@ const BookingCheckoutScreen = () => {
                                     value={city}
                                     onChangeText={setCity}
                                     placeholder="City"
+                                    returnKeyType="next"
                                 />
                             </View>
 
@@ -628,6 +670,7 @@ const BookingCheckoutScreen = () => {
                                     onChangeText={setPostcode}
                                     placeholder="Postcode"
                                     autoCapitalize="characters"
+                                    returnKeyType="done"
                                 />
                             </View>
 
@@ -655,6 +698,7 @@ const BookingCheckoutScreen = () => {
                             placeholder="Any special requirements or information for your treatment"
                             multiline
                             numberOfLines={4}
+                            returnKeyType="done"
                         />
                     </View>
 
@@ -666,6 +710,9 @@ const BookingCheckoutScreen = () => {
                             <Text style={styles.totalValue}>£{serviceDetails.price}</Text>
                         </View>
                     </View>
+
+                    {/* Add extra padding at bottom to ensure content is visible when keyboard is open */}
+                    <View style={{height: Platform.OS === 'android' ? 100 : 20}} />
                 </ScrollView>
 
                 <View style={styles.footer}>
@@ -685,6 +732,7 @@ const BookingCheckoutScreen = () => {
         </KeyboardAvoidingView>
     );
 };
+
 
 const styles = StyleSheet.create({
     container: {

@@ -69,7 +69,7 @@ const TreatmentsScreen = () => {
   }
 
   return (
-      <View className="flex-1 p-4 mb-12 bg-gray-100">
+      <View className="flex-1 p-4 mb-20 bg-gray-100">
         <Text className="w-full text-3xl pb-3 text-black font-bold">
           Treatments
         </Text>
