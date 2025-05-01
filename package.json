@@ -47,6 +47,7 @@
     "react-native-css-interop": "^0.1.22",
     "react-native-gesture-handler": "~2.20.2",
     "react-native-otp-inputs": "^7.4.0",
+    "react-native-permissions": "^5.4.0",
     "react-native-reanimated": "^3.16.2",
     "react-native-safe-area-context": "^4.14.1",
     "react-native-screens": "~4.4.0",

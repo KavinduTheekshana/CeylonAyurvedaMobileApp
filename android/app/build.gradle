@@ -86,9 +86,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.theekshana9.CeylonAyurveda'
+    namespace 'com.theekshana9.CeylonAyurvedaHealthUk'
     defaultConfig {
-        applicationId 'com.theekshana9.CeylonAyurveda'
+        applicationId 'com.theekshana9.CeylonAyurvedaHealthUk'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

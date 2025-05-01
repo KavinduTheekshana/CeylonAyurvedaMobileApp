@@ -17,6 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.theekshana9.CeylonAyurveda",
       "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "CeylonAyurveda needs access to your photo library to allow you to select and upload a profile picture for your account.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "config": {
@@ -28,7 +29,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.theekshana9.CeylonAyurveda"
+      "package": "com.theekshana9.CeylonAyurvedaHealthUk"
     },
     "web": {
       "bundler": "metro",

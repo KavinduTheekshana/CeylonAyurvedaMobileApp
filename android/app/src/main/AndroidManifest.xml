@@ -29,6 +29,7 @@
         <data android:scheme="com.theekshana9.CeylonAyurvedaHealth"/>
         <data android:scheme="exp+ceylonayurveda"/>
         <data android:scheme="com.theekshana9.CeylonAyurveda"/>
+        <data android:scheme="com.theekshana9.CeylonAyurvedaHealthUk"/>
       </intent-filter>
     </activity>
   </application>
