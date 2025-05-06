@@ -176,6 +176,9 @@ export default function Login() {
           "session_expiry",
           expirationDate.toISOString()
         );
+        
+        // Set user mode to logged in
+        await AsyncStorage.setItem("user_mode", "logged_in");
 
         // Navigate to home or dashboard
         router.replace("/(tabs)");
@@ -213,6 +216,31 @@ export default function Login() {
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Handle continue as guest
+  const handleContinueAsGuest = async (): Promise<void> => {
+    try {
+      // Clear any existing user data just to be safe
+      await AsyncStorage.removeItem("access_token");
+      await AsyncStorage.removeItem("user_id");
+      await AsyncStorage.removeItem("user_name");
+      await AsyncStorage.removeItem("user_email");
+      
+      // Set user mode to guest
+      await AsyncStorage.setItem("user_mode", "guest");
+      
+      // Set a temporary guest session (1 day)
+      const expirationDate = new Date();
+      expirationDate.setDate(expirationDate.getDate() + 1);
+      await AsyncStorage.setItem("session_expiry", expirationDate.toISOString());
+      
+      // Navigate to home
+      router.replace("/(tabs)");
+    } catch (error) {
+      console.error("Error continuing as guest:", error);
+      Alert.alert("Error", "Failed to continue as guest. Please try again.");
     }
   };
 
@@ -367,6 +395,16 @@ export default function Login() {
                         Login Account
                       </Text>
                     )}
+                  </TouchableOpacity>
+
+                  {/* Continue as guest */}
+                  <TouchableOpacity
+                    className="bg-white border border-[#9A563A] mt-4 py-5 items-center rounded-[14px]"
+                    onPress={handleContinueAsGuest}
+                  >
+                    <Text className="text-[#9A563A] text-lg font-semibold">
+                      Continue as Guest
+                    </Text>
                   </TouchableOpacity>
 
                   {/* Register Link */}

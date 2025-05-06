@@ -402,7 +402,7 @@ import {
 
     return (
       <SafeAreaProvider>
-        <SafeAreaView className="flex-1 bg-[#FAFAFA]">
+        <SafeAreaView className="flex-1 bg-[#FAFAFA] mb-20">
           {/* Content */}
           {loading ? (
             <View className="flex-1 justify-center items-center">

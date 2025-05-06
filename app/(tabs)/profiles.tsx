@@ -1,4 +1,3 @@
-// ProfileScreen.tsx - With useFocusEffect and pull-to-refresh
 import React, { useState, useCallback, useRef } from 'react';
 import {
     SafeAreaView,
@@ -23,15 +22,16 @@ import {
 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
-import axios from 'axios'; // Make sure axios is installed
+import axios from 'axios';
 import { API_BASE_URL } from '@/config/api';
+import GuestProfileHeader from '../components/GuestProfileHeader';
 
 // Define TypeScript interfaces
 interface UserData {
     id: string;
     name: string;
     email: string;
-    profile_photo_path?: string; // Updated to match database schema
+    profile_photo_path?: string;
 }
 
 interface MenuItem {
@@ -41,11 +41,13 @@ interface MenuItem {
     isBold?: boolean;
     color?: string;
     onPress?: () => void;
+    visibleForGuest?: boolean;
 }
 
 interface MenuSection {
     title: string;
     items: MenuItem[];
+    visibleForGuest?: boolean;
 }
 
 export default function ProfileScreen() {
@@ -58,28 +60,38 @@ export default function ProfileScreen() {
     });
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [refreshing, setRefreshing] = useState<boolean>(false);
-    // Define default avatar as a number (the way require works in RN)
-    const defaultAvatar = require('../../assets/images/default-avatar.jpg');
-
+    const [isGuest, setIsGuest] = useState<boolean>(false);
+    
     // States for delete account modal
     const [deleteModalVisible, setDeleteModalVisible] = useState<boolean>(false);
     const [password, setPassword] = useState<string>('');
     const [isDeleting, setIsDeleting] = useState<boolean>(false);
     const [passwordError, setPasswordError] = useState<string>('');
 
-    // API URL from environment variables or hardcoded for now
-    // const API_URL = process.env.API_URL || 'https://your-api-url.com/api';
+    // Define default avatar as a number (the way require works in RN)
+    const defaultAvatar = require('../../assets/images/default-avatar.jpg');
 
     // Function to load user data
     const loadUserData = async (): Promise<void> => {
         try {
             setIsLoading(true);
 
+            // Check if user is in guest mode
+            const userMode = await AsyncStorage.getItem('user_mode');
+            setIsGuest(userMode === 'guest');
+            
+            if (userMode === 'guest') {
+                // No need to load user data for guest
+                setIsLoading(false);
+                setRefreshing(false);
+                return;
+            }
+
             // Get individual user data items
             const userId = await AsyncStorage.getItem('user_id') || '';
             const userName = await AsyncStorage.getItem('user_name') || '';
             const userEmail = await AsyncStorage.getItem('user_email') || '';
-            const userProfilePhoto = await AsyncStorage.getItem('user_profile_photo_path') || ''; // Updated key
+            const userProfilePhoto = await AsyncStorage.getItem('user_profile_photo_path') || '';
             console.log('Profile photo path:', userProfilePhoto);
 
             // Try to get complete user data as fallback
@@ -122,6 +134,16 @@ export default function ProfileScreen() {
         }, []) // Empty dependency array means this effect runs only when the screen focuses
     );
 
+    // Handle login
+    const handleLogin = (): void => {
+        router.push('/(auth)/LoginScreen');
+    };
+
+    // Handle register
+    const handleRegister = (): void => {
+        router.push('/(auth)/RegisterScreen');
+    };
+
     // Handle logout
     const handleLogout = (): void => {
         Alert.alert(
@@ -150,10 +172,11 @@ export default function ProfileScreen() {
                 'user_id',
                 'user_name',
                 'user_email',
-                'user_profile_photo_path', // Updated key
+                'user_profile_photo_path',
                 'user_phone',
                 'user_data',
-                'session_expiry'
+                'session_expiry',
+                'user_mode'
             ]);
 
             // Navigate to login screen
@@ -162,6 +185,16 @@ export default function ProfileScreen() {
             console.error('Error during logout:', error);
             Alert.alert('Error', 'Failed to logout. Please try again.');
         }
+    };
+
+    // For guests, switch to login screen
+    const handleGuestToLogin = () => {
+        router.push('/(auth)/LoginScreen');
+    };
+
+    // For guests, switch to register screen
+    const handleGuestToRegister = () => {
+        router.push('/(auth)/RegisterScreen');
     };
 
     // Handle Delete Account
@@ -250,34 +283,40 @@ export default function ProfileScreen() {
                     icon: <Feather name="bookmark" size={24} color="#ccc"/>,
                     label: 'Archive Goals',
                     color: "#ccc",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    visibleForGuest: false
                 },
                 {
                     icon: <Feather name="repeat" size={24} color="#ccc"/>,
                     label: 'Link Bank Account',
                     color: "#ccc",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    visibleForGuest: false
                 },
                 {
                     icon: <FontAwesome name="circle-o" size={24} color="#ccc"/>,
                     label: 'Billing & Subscriptions',
                     color: "#ccc",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    visibleForGuest: false
                 },
                 {
                     icon: <FontAwesome name="credit-card" size={24} color="#ccc"/>,
                     label: 'Payment Methods',
                     color: "#ccc",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    visibleForGuest: false
                 },
                 {
                     icon: <Feather name="shield" size={24} color="black"/>,
                     label: 'Account & Security',
                     color: "black",
                     rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
-                    onPress: () => router.push('/SecurityScreen') // Navigate to security screen
+                    onPress: () => router.push('/SecurityScreen'),
+                    visibleForGuest: false
                 },
-            ]
+            ],
+            visibleForGuest: false
         },
         {
             title: 'General',
@@ -286,27 +325,32 @@ export default function ProfileScreen() {
                     icon: <Ionicons name="settings-outline" size={24} color="#ccc"/>,
                     label: 'Preferences',
                     color: "#ccc",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    visibleForGuest: true
                 },
                 {
                     icon: <Ionicons name="eye-outline" size={24} color="#ccc"/>,
                     label: 'App Appearance',
                     color: "#ccc",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    visibleForGuest: true
                 },
                 {
                     icon: <Feather name="help-circle" size={24} color="#ccc"/>,
                     label: 'Help & Support',
                     color: "#ccc",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    visibleForGuest: true
                 },
                 {
                     icon: <AntDesign name="like2" size={24} color="#ccc"/>,
                     label: 'Rate Us',
                     color: "#ccc",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    visibleForGuest: true
                 },
-            ]
+            ],
+            visibleForGuest: true
         }
     ];
 
@@ -333,87 +377,115 @@ export default function ProfileScreen() {
                     />
                 }
             >
-                {/* Profile Header */}
-                <View style={styles.profileHeader}>
-                    <View style={styles.avatarContainer}>
-                        {userData.profile_photo_path ? (
-                            <Image
-                                source={{ uri: userData.profile_photo_path }}
-                                style={styles.avatar}
-                            />
-                        ) : (
-                            <View style={styles.avatar}>
-                                <Feather name="user" size={40} color="black"/>
-                            </View>
-                        )}
-                    </View>
-
-                    {/* PRO Badge */}
-                    <View style={styles.proBadgeContainer}>
-                        <View style={styles.proBadge}>
-                            <Feather name="award" size={18} color="white"/>
-                            <Text style={styles.proBadgeText}>Regular</Text>
-                        </View>
-                    </View>
-
-                    <Text style={styles.userName}>{userData.name || 'User'}</Text>
-                    <Text style={styles.userEmail}>{userData.email || 'email@example.com'}</Text>
-
-                    <TouchableOpacity style={styles.infoButton} onPress={() => router.push('/EditProfileScreen')}>
-                        <Text style={styles.infoButtonText}>Edit Profile</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Menu Sections */}
-                {menuItems.map((section, sectionIndex) => (
-                    <View key={sectionIndex} style={styles.section}>
-                        <Text style={styles.sectionTitle}>{section.title}</Text>
-
-                        {section.items.map((item, itemIndex) => (
-                            <TouchableOpacity
-                                key={itemIndex}
-                                style={[
-                                    styles.menuItem,
-                                    itemIndex === section.items.length - 1 && styles.lastMenuItem
-                                ]}
-                                onPress={item.onPress} // Add this line to handle the press event
-                            >
-                                <View style={styles.menuItemLeft}>
-                                    {item.icon}
-                                    <Text style={[
-                                        styles.menuItemText,
-                                        item.isBold && styles.boldText,
-                                        item.color && {color: item.color}
-                                    ]}>
-                                        {item.label}
-                                    </Text>
+                {/* Profile Header - Different for guests and logged in users */}
+                {isGuest ? (
+                    // Guest profile header
+                    <GuestProfileHeader 
+                        onLogin={handleGuestToLogin}
+                        onRegister={handleGuestToRegister}
+                    />
+                ) : (
+                    // Logged in user profile header
+                    <View style={styles.profileHeader}>
+                        <View style={styles.avatarContainer}>
+                            {userData.profile_photo_path ? (
+                                <Image
+                                    source={{ uri: userData.profile_photo_path }}
+                                    style={styles.avatar}
+                                />
+                            ) : (
+                                <View style={styles.avatar}>
+                                    <Feather name="user" size={40} color="black"/>
                                 </View>
-                                {item.rightIcon}
-                            </TouchableOpacity>
-                        ))}
+                            )}
+                        </View>
+
+                        {/* PRO Badge */}
+                        <View style={styles.proBadgeContainer}>
+                            <View style={styles.proBadge}>
+                                <Feather name="award" size={18} color="white"/>
+                                <Text style={styles.proBadgeText}>Regular</Text>
+                            </View>
+                        </View>
+
+                        <Text style={styles.userName}>{userData.name || 'User'}</Text>
+                        <Text style={styles.userEmail}>{userData.email || 'email@example.com'}</Text>
+
+                        <TouchableOpacity style={styles.infoButton} onPress={() => router.push('/EditProfileScreen')}>
+                            <Text style={styles.infoButtonText}>Edit Profile</Text>
+                        </TouchableOpacity>
                     </View>
-                ))}
+                )}
 
-                {/* Logout and Delete Account Buttons */}
-                <View style={styles.accountActionsContainer}>
-                    {/* Logout Button */}
-                    <TouchableOpacity
-                        style={styles.logoutButton}
-                        onPress={handleLogout}
-                    >
-                        <Text style={styles.logoutText}>Logout</Text>
-                        <Feather name="log-out" size={20} color="#9A563A"/>
-                    </TouchableOpacity>
+                {/* Menu Sections - Filter based on user type */}
+                {menuItems
+                    .filter(section => !isGuest || section.visibleForGuest)
+                    .map((section, sectionIndex) => (
+                        <View key={sectionIndex} style={styles.section}>
+                            <Text style={styles.sectionTitle}>{section.title}</Text>
 
-                    {/* Delete Account Button */}
-                    <TouchableOpacity
-                        style={styles.deleteAccountButton}
-                        onPress={handleDeleteAccount}
-                    >
-                        <Text style={styles.deleteAccountText}>Delete Account</Text>
-                        <Feather name="trash-2" size={20} color="#FF3B30"/>
-                    </TouchableOpacity>
-                </View>
+                            {section.items
+                                .filter(item => !isGuest || item.visibleForGuest)
+                                .map((item, itemIndex) => (
+                                    <TouchableOpacity
+                                        key={itemIndex}
+                                        style={[
+                                            styles.menuItem,
+                                            itemIndex === section.items.filter(it => !isGuest || it.visibleForGuest).length - 1 && styles.lastMenuItem
+                                        ]}
+                                        onPress={item.onPress}
+                                    >
+                                        <View style={styles.menuItemLeft}>
+                                            {item.icon}
+                                            <Text style={[
+                                                styles.menuItemText,
+                                                item.isBold && styles.boldText,
+                                                item.color && {color: item.color}
+                                            ]}>
+                                                {item.label}
+                                            </Text>
+                                        </View>
+                                        {item.rightIcon}
+                                    </TouchableOpacity>
+                                ))}
+                        </View>
+                    ))}
+
+                {/* Logout and Delete Account Buttons for logged in users */}
+                {!isGuest && (
+                    <View style={styles.accountActionsContainer}>
+                        {/* Logout Button */}
+                        <TouchableOpacity
+                            style={styles.logoutButton}
+                            onPress={handleLogout}
+                        >
+                            <Text style={styles.logoutText}>Logout</Text>
+                            <Feather name="log-out" size={20} color="#9A563A"/>
+                        </TouchableOpacity>
+
+                        {/* Delete Account Button */}
+                        <TouchableOpacity
+                            style={styles.deleteAccountButton}
+                            onPress={handleDeleteAccount}
+                        >
+                            <Text style={styles.deleteAccountText}>Delete Account</Text>
+                            <Feather name="trash-2" size={20} color="#FF3B30"/>
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {/* "Exit Guest Mode" Button for guests */}
+                {isGuest && (
+                    <View style={styles.accountActionsContainer}>
+                        <TouchableOpacity
+                            style={styles.logoutButton}
+                            onPress={handleLogout}
+                        >
+                            <Text style={styles.logoutText}>Exit Guest Mode</Text>
+                            <Feather name="log-out" size={20} color="#9A563A"/>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </ScrollView>
 
             {/* Delete Account Modal */}

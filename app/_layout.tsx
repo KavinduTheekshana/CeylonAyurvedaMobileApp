@@ -20,6 +20,7 @@ export default function RootLayout() {
         // Check authentication state
         const token = await AsyncStorage.getItem('access_token');
         const expiry = await AsyncStorage.getItem('session_expiry');
+        const userMode = await AsyncStorage.getItem('user_mode');
 
         // Wait for a short time to ensure splash is visible
         await new Promise(resolve => setTimeout(resolve, 1500));
@@ -27,7 +28,18 @@ export default function RootLayout() {
         // Hide the splash screen
         await SplashScreen.hideAsync();
 
-        // Navigate based on auth state
+        // Guest users are allowed to browse the app
+        if (userMode === 'guest' && expiry) {
+          const expiryDate = new Date(expiry);
+          const now = new Date();
+
+          if (expiryDate > now) {
+            router.replace('/(tabs)');
+            return;
+          }
+        }
+
+        // Logged in users with valid tokens
         if (token && expiry) {
           const expiryDate = new Date(expiry);
           const now = new Date();
@@ -38,6 +50,7 @@ export default function RootLayout() {
           }
         }
 
+        // Default: redirect to auth screen
         router.replace('/(auth)');
       } catch (error) {
         console.error("Error during initialization:", error);

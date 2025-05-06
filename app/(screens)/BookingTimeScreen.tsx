@@ -12,6 +12,7 @@ import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { HeaderBackButton } from '@react-navigation/elements';
 import {API_BASE_URL} from "@/config/api";
+import withAuthGuard from '../components/AuthGuard';
 
 // Define your Service type
 type Service = {
@@ -339,4 +340,5 @@ const styles = StyleSheet.create({
     },
 });
 
-export default BookingTimeScreen;
+// Wrap the component with the AuthGuard
+export default withAuthGuard(BookingTimeScreen);

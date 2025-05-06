@@ -11,6 +11,7 @@ import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { HeaderBackButton } from '@react-navigation/elements';
 import { Calendar } from 'react-native-calendars';
+import withAuthGuard from '../components/AuthGuard';
 
 // Define your Service type
 type Service = {
@@ -187,4 +188,5 @@ const styles = StyleSheet.create({
     },
 });
 
-export default BookingDateScreen;
+// Wrap the component with the AuthGuard
+export default withAuthGuard(BookingDateScreen);

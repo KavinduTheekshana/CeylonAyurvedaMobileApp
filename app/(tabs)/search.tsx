@@ -52,26 +52,14 @@ export default function SearchScreen() {
     const [error, setError] = useState<string | null>(null);
     const [searchFocus, setSearchFocus] = useState<boolean>(false);
 
-    // Function to fetch all services
+    // Function to fetch all services - no auth required
     const fetchServices = async () => {
         setIsLoading(true);
         setError(null);
 
         try {
-            const token = await AsyncStorage.getItem('access_token');
-            if (!token) {
-                navigation.reset({
-                    index: 0,
-                    routes: [{ name: 'Login' }],
-                });
-                return;
-            }
-
-            const response = await axios.get(`${API_BASE_URL}/api/services`, {
-                headers: {
-                    Authorization: `Bearer ${token}`
-                }
-            });
+            // Direct API call without authorization header
+            const response = await axios.get(`${API_BASE_URL}/api/services`);
 
             if (response.data.success) {
                 setServices(response.data.data);
@@ -112,7 +100,9 @@ export default function SearchScreen() {
         setSearchQuery(text);
         handleSearch(text);
     };
+    
     const router = useRouter();
+    
     // Navigate to service detail
     const handleServicePress = (service: Service) => {
         // Create a properly formatted service object with all required fields
@@ -159,7 +149,7 @@ export default function SearchScreen() {
                 )}
                 <View className="flex-row items-center justify-between mt-1.5">
                     {item.price !== null && (
-                        <Text className="text-base font-bold text-primary">${item.price}</Text>
+                        <Text className="text-base font-bold text-primary">£{item.price}</Text>
                     )}
                     {item.duration !== null && (
                         <View className="flex-row items-center">
@@ -174,7 +164,7 @@ export default function SearchScreen() {
 
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <SafeAreaView className="flex-1 bg-[#FAFAFA]">
+            <SafeAreaView className="flex-1 bg-[#FAFAFA] mb-20">
                 <View className="flex-1 px-4 pt-6">
                     {/* Header */}
                     <View className="mb-5 pt-2.5">

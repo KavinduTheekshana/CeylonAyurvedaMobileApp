@@ -14,6 +14,7 @@ import {
     Keyboard
 } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import withAuthGuard from '../components/AuthGuard';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { HeaderBackButton } from '@react-navigation/elements';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -976,4 +977,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default BookingCheckoutScreen;
+export default withAuthGuard(BookingCheckoutScreen);

@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { API_BASE_URL } from "@/config/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import GuestNotification from "../components/GuestNotification";
 
 // Define API endpoint
 const API_URL = `${API_BASE_URL}/api/treatments`;
@@ -26,7 +28,26 @@ const TreatmentsScreen = () => {
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [isGuest, setIsGuest] = useState<boolean>(false);
+  const [showGuestNotification, setShowGuestNotification] = useState<boolean>(false);
   const router = useRouter();
+
+  // Check if user is a guest and show notification
+  useEffect(() => {
+    const checkGuestStatus = async () => {
+      const userMode = await AsyncStorage.getItem('user_mode');
+      const notificationShown = await AsyncStorage.getItem('guest_notification_shown');
+      
+      if (userMode === 'guest' && notificationShown !== 'true') {
+        setIsGuest(true);
+        setShowGuestNotification(true);
+        // Mark notification as shown to avoid showing it again
+        await AsyncStorage.setItem('guest_notification_shown', 'true');
+      }
+    };
+    
+    checkGuestStatus();
+  }, []);
 
   const fetchTreatments = useCallback(() => {
     fetch(API_URL)
@@ -58,6 +79,14 @@ const TreatmentsScreen = () => {
     fetchTreatments();
   }, [fetchTreatments]);
 
+  const handleLogin = () => {
+    router.push('/(auth)/LoginScreen');
+  };
+
+  const handleDismissNotification = () => {
+    setShowGuestNotification(false);
+  };
+
   if (loading) {
     return (
         <ActivityIndicator
@@ -70,6 +99,14 @@ const TreatmentsScreen = () => {
 
   return (
       <View className="flex-1 p-4 mb-20 bg-gray-100">
+        {/* Guest Notification */}
+        <GuestNotification
+          visible={showGuestNotification}
+          onLogin={handleLogin}
+          onDismiss={handleDismissNotification}
+          message="Login or create an account to book appointments"
+        />
+        
         <Text className="w-full text-3xl pb-3 text-black font-bold">
           Treatments
         </Text>
