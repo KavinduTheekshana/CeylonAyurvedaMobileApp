@@ -132,7 +132,7 @@ const ServicesScreen = () => {
                 )}
                 <View className="flex-row items-center justify-between mt-1.5">
                     {item.price !== null && (
-                        <Text className="text-base font-bold text-primary">${item.price}</Text>
+                        <Text className="text-base font-bold text-primary">£{item.price}</Text>
                     )}
                     {item.duration !== null && (
                         <View className="flex-row items-center">

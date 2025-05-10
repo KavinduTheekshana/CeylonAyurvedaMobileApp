@@ -18,7 +18,7 @@ import withAuthGuard from '../components/AuthGuard';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { HeaderBackButton } from '@react-navigation/elements';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {API_BASE_URL} from "@/config/api";
+import { API_BASE_URL } from "@/config/api";
 
 // Define your Service type
 type Service = {
@@ -497,7 +497,8 @@ const BookingCheckoutScreen = () => {
                         <Text style={styles.sectionTitle}>Service Details</Text>
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Service:</Text>
-                            <Text style={styles.detailValue}>{serviceDetails.title}</Text>
+                            <Text style={styles.detailValue} numberOfLines={2} ellipsizeMode="tail">{serviceDetails.title || 'N/A'}</Text>
+                            {/* <Text style={styles.detailValue}>{serviceDetails.title}</Text> */}
                         </View>
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Duration:</Text>
@@ -713,7 +714,7 @@ const BookingCheckoutScreen = () => {
                     </View>
 
                     {/* Add extra padding at bottom to ensure content is visible when keyboard is open */}
-                    <View style={{height: Platform.OS === 'android' ? 100 : 20}} />
+                    <View style={{ height: Platform.OS === 'android' ? 100 : 20 }} />
                 </ScrollView>
 
                 <View style={styles.footer}>
@@ -814,6 +815,9 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '500',
         color: '#333',
+        flex: 2, // Take up 2 parts of the space
+        flexWrap: 'wrap', // Allow text wrapping
+        textAlign: 'right', // Align text to the right
     },
     totalRow: {
         flexDirection: 'row',

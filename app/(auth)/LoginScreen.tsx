@@ -267,10 +267,10 @@ export default function Login() {
                   {/* Logo */}
                   <Logo />
                   {/* Header text */}
-                  <Text className="text-2xl font-bold text-black mt-[-10px]">
+                  <Text className="text-2xl font-bold text-black mt-[-10px] text-center">
                     Login Account
                   </Text>
-                  <Text className="text-gray-500 mb-6">
+                  <Text className="text-gray-500 mb-6 text-center">
                     Please login into your account
                   </Text>
 

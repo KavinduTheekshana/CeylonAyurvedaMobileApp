@@ -155,10 +155,10 @@ const RegisterScreen = () => {
                   {/*logo*/}
                   <Logo />
                   {/*text*/}
-                  <Text className="text-2xl font-bold text-black  mt-[-10px]">
+                  <Text className="text-2xl font-bold text-black  mt-[-10px] text-center">
                     Registration Account
                   </Text>
-                  <Text className="text-gray-500 mb-6">
+                  <Text className="text-gray-500 mb-6 text-center">
                     Let's create your account first
                   </Text>
 
