@@ -63,11 +63,13 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <Stack>
-      <StatusBar barStyle="dark-content" hidden={false} />
-      <Stack.Screen name="(screens)" options={{ headerShown: false }} />
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-    </Stack>
+    <>
+      <StatusBar barStyle="dark-content" />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(screens)" />
+      </Stack>
+    </>
   );
 }

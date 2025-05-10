@@ -19,6 +19,8 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { HeaderBackButton } from '@react-navigation/elements';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from "@/config/api";
+// Import validation functions
+import { validateDerbyServiceArea, quickDerbyAreaCheck } from '@/utils/locationHelper';
 
 // Define your Service type
 type Service = {
@@ -89,6 +91,7 @@ const BookingCheckoutScreen = () => {
     // States
     const [loading, setLoading] = useState<boolean>(true);
     const [submitting, setSubmitting] = useState<boolean>(false);
+    const [validatingLocation, setValidatingLocation] = useState<boolean>(false);
     const [serviceDetails, setServiceDetails] = useState<Service | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
@@ -325,6 +328,82 @@ const BookingCheckoutScreen = () => {
         // Dismiss keyboard before submission (helps on Android)
         Keyboard.dismiss();
 
+        // If showing address form (not using saved address), validate the postcode
+        if (showAddressForm || selectedAddressId === null) {
+            // First, quick check if postcode might be in Derby area
+            if (!quickDerbyAreaCheck(postcode)) {
+                Alert.alert(
+                    'Service Area Notice',
+                    'This postcode may be outside our service area (5 miles from Derby). Would you like to continue checking?',
+                    [
+                        {
+                            text: 'Cancel',
+                            style: 'cancel'
+                        },
+                        {
+                            text: 'Continue',
+                            onPress: () => performLocationValidation()
+                        }
+                    ]
+                );
+                return;
+            }
+
+            // If quick check passes, do full validation
+            performLocationValidation();
+        } else {
+            // If using a saved address, proceed directly
+            submitBookingData();
+        }
+    };
+
+    const performLocationValidation = async () => {
+        setValidatingLocation(true);
+
+        try {
+            // Validate the postcode is within Derby service area
+            const validationResult = await validateDerbyServiceArea(postcode);
+
+            if (!validationResult.isValid) {
+                Alert.alert(
+                    'Outside Service Area',
+                    validationResult.errorMessage || 'This address is outside our service area (5 miles from Derby).',
+                    [
+                        {
+                            text: 'OK',
+                            style: 'default'
+                        }
+                    ]
+                );
+                setValidatingLocation(false);
+                return;
+            }
+
+            // If validation passes, submit the booking
+            await submitBookingData();
+        } catch (error) {
+            console.error('Location validation error:', error);
+            // If validation fails, give option to continue anyway
+            Alert.alert(
+                'Location Validation Error',
+                'We could not validate the location. Would you like to continue with the booking anyway?',
+                [
+                    {
+                        text: 'Cancel',
+                        style: 'cancel'
+                    },
+                    {
+                        text: 'Continue Anyway',
+                        onPress: () => submitBookingData()
+                    }
+                ]
+            );
+        } finally {
+            setValidatingLocation(false);
+        }
+    };
+
+    const submitBookingData = async () => {
         setSubmitting(true);
 
         // Prepare the booking data to match your backend structure
@@ -498,7 +577,6 @@ const BookingCheckoutScreen = () => {
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Service:</Text>
                             <Text style={styles.detailValue} numberOfLines={2} ellipsizeMode="tail">{serviceDetails.title || 'N/A'}</Text>
-                            {/* <Text style={styles.detailValue}>{serviceDetails.title}</Text> */}
                         </View>
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Duration:</Text>
@@ -630,6 +708,9 @@ const BookingCheckoutScreen = () => {
                     {(showAddressForm || savedAddresses.length === 0) && (
                         <View style={styles.card}>
                             <Text style={styles.sectionTitle}>Address Details</Text>
+                            <Text style={styles.serviceAreaNote}>
+                                We currently service addresses within 5 miles of Derby
+                            </Text>
 
                             <View style={styles.inputGroup}>
                                 <Text style={styles.inputLabel}>Address Line 1 *</Text>
@@ -665,7 +746,7 @@ const BookingCheckoutScreen = () => {
                             </View>
 
                             <View style={styles.inputGroup}>
-                                <Text style={styles.inputLabel}>Postcode *</Text>
+                                <Text style={styles.inputLabel}>Postcode * (Derby area only)</Text>
                                 <TextInput
                                     style={styles.input}
                                     value={postcode}
@@ -721,12 +802,14 @@ const BookingCheckoutScreen = () => {
                     <TouchableOpacity
                         style={styles.confirmButton}
                         onPress={handleSubmitBooking}
-                        disabled={submitting}
+                        disabled={submitting || validatingLocation}
                     >
-                        {submitting ? (
+                        {submitting || validatingLocation ? (
                             <ActivityIndicator color="#fff" />
                         ) : (
-                            <Text style={styles.confirmButtonText}>Confirm Booking</Text>
+                            <Text style={styles.confirmButtonText}>
+                                {validatingLocation ? 'Validating Location...' : 'Confirm Booking'}
+                            </Text>
                         )}
                     </TouchableOpacity>
                 </View>
@@ -800,6 +883,12 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         color: '#333',
     },
+    serviceAreaNote: {
+        fontSize: 14,
+        color: '#666',
+        fontStyle: 'italic',
+        marginBottom: 12,
+    },
     detailRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -815,9 +904,9 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '500',
         color: '#333',
-        flex: 2, // Take up 2 parts of the space
-        flexWrap: 'wrap', // Allow text wrapping
-        textAlign: 'right', // Align text to the right
+        flex: 2,
+        flexWrap: 'wrap',
+        textAlign: 'right',
     },
     totalRow: {
         flexDirection: 'row',

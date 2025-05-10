@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -10,10 +10,10 @@ import {
     Alert,
     Image
 } from 'react-native';
-import {useRoute, RouteProp, useNavigation} from '@react-navigation/native';
-import {StackNavigationProp} from '@react-navigation/stack';
+import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {API_BASE_URL} from "@/config/api";
+import { API_BASE_URL } from "@/config/api";
 
 // Define booking type
 type Booking = {
@@ -59,7 +59,7 @@ type BookingConfirmationScreenNavigationProp = StackNavigationProp<RootStackPara
 const BookingConfirmationScreen = () => {
     const route = useRoute<BookingConfirmationScreenRouteProp>();
     const navigation = useNavigation<BookingConfirmationScreenNavigationProp>();
-    const {bookingId} = route.params;
+    const { bookingId } = route.params;
 
     const [loading, setLoading] = useState<boolean>(true);
     const [booking, setBooking] = useState<Booking | null>(null);
@@ -122,17 +122,56 @@ const BookingConfirmationScreen = () => {
         return new Date(dateString).toLocaleDateString(undefined, options);
     };
 
+    // Alternative formatTime function for 12-hour format with AM/PM
+    const formatTime12Hour = (timeString: string) => {
+        try {
+            let hours: number;
+            let minutes: number;
+
+            // If it's already in HH:MM format
+            if (/^\d{2}:\d{2}$/.test(timeString)) {
+                const [h, m] = timeString.split(':').map(Number);
+                hours = h;
+                minutes = m;
+            }
+            // If it's an ISO date string
+            else if (timeString.includes('T')) {
+                const date = new Date(timeString);
+                hours = date.getUTCHours();
+                minutes = date.getUTCMinutes();
+            }
+            // If it's in HH:MM:SS format
+            else if (/^\d{2}:\d{2}:\d{2}$/.test(timeString)) {
+                const [h, m] = timeString.substring(0, 5).split(':').map(Number);
+                hours = h;
+                minutes = m;
+            }
+            else {
+                return timeString; // Fallback
+            }
+
+            // Convert to 12-hour format
+            const period = hours >= 12 ? 'PM' : 'AM';
+            const displayHours = hours % 12 || 12; // Convert 0 to 12
+
+            return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+        } catch (error) {
+            console.error('Error formatting time:', error);
+            return timeString;
+        }
+    };
+
     const handleReturnHome = () => {
         navigation.reset({
             index: 0,
-            routes: [{name: 'Home'}],
+            routes: [{ name: 'Home' }],
         });
     };
 
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#9A563A"/>
+                <ActivityIndicator size="large" color="#9A563A" />
                 <Text style={styles.loadingText}>Loading booking confirmation...</Text>
             </View>
         );
@@ -168,7 +207,7 @@ const BookingConfirmationScreen = () => {
                         </View>
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Time:</Text>
-                            <Text style={styles.detailValue}>{booking.time}</Text>
+                            <Text style={styles.detailValue}>{formatTime12Hour(booking.time)}</Text>
                         </View>
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Price:</Text>
@@ -271,7 +310,7 @@ const styles = StyleSheet.create({
         padding: 16,
         marginBottom: 16,
         shadowColor: '#000',
-        shadowOffset: {width: 0, height: 1},
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
         elevation: 2,

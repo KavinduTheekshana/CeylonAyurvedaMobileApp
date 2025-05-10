@@ -17,6 +17,8 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { HeaderBackButton } from '@react-navigation/elements';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {API_BASE_URL} from "@/config/api";
+// Fix the import path for locationHelper
+import { validateDerbyServiceArea, quickDerbyAreaCheck } from '@/utils/locationHelper';
 
 // Type for the navigation
 type RootStackParamList = {
@@ -47,6 +49,7 @@ const AddAddressScreen = () => {
     const [postcode, setPostcode] = useState<string>('');
     const [isDefault, setIsDefault] = useState<boolean>(true);
     const [submitting, setSubmitting] = useState<boolean>(false);
+    const [validatingLocation, setValidatingLocation] = useState<boolean>(false);
 
     React.useLayoutEffect(() => {
         navigation.setOptions({
@@ -95,6 +98,76 @@ const AddAddressScreen = () => {
     const handleSaveAddress = async () => {
         if (!validateForm()) return;
 
+        // First, quick check if postcode might be in Derby area
+        if (!quickDerbyAreaCheck(postcode)) {
+            Alert.alert(
+                'Service Area Notice',
+                'This postcode may be outside our service area (5 miles from Derby). Would you like to continue checking?',
+                [
+                    {
+                        text: 'Cancel',
+                        style: 'cancel'
+                    },
+                    {
+                        text: 'Continue',
+                        onPress: () => performLocationValidation()
+                    }
+                ]
+            );
+            return;
+        }
+
+        // If quick check passes, do full validation
+        performLocationValidation();
+    };
+
+    const performLocationValidation = async () => {
+        setValidatingLocation(true);
+
+        try {
+            // Validate the postcode is within Derby service area
+            const validationResult = await validateDerbyServiceArea(postcode);
+
+            if (!validationResult.isValid) {
+                Alert.alert(
+                    'Outside Service Area',
+                    validationResult.errorMessage || 'This address is outside our service area (5 miles from Derby).',
+                    [
+                        {
+                            text: 'OK',
+                            style: 'default'
+                        }
+                    ]
+                );
+                setValidatingLocation(false);
+                return;
+            }
+
+            // If validation passes, save the address
+            await saveAddressToServer();
+        } catch (error) {
+            console.error('Location validation error:', error);
+            // If validation fails, give option to continue anyway
+            Alert.alert(
+                'Location Validation Error',
+                'We could not validate the location. Would you like to save the address anyway?',
+                [
+                    {
+                        text: 'Cancel',
+                        style: 'cancel'
+                    },
+                    {
+                        text: 'Save Anyway',
+                        onPress: () => saveAddressToServer()
+                    }
+                ]
+            );
+        } finally {
+            setValidatingLocation(false);
+        }
+    };
+
+    const saveAddressToServer = async () => {
         setSubmitting(true);
 
         // Prepare the address data
@@ -134,7 +207,7 @@ const AddAddressScreen = () => {
             if (data.success && data.data) {
                 Alert.alert(
                     'Success',
-                    'Address bookings successfully',
+                    'Address saved successfully',
                     [
                         {
                             text: 'OK',
@@ -162,6 +235,9 @@ const AddAddressScreen = () => {
             <SafeAreaView style={styles.container}>
                 <ScrollView style={styles.content}>
                     <Text style={styles.title}>Add New Address</Text>
+                    <Text style={styles.serviceAreaNote}>
+                        We currently service addresses within 5 miles of Derby
+                    </Text>
 
                     <View style={styles.card}>
                         <Text style={styles.sectionTitle}>Personal Information</Text>
@@ -234,7 +310,7 @@ const AddAddressScreen = () => {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Postcode *</Text>
+                            <Text style={styles.inputLabel}>Postcode * (Derby area only)</Text>
                             <TextInput
                                 style={styles.input}
                                 value={postcode}
@@ -260,12 +336,14 @@ const AddAddressScreen = () => {
                     <TouchableOpacity
                         style={styles.saveButton}
                         onPress={handleSaveAddress}
-                        disabled={submitting}
+                        disabled={submitting || validatingLocation}
                     >
-                        {submitting ? (
+                        {submitting || validatingLocation ? (
                             <ActivityIndicator color="#fff" />
                         ) : (
-                            <Text style={styles.saveButtonText}>Save Address</Text>
+                            <Text style={styles.saveButtonText}>
+                                {validatingLocation ? 'Validating Location...' : 'Save Address'}
+                            </Text>
                         )}
                     </TouchableOpacity>
                 </View>
@@ -286,6 +364,12 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 24,
         fontWeight: 'bold',
+        marginBottom: 8,
+    },
+    serviceAreaNote: {
+        fontSize: 14,
+        color: '#666',
+        fontStyle: 'italic',
         marginBottom: 16,
     },
     card: {
