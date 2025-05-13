@@ -12,6 +12,7 @@ import { useRouter } from "expo-router";
 import { API_BASE_URL } from "@/config/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import GuestNotification from "../components/GuestNotification";
+import OffersBadge from "../components/OffersBadge";
 
 // Define API endpoint
 const API_URL = `${API_BASE_URL}/api/treatments`;
@@ -22,6 +23,7 @@ interface Treatment {
   name: string;
   image: string | null;
   description: string;
+  offers: boolean; // Added the offers field
 }
 
 const TreatmentsScreen = () => {
@@ -136,7 +138,7 @@ const TreatmentsScreen = () => {
                           },
                         })
                     }
-                    className="bg-white rounded-[14px] overflow-hidden mb-4 w-[48%] shadow-sm m-1"
+                    className="bg-white rounded-[14px] overflow-hidden mb-4 w-[48%] shadow-sm m-1 relative"
                 >
                   {item.image && (
                       <Image
@@ -144,6 +146,17 @@ const TreatmentsScreen = () => {
                           className="w-full h-[120px] rounded-t-md"
                       />
                   )}
+                  
+                  {/* Offer Badge - Using custom component */}
+                  {item.offers && (
+                    <OffersBadge 
+                      size="small" 
+                      position="topRight"
+                      color="#FF6B6B"
+                      text="Offers Available"
+                    />
+                  )}
+                  
                   <Text className="text-base font-bold mt-1 text-center px-2 py-2">
                     {item.name}
                   </Text>
