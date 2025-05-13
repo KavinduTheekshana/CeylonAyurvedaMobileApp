@@ -1,5 +1,4 @@
-import React, { useEffect } from 'react';
-
+import React, { useEffect, useState } from 'react';
 import {
     View,
     Text,
@@ -7,14 +6,20 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
-    SafeAreaView
+    SafeAreaView,
+    ActivityIndicator,
+    Alert
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { Feather } from "@expo/vector-icons";
-import {HeaderBackButton} from "@react-navigation/elements"; // Import directly where needed
+import { HeaderBackButton } from "@react-navigation/elements";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import AuthRequiredModal from '../components/AuthRequiredModal';
+import { API_BASE_URL } from "@/config/api";
+import BookingProgressBar from '../components/BookingProgressBar';
+import { fetchBookingCountData } from '../utils/booking';
 
-
-// Define your Service type
+// Define your Service type with booking_count added
 type Service = {
     id: number;
     title: string;
@@ -24,12 +29,34 @@ type Service = {
     benefits: string;
     image: string | null;
     description?: string;
+    booking_count?: number;
+    treatment?: {
+        id: number;
+        name: string;
+    };
 };
 
 const ServiceDetailsScreen = () => {
     const router = useRouter();
     const navigation = useNavigation();
     const params = useLocalSearchParams();
+    const [isGuest, setIsGuest] = useState<boolean>(false);
+    const [authModalVisible, setAuthModalVisible] = useState<boolean>(false);
+    const [loading, setLoading] = useState<boolean>(false);
+    const [bookingData, setBookingData] = useState<{count: number, max: number}>({
+        count: 0,
+        max: 80 // Maximum capacity
+    });
+
+    // Check if user is a guest
+    useEffect(() => {
+        const checkUserMode = async () => {
+            const userMode = await AsyncStorage.getItem('user_mode');
+            setIsGuest(userMode === 'guest');
+        };
+        
+        checkUserMode();
+    }, []);
 
     // Parse the service data from the params
     let service: Service;
@@ -61,47 +88,31 @@ const ServiceDetailsScreen = () => {
           throw new Error('Incomplete service data');
         }
 
-          // Set the header title to the service title
-          useEffect(() => {
-             navigation.setOptions({
-                        title: service.title,
-                        headerLeft: () => (
-                            <HeaderBackButton
-                                onPress={() => {
-                                    if (navigation.canGoBack()) {
-                                        navigation.goBack();
-                                    } else {
-                                        navigation.goBack();
-                                    }
-                                }}
-                                tintColor="#000"
-                            />
-                        ),
-                    });
-
-            // if (navigation.setOptions) {
-            //   navigation.setOptions({
-            //     title: service.title,
-            //     headerBackTitle: ' ', // This sets the back button title to empty space on iOS
-            //     // The following options set up a custom back button with just an icon
-            //     headerLeft: () => (
-            //       <TouchableOpacity
-            //         style={{ marginLeft: 10, padding: 5 }}
-            //         onPress={() => router.back()}
-            //       >
-            //         <Feather name="arrow-left" size={24} color="#000" />
-            //       </TouchableOpacity>
-            //     )
-            //   });
-            // }
-          }, [navigation, service.title, router]);
+        // Set the header title to the service title
+        useEffect(() => {
+            navigation.setOptions({
+                title: service.title,
+                headerLeft: () => (
+                    <HeaderBackButton
+                        onPress={() => {
+                            if (navigation.canGoBack()) {
+                                navigation.goBack();
+                            } else {
+                                navigation.goBack();
+                            }
+                        }}
+                        tintColor="#000"
+                    />
+                ),
+            });
+        }, [navigation, service.title, router]);
 
       } catch (e) {
         console.error('Error handling service data:', e);
         return (
           <SafeAreaView style={styles.container}>
             <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>Error loading service details: {e.message}</Text>
+              <Text style={styles.errorText}>Error loading service details: {(e as Error).message}</Text>
               <TouchableOpacity
                 style={styles.backButton}
                 onPress={() => router.back()}>
@@ -112,10 +123,36 @@ const ServiceDetailsScreen = () => {
         );
       }
 
+    // Fetch booking count data
+ useEffect(() => {
+    const loadBookingData = async () => {
+        setLoading(true);
+        try {
+            // Use the utility function that includes fallback logic
+            const bookingData = await fetchBookingCountData(service.id, API_BASE_URL);
+            setBookingData(bookingData);
+        } catch (error) {
+            console.error('Error loading booking data:', error);
+            // The fallback is already handled in fetchBookingCountData
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    loadBookingData();
+}, [service.id]);
+
     // For debugging - check what data we actually have
     console.log('Service details data:', service);
 
     const handleBookNow = () => {
+        // If guest, show auth modal
+        if (isGuest) {
+            setAuthModalVisible(true);
+            return;
+        }
+        
+        // Otherwise, proceed to booking flow
         router.push({
             pathname: "/(screens)/BookingDateScreen",
             params: {
@@ -155,6 +192,20 @@ const ServiceDetailsScreen = () => {
                         </View>
                     </View>
 
+                    {/* Booking Progress Bar */}
+                    <View style={styles.bookingProgressContainer}>
+                        {loading ? (
+                            <ActivityIndicator size="small" color="#9A563A" style={{marginVertical: 20}} />
+                        ) : (
+                            <BookingProgressBar 
+                                current={bookingData.count} 
+                                max={bookingData.max}
+                                label="Booking Popularity" 
+                            />
+                        )}
+                           <Text style={styles.infoLabel}>Once you've completed 80 bookings, one of our team members will get in touch with you. At that point, you'll also have the option to reschedule your booking if needed. For now, just choose a date and time to create your pre booking.</Text>
+                    </View>
+
                     {service.benefits && (
                         <View style={styles.descriptionContainer}>
                             <Text style={styles.descriptionTitle}>Benefits</Text>
@@ -176,6 +227,13 @@ const ServiceDetailsScreen = () => {
                     <Text style={styles.bookButtonText}>Book Now</Text>
                 </TouchableOpacity>
             </View>
+
+            {/* Auth Required Modal */}
+            <AuthRequiredModal
+                visible={authModalVisible}
+                onClose={() => setAuthModalVisible(false)}
+                message="Please login or create an account to book this service"
+            />
         </SafeAreaView>
     );
 };
@@ -247,6 +305,17 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: '600',
         color: '#333',
+    },
+    bookingProgressContainer: {
+        backgroundColor: '#fff',
+        padding: 16,
+        borderRadius: 8,
+        marginBottom: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 1,
     },
     descriptionContainer: {
         backgroundColor: '#fff',
