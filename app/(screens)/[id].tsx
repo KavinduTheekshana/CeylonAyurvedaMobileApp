@@ -117,14 +117,20 @@ const ServicesScreen = () => {
         return <ActivityIndicator size="large" color="#9A563A" className="flex-1 justify-center items-center" />;
     }
 
-    const renderItem = ({ item }: { item: Service }) => (
+    const renderItem = ({ item }: { item: Service }) => {
+        // Check if discount price is zero (accounting for decimal values like 0.00)
+        const isFreeSevice = item.discount_price !== null && 
+                            item.discount_price !== undefined && 
+                            parseFloat(String(item.discount_price)) === 0;
+                            
+        return (
         <TouchableOpacity
-            className="bg-white rounded-[14px] overflow-hidden mb-4 w-[48%] shadow-sm m-1"
-            // style={{ width: itemWidth }}
+            className={`bg-white rounded-[14px] overflow-hidden mb-4 w-[48%] shadow-sm m-1 ${
+                isFreeSevice ? 'bg-green-50 border border-green-200' : ''
+            }`}
             onPress={() => handleServicePress(item)}
         >
             {item.image && <Image source={{ uri: item.image }}   className="w-full h-[120px]" />}
-
 
             <View className="p-3">
                 <Text className="text-base font-semibold text-black mb-1" numberOfLines={1}>{item.title}</Text>
@@ -135,10 +141,14 @@ const ServicesScreen = () => {
                     {/* Price display with discount handling */}
                     <View className="flex-row items-center">
                         {item.discount_price !== null && item.discount_price !== undefined ? (
-                            <>
-                                <Text className="text-base font-bold text-primary">£{item.discount_price}</Text>
-                                <Text className="text-xs text-gray-500 line-through ml-1">£{item.price}</Text>
-                            </>
+                            isFreeSevice ? (
+                                <Text className="text-base font-bold text-green-600">FREE</Text>
+                            ) : (
+                                <>
+                                    <Text className="text-base font-bold text-primary">£{item.discount_price}</Text>
+                                    <Text className="text-xs text-gray-500 line-through ml-1">£{item.price}</Text>
+                                </>
+                            )
                         ) : (
                             <Text className="text-base font-bold text-primary">£{item.price}</Text>
                         )}
@@ -153,6 +163,7 @@ const ServicesScreen = () => {
             </View>
         </TouchableOpacity>
     );
+    };
 
     return (
         <View className="flex-1 p-4 bg-gray-100">

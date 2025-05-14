@@ -182,26 +182,46 @@ const ServiceDetailsScreen = () => {
                     )}
 
                     <View style={styles.infoRow}>
-                        <View style={styles.infoBox}>
-                            <Text style={styles.infoLabel}>Price</Text>
-                            {service.discount_price !== null && service.discount_price !== undefined ? (
-                                <View style={styles.priceContainer}>
-                                    <Text style={styles.discountPrice}>£{service.discount_price}</Text>
-                                    <Text style={styles.originalPrice}>£{service.price}</Text>
-                                </View>
-                            ) : (
-                                <Text style={styles.infoValue}>£{service.price}</Text>
-                            )}
-                        </View>
+                        {(() => {
+                            // Check if discount price is zero (accounting for decimal values like 0.00)
+                            const isFreeService = service.discount_price !== null && 
+                                              service.discount_price !== undefined && 
+                                              parseFloat(String(service.discount_price)) === 0;
+                            
+                            return (
+                                <>
+                                    <View style={[
+                                        styles.infoBox, 
+                                        isFreeService && styles.freeServiceInfoBox
+                                    ]}>
+                                        <Text style={styles.infoLabel}>Price</Text>
+                                        {service.discount_price !== null && service.discount_price !== undefined ? (
+                                            isFreeService ? (
+                                                <Text style={styles.freePrice}>FREE</Text>
+                                            ) : (
+                                                <View style={styles.priceContainer}>
+                                                    <Text style={styles.discountPrice}>£{service.discount_price}</Text>
+                                                    <Text style={styles.originalPrice}>£{service.price}</Text>
+                                                </View>
+                                            )
+                                        ) : (
+                                            <Text style={styles.infoValue}>£{service.price}</Text>
+                                        )}
+                                    </View>
 
-                        <View style={styles.infoBox}>
-                            <Text style={styles.infoLabel}>Duration</Text>
-                            <Text style={styles.infoValue}>{service.duration} min</Text>
-                        </View>
+                                    <View style={styles.infoBox}>
+                                        <Text style={styles.infoLabel}>Duration</Text>
+                                        <Text style={styles.infoValue}>{service.duration} min</Text>
+                                    </View>
+                                </>
+                            );
+                        })()}
                     </View>
 
-                    {/* Booking Progress Bar - Only shown when a discount is available */}
-                    {service.discount_price !== null && service.discount_price !== undefined && (
+                    {/* Booking Progress Bar - Only shown when discount price is 0 (FREE) */}
+                    {service.discount_price !== null && 
+                     service.discount_price !== undefined && 
+                     parseFloat(String(service.discount_price)) === 0 && (
                         <View style={styles.bookingProgressContainer}>
                             {loading ? (
                                 <ActivityIndicator size="small" color="#9A563A" style={{marginVertical: 20}} />
@@ -306,6 +326,11 @@ const styles = StyleSheet.create({
         shadowRadius: 1,
         elevation: 1,
     },
+    freeServiceInfoBox: {
+        backgroundColor: '#E8F5E9', // Light green background
+        borderWidth: 1,
+        borderColor: '#81C784', // Green border
+    },
     infoLabel: {
         fontSize: 12,
         color: '#777',
@@ -330,6 +355,11 @@ const styles = StyleSheet.create({
         textDecorationLine: 'line-through',
         color: '#999',
         marginLeft: 8,
+    },
+    freePrice: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#2E7D32', // Dark green color
     },
     bookingProgressContainer: {
         backgroundColor: '#fff',
