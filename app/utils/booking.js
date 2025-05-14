@@ -1,4 +1,4 @@
-// This function can be added to a utilities file like utils/booking.js
+// utils/booking.js
 
 /**
  * Generates a deterministic but random-looking booking count for a service
@@ -59,3 +59,11 @@ export const fetchBookingCountData = async (serviceId, apiBaseUrl) => {
     };
   }
 };
+
+// Default export for the booking utility module
+const BookingUtils = {
+  generateFallbackBookingCount,
+  fetchBookingCountData
+};
+
+export default BookingUtils;

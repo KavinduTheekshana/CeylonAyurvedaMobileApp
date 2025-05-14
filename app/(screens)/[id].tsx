@@ -9,14 +9,13 @@ import {
     TouchableOpacity,
     StatusBar
 } from 'react-native';
-// import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import ServiceDetailsScreen from './ServiceDetails';
 import {API_BASE_URL} from "@/config/api";
 import {Feather} from "@expo/vector-icons";
 import {RouteProp, useNavigation, useRoute} from "@react-navigation/native";
 import {StackNavigationProp} from "@react-navigation/stack";
 import { useRouter } from 'expo-router';
-import {HeaderBackButton} from "@react-navigation/elements"; // Import directly where needed
+import {HeaderBackButton} from "@react-navigation/elements";
 
 // API URL
 const API_URL = `${API_BASE_URL}/api/services/`;
@@ -29,6 +28,7 @@ type Service = {
     title: string;
     subtitle: string;
     price: number;
+    discount_price?: number | null;
     benefits: string;
     duration: number;
     image: string | null;
@@ -101,6 +101,7 @@ const ServicesScreen = () => {
                     title: service.title,
                     subtitle: service.subtitle || '',
                     price: service.price || 0,
+                    discount_price: service.discount_price || null,
                     duration: service.duration || 0,
                     benefits: service.benefits || '',
                     image: service.image ?
@@ -131,9 +132,17 @@ const ServicesScreen = () => {
                     <Text className="text-sm text-gray-600 mb-2" numberOfLines={1}>{item.subtitle}</Text>
                 )}
                 <View className="flex-row items-center justify-between mt-1.5">
-                    {item.price !== null && (
-                        <Text className="text-base font-bold text-primary">£{item.price}</Text>
-                    )}
+                    {/* Price display with discount handling */}
+                    <View className="flex-row items-center">
+                        {item.discount_price !== null && item.discount_price !== undefined ? (
+                            <>
+                                <Text className="text-base font-bold text-primary">£{item.discount_price}</Text>
+                                <Text className="text-xs text-gray-500 line-through ml-1">£{item.price}</Text>
+                            </>
+                        ) : (
+                            <Text className="text-base font-bold text-primary">£{item.price}</Text>
+                        )}
+                    </View>
                     {item.duration !== null && (
                         <View className="flex-row items-center">
                             <Feather name="clock" size={14} color="#9A563A" />

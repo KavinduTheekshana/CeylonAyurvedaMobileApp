@@ -19,12 +19,13 @@ import { API_BASE_URL } from "@/config/api";
 import BookingProgressBar from '../components/BookingProgressBar';
 import { fetchBookingCountData } from '../utils/booking';
 
-// Define your Service type with booking_count added
+// Define your Service type with booking_count and discount_price added
 type Service = {
     id: number;
     title: string;
     subtitle: string;
     price: number;
+    discount_price?: number | null;
     duration: number;
     benefits: string;
     image: string | null;
@@ -124,23 +125,23 @@ const ServiceDetailsScreen = () => {
       }
 
     // Fetch booking count data
- useEffect(() => {
-    const loadBookingData = async () => {
-        setLoading(true);
-        try {
-            // Use the utility function that includes fallback logic
-            const bookingData = await fetchBookingCountData(service.id, API_BASE_URL);
-            setBookingData(bookingData);
-        } catch (error) {
-            console.error('Error loading booking data:', error);
-            // The fallback is already handled in fetchBookingCountData
-        } finally {
-            setLoading(false);
-        }
-    };
-    
-    loadBookingData();
-}, [service.id]);
+    useEffect(() => {
+        const loadBookingData = async () => {
+            setLoading(true);
+            try {
+                // Use the utility function that includes fallback logic
+                const bookingData = await fetchBookingCountData(service.id, API_BASE_URL);
+                setBookingData(bookingData);
+            } catch (error) {
+                console.error('Error loading booking data:', error);
+                // The fallback is already handled in fetchBookingCountData
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        loadBookingData();
+    }, [service.id]);
 
     // For debugging - check what data we actually have
     console.log('Service details data:', service);
@@ -183,7 +184,14 @@ const ServiceDetailsScreen = () => {
                     <View style={styles.infoRow}>
                         <View style={styles.infoBox}>
                             <Text style={styles.infoLabel}>Price</Text>
-                            <Text style={styles.infoValue}>£{service.price}</Text>
+                            {service.discount_price !== null && service.discount_price !== undefined ? (
+                                <View style={styles.priceContainer}>
+                                    <Text style={styles.discountPrice}>£{service.discount_price}</Text>
+                                    <Text style={styles.originalPrice}>£{service.price}</Text>
+                                </View>
+                            ) : (
+                                <Text style={styles.infoValue}>£{service.price}</Text>
+                            )}
                         </View>
 
                         <View style={styles.infoBox}>
@@ -192,19 +200,21 @@ const ServiceDetailsScreen = () => {
                         </View>
                     </View>
 
-                    {/* Booking Progress Bar */}
-                    <View style={styles.bookingProgressContainer}>
-                        {loading ? (
-                            <ActivityIndicator size="small" color="#9A563A" style={{marginVertical: 20}} />
-                        ) : (
-                            <BookingProgressBar 
-                                current={bookingData.count} 
-                                max={bookingData.max}
-                                label="Booking Popularity" 
-                            />
-                        )}
-                           <Text style={styles.infoLabel}>Once you've completed 80 bookings, one of our team members will get in touch with you. At that point, you'll also have the option to reschedule your booking if needed. For now, just choose a date and time to create your pre booking.</Text>
-                    </View>
+                    {/* Booking Progress Bar - Only shown when a discount is available */}
+                    {service.discount_price !== null && service.discount_price !== undefined && (
+                        <View style={styles.bookingProgressContainer}>
+                            {loading ? (
+                                <ActivityIndicator size="small" color="#9A563A" style={{marginVertical: 20}} />
+                            ) : (
+                                <BookingProgressBar 
+                                    current={bookingData.count} 
+                                    max={bookingData.max}
+                                    label="Booking Popularity" 
+                                />
+                            )}
+                            <Text style={styles.infoLabel}>Once you've completed 80 bookings, one of our team members will get in touch with you. At that point, you'll also have the option to reschedule your booking if needed. For now, just choose a date and time to create your pre booking.</Text>
+                        </View>
+                    )}
 
                     {service.benefits && (
                         <View style={styles.descriptionContainer}>
@@ -305,6 +315,21 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: '600',
         color: '#333',
+    },
+    priceContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    discountPrice: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#9A563A',
+    },
+    originalPrice: {
+        fontSize: 14,
+        textDecorationLine: 'line-through',
+        color: '#999',
+        marginLeft: 8,
     },
     bookingProgressContainer: {
         backgroundColor: '#fff',
