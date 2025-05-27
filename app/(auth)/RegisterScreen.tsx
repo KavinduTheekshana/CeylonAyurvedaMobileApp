@@ -56,10 +56,9 @@ const RegisterScreen = () => {
       password,
       password_confirmation: confirmPassword,
     };
-
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/api/register`,
+        `${API_BASE_URL}/api/user/save`,
         userData
       );
       console.log("Registration successful:", response.data);

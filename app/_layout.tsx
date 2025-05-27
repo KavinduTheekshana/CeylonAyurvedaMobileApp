@@ -1,8 +1,8 @@
 // app/_layout.tsx
 import { Stack } from "expo-router";
 import "./globals.css";
-import { StatusBar } from "react-native";
-import React, { useEffect } from "react";
+import { StatusBar, View, ActivityIndicator } from "react-native";
+import React, { useEffect, useState } from "react";
 import * as SplashScreen from 'expo-splash-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from "expo-router";
@@ -12,6 +12,7 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const router = useRouter();
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     // Function to prepare the app and hide splash screen
@@ -34,6 +35,7 @@ export default function RootLayout() {
           const now = new Date();
 
           if (expiryDate > now) {
+            setIsReady(true);
             router.replace('/(tabs)');
             return;
           }
@@ -45,22 +47,34 @@ export default function RootLayout() {
           const now = new Date();
 
           if (expiryDate > now) {
+            setIsReady(true);
             router.replace('/(tabs)');
             return;
           }
         }
 
         // Default: redirect to auth screen
+        setIsReady(true);
         router.replace('/(auth)');
       } catch (error) {
         console.error("Error during initialization:", error);
         await SplashScreen.hideAsync();
+        setIsReady(true);
         router.replace('/(auth)');
       }
     }
 
     prepare();
   }, []);
+
+  // Show loading screen while preparing
+  if (!isReady) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAFAFA' }}>
+        <ActivityIndicator size="large" color="#9A563A" />
+      </View>
+    );
+  }
 
   return (
     <>

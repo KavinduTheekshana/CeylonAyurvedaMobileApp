@@ -11,7 +11,7 @@ import {
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { HeaderBackButton } from '@react-navigation/elements';
-import {API_BASE_URL} from "@/config/api";
+import { API_BASE_URL } from "@/config/api";
 import withAuthGuard from '../components/AuthGuard';
 
 // Define your Service type
@@ -38,12 +38,20 @@ type RootStackParamList = {
     Home: undefined;
     Services: { treatmentId: string; treatmentName: string };
     ServiceDetails: { service: Service };
-    BookingDateScreen: { serviceId: number; serviceName: string; duration: number };
+    BookingDateScreen: { 
+        serviceId: number; 
+        serviceName: string; 
+        duration: number;
+        therapistId?: number;
+        therapistName?: string;
+    };
     BookingTimeScreen: {
         serviceId: number;
         serviceName: string;
         selectedDate: string;
         duration: number;
+        therapistId: number;
+        therapistName: string;
     };
     BookingCheckoutScreen: {
         serviceId: number;
@@ -51,6 +59,8 @@ type RootStackParamList = {
         selectedDate: string;
         selectedTime: string;
         duration: number;
+        therapistId: number;
+        therapistName: string;
     };
 };
 
@@ -66,23 +76,33 @@ const API_URL = `${API_BASE_URL}/api/timeslots`;
 const BookingTimeScreen = () => {
     const route = useRoute<BookingTimeScreenRouteProp>();
     const navigation = useNavigation<BookingTimeScreenNavigationProp>();
-    const { serviceId, serviceName, selectedDate, duration } = route.params;
+    const { 
+        serviceId, 
+        serviceName, 
+        selectedDate, 
+        duration,
+        therapistId,
+        therapistName 
+    } = route.params;
 
     const [selectedTime, setSelectedTime] = useState<string>('');
     const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
 
     useEffect(() => {
-        // Fetch available time slots from the API
+        // Fetch available time slots from the API including therapist availability
         fetchTimeSlots();
-    }, [serviceId, selectedDate, duration]);
+    }, [serviceId, selectedDate, duration, therapistId]);
 
     const fetchTimeSlots = () => {
         setLoading(true);
 
-        console.log(`${API_URL}?serviceId=${serviceId}&date=${selectedDate}&duration=${duration}`);
-        // Request available time slots from the API
-        fetch(`${API_URL}?serviceId=${serviceId}&date=${selectedDate}&duration=${duration}`)
+        // Include therapist ID in the API request for availability
+        const apiUrl = `${API_URL}?serviceId=${serviceId}&date=${selectedDate}&duration=${duration}&therapistId=${therapistId}`;
+        console.log('Fetching time slots:', apiUrl);
+        
+        // Request available time slots from the API with therapist availability
+        fetch(apiUrl)
             .then(response => response.json())
             .then(data => {
                 if (data.success && Array.isArray(data.data)) {
@@ -115,7 +135,7 @@ const BookingTimeScreen = () => {
             for (let minute = 0; minute < 60; minute += intervalMinutes) {
                 const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
 
-                // Randomly mark some slots as unavailable
+                // Randomly mark some slots as unavailable (simulating therapist's schedule)
                 const available = Math.random() > 0.3;
 
                 slots.push({
@@ -131,7 +151,7 @@ const BookingTimeScreen = () => {
 
     React.useLayoutEffect(() => {
         navigation.setOptions({
-            title: `Select Time - ${serviceName}`,
+            title: `Select Time`,
             headerLeft: () => (
                 <HeaderBackButton
                     onPress={() => navigation.goBack()}
@@ -139,7 +159,7 @@ const BookingTimeScreen = () => {
                 />
             ),
         });
-    }, [navigation, serviceName]);
+    }, [navigation]);
 
     const handleTimeSelect = (time: string) => {
         setSelectedTime(time);
@@ -150,13 +170,15 @@ const BookingTimeScreen = () => {
             return; // Don't proceed if no time is selected
         }
 
-        // Navigate to checkout screen
+        // Navigate to checkout screen with therapist info
         navigation.navigate('BookingCheckoutScreen', {
             serviceId,
             serviceName,
             selectedDate,
             selectedTime,
-            duration
+            duration,
+            therapistId,
+            therapistName
         });
     };
 
@@ -193,9 +215,22 @@ const BookingTimeScreen = () => {
                 <Text style={styles.subtitle}>
                     Available time slots for {selectedDate}
                 </Text>
-                <Text style={styles.durationText}>
-                    Treatment duration: {duration} minutes
-                </Text>
+                
+                {/* Show service and therapist info */}
+                <View style={styles.bookingInfo}>
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Service:</Text>
+                        <Text style={styles.infoValue}>{serviceName}</Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Therapist:</Text>
+                        <Text style={styles.infoValue}>{therapistName}</Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                        <Text style={styles.infoLabel}>Duration:</Text>
+                        <Text style={styles.infoValue}>{duration} minutes</Text>
+                    </View>
+                </View>
 
                 {loading ? (
                     <View style={styles.loadingContainer}>
@@ -214,7 +249,7 @@ const BookingTimeScreen = () => {
                     ) : (
                         <View style={styles.noTimesContainer}>
                             <Text style={styles.noTimesText}>
-                                No available time slots for this date. Please try another date.
+                                No available time slots for this therapist on this date. Please try another date.
                             </Text>
                         </View>
                     )
@@ -254,12 +289,32 @@ const styles = StyleSheet.create({
     subtitle: {
         fontSize: 16,
         color: '#555',
-        marginBottom: 8,
+        marginBottom: 16,
     },
-    durationText: {
+    bookingInfo: {
+        backgroundColor: '#fff',
+        padding: 16,
+        borderRadius: 8,
+        marginBottom: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 1,
+    },
+    infoRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingVertical: 4,
+    },
+    infoLabel: {
         fontSize: 14,
         color: '#666',
-        marginBottom: 24,
+    },
+    infoValue: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#333',
     },
     loadingContainer: {
         flex: 1,

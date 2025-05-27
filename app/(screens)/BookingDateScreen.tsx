@@ -30,12 +30,20 @@ type RootStackParamList = {
     Home: undefined;
     Services: { treatmentId: string; treatmentName: string };
     ServiceDetails: { service: Service };
-    BookingDateScreen: { serviceId: number; serviceName: string; duration: number };
+    BookingDateScreen: { 
+        serviceId: number; 
+        serviceName: string; 
+        duration: number;
+        therapistId?: number;
+        therapistName?: string;
+    };
     BookingTimeScreen: {
         serviceId: number;
         serviceName: string;
         selectedDate: string;
         duration: number;
+        therapistId: number;
+        therapistName: string;
     };
 };
 
@@ -48,7 +56,13 @@ type BookingDateScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 const BookingDateScreen = () => {
     const route = useRoute<BookingDateScreenRouteProp>();
     const navigation = useNavigation<BookingDateScreenNavigationProp>();
-    const { serviceId, serviceName, duration } = route.params;
+    const { 
+        serviceId, 
+        serviceName, 
+        duration,
+        therapistId,
+        therapistName 
+    } = route.params;
 
     const [selectedDate, setSelectedDate] = useState<string>('');
     const [markedDates, setMarkedDates] = useState<any>({});
@@ -65,7 +79,7 @@ const BookingDateScreen = () => {
 
     React.useLayoutEffect(() => {
         navigation.setOptions({
-            title: `Select Date - ${serviceName}`,
+            title: `Select Date`,
             headerLeft: () => (
                 <HeaderBackButton
                     onPress={() => navigation.goBack()}
@@ -73,7 +87,7 @@ const BookingDateScreen = () => {
                 />
             ),
         });
-    }, [navigation, serviceName]);
+    }, [navigation]);
 
     const handleDateSelect = (date: any) => {
         // Update the selected date
@@ -95,12 +109,21 @@ const BookingDateScreen = () => {
             return; // Don't proceed if no date is selected
         }
 
-        // Navigate to time selection screen (you'll need to create this screen)
+        // Check if we have therapist information
+        if (!therapistId || !therapistName) {
+            // Navigate back to therapist selection
+            navigation.goBack();
+            return;
+        }
+
+        // Navigate to time selection screen with therapist info
         navigation.navigate('BookingTimeScreen', {
             serviceId,
             serviceName,
             selectedDate,
-            duration
+            duration,
+            therapistId,
+            therapistName
         });
     };
 
@@ -109,8 +132,16 @@ const BookingDateScreen = () => {
             <View style={styles.calendarContainer}>
                 <Text style={styles.title}>Select a Date</Text>
                 <Text style={styles.subtitle}>
-                    Please select your preferred date for the {serviceName} service
+                    Choose your preferred date for {serviceName}
                 </Text>
+                
+                {/* Show selected therapist info */}
+                {therapistName && (
+                    <View style={styles.therapistInfo}>
+                        <Text style={styles.therapistLabel}>Selected Therapist:</Text>
+                        <Text style={styles.therapistNameText}>{therapistName}</Text>
+                    </View>
+                )}
 
                 <Calendar
                     current={today.toISOString().split('T')[0]}
@@ -164,7 +195,30 @@ const styles = StyleSheet.create({
     subtitle: {
         fontSize: 16,
         color: '#555',
-        marginBottom: 24,
+        marginBottom: 16,
+    },
+    therapistInfo: {
+        backgroundColor: '#fff',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 1,
+        elevation: 1,
+    },
+    therapistLabel: {
+        fontSize: 14,
+        color: '#666',
+        marginRight: 8,
+    },
+    therapistNameText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#9A563A',
     },
     footer: {
         padding: 16,

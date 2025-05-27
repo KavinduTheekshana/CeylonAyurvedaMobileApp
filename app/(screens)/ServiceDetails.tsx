@@ -104,18 +104,13 @@ const ServiceDetailsScreen = () => {
 
             const data = await response.json();
 
-
-            //   if (data.success && Array.isArray(data.data)) {
             setUserBookings(data.data);
-            console.log("Hi");
-            // Check if the current service is in the user's active bookings
             const serviceBooked = data.data.some((booking: UserBooking) =>
                 booking.service_id === service.id
             );
 
             setHasBookedThisService(serviceBooked);
             console.log('Has user booked this service?', serviceBooked);
-            //   }
         } catch (error) {
             console.error('Error fetching user bookings:', error);
         } finally {
@@ -126,33 +121,28 @@ const ServiceDetailsScreen = () => {
     // Parse the service data from the params
     let service: Service;
     try {
-        // Check if we have a params.service
         if (!params.service) {
             console.log('No service data found in params:', params);
             throw new Error('No service data provided');
         }
-        // Try to parse the service JSON
+        
         if (typeof params.service === 'string') {
             try {
                 service = JSON.parse(params.service);
-                // console.log('Successfully parsed service JSON:', service);
             } catch (parseError) {
                 console.error('Failed to parse service JSON:', parseError, params.service);
                 throw new Error('Invalid service data format');
             }
         } else {
-            // Handle case where params.service is already an object
             service = params.service as any;
             console.log('Service data is already an object:', service);
         }
 
-        // Validate that we have the required properties
         if (!service.id || !service.title) {
             console.error('Service data missing required properties:', service);
             throw new Error('Incomplete service data');
         }
 
-        // Set the header title to the service title
         useEffect(() => {
             navigation.setOptions({
                 title: service.title,
@@ -192,12 +182,10 @@ const ServiceDetailsScreen = () => {
         const loadBookingData = async () => {
             setLoading(true);
             try {
-                // Use the utility function that includes fallback logic
                 const bookingData = await fetchBookingCountData(service.id, API_BASE_URL);
                 setBookingData(bookingData);
             } catch (error) {
                 console.error('Error loading booking data:', error);
-                // The fallback is already handled in fetchBookingCountData
             } finally {
                 setLoading(false);
             }
@@ -205,9 +193,6 @@ const ServiceDetailsScreen = () => {
 
         loadBookingData();
     }, [service.id]);
-
-    // For debugging - check what data we actually have
-    //   console.log('Service details data:', service);
 
     // Determine if Book Now button should be disabled - only for free services
     const shouldDisableBookButton = isServiceFree(service) && hasBookedThisService;
@@ -229,9 +214,9 @@ const ServiceDetailsScreen = () => {
             return;
         }
 
-        // Otherwise, proceed to booking flow
+        // Navigate to therapist selection screen (this is the key change)
         router.push({
-            pathname: "/(screens)/BookingDateScreen",
+            pathname: "/(screens)/BookingTherapistScreen",
             params: {
                 serviceId: service.id,
                 serviceName: service.title,
@@ -259,7 +244,6 @@ const ServiceDetailsScreen = () => {
 
                     <View style={styles.infoRow}>
                         {(() => {
-                            // Check if discount price is zero (accounting for decimal values like 0.00)
                             const isFreeService = service.discount_price !== null &&
                                 service.discount_price !== undefined &&
                                 parseFloat(String(service.discount_price)) === 0;
@@ -310,7 +294,6 @@ const ServiceDetailsScreen = () => {
                                 )}
                                 <Text style={styles.infoLabel}>Once you've completed 80 bookings, one of our team members will get in touch with you. At that point, you'll also have the option to reschedule your booking if needed. For now, just choose a date and time to create your pre booking.</Text>
 
-                                {/* Only show if the service is free and user already booked it */}
                                 {isServiceFree(service) && (
                                     hasBookedThisService ? (
                                         <View style={styles.alreadyBookedContainer}>
@@ -429,9 +412,9 @@ const styles = StyleSheet.create({
         elevation: 1,
     },
     freeServiceInfoBox: {
-        backgroundColor: '#E8F5E9', // Light green background
+        backgroundColor: '#E8F5E9',
         borderWidth: 1,
-        borderColor: '#81C784', // Green border
+        borderColor: '#81C784',
     },
     infoLabel: {
         fontSize: 12,
@@ -461,7 +444,7 @@ const styles = StyleSheet.create({
     freePrice: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#2E7D32', // Dark green color
+        color: '#2E7D32',
     },
     bookingProgressContainer: {
         backgroundColor: '#fff',
@@ -513,7 +496,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     disabledBookButton: {
-        backgroundColor: '#cccccc', // Grey color for disabled state
+        backgroundColor: '#cccccc',
     },
     alreadyBookedContainer: {
         flexDirection: 'row',

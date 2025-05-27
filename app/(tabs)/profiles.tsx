@@ -1,7 +1,6 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     SafeAreaView,
-    StyleSheet,
     View,
     Text,
     Image,
@@ -68,9 +67,6 @@ export default function ProfileScreen() {
     const [isDeleting, setIsDeleting] = useState<boolean>(false);
     const [passwordError, setPasswordError] = useState<string>('');
 
-    // Define default avatar as a number (the way require works in RN)
-    const defaultAvatar = require('../../assets/images/default-avatar.jpg');
-
     // Function to load user data
     const loadUserData = async (): Promise<void> => {
         try {
@@ -126,12 +122,10 @@ export default function ProfileScreen() {
     useFocusEffect(
         useCallback(() => {
             loadUserData();
-
-            // Optional cleanup function
             return () => {
                 // Any cleanup if needed
             };
-        }, []) // Empty dependency array means this effect runs only when the screen focuses
+        }, [])
     );
 
     // Handle login
@@ -216,8 +210,6 @@ export default function ProfileScreen() {
         try {
             // Get token
             const token = await AsyncStorage.getItem('access_token');
-            console.log('Token:', token);
-            console.log('Password:', password);
 
             if (!token) {
                 throw new Error('Authentication token not found');
@@ -356,15 +348,16 @@ export default function ProfileScreen() {
 
     if (isLoading) {
         return (
-            <View style={styles.loadingContainer}>
+            <View className="flex-1 justify-center items-center bg-gray-100">
                 <ActivityIndicator size="large" color="#9A563A" />
             </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <SafeAreaView className="flex-1 bg-gray-100 mx-5 pb-12 mb-12">
             <ScrollView
+                className="flex-1"
                 showsVerticalScrollIndicator={false}
                 refreshControl={
                     <RefreshControl
@@ -386,33 +379,36 @@ export default function ProfileScreen() {
                     />
                 ) : (
                     // Logged in user profile header
-                    <View style={styles.profileHeader}>
-                        <View style={styles.avatarContainer}>
+                    <View className="mt-5 rounded-xl items-center p-5 bg-white border-b border-gray-200">
+                        <View className="mb-2.5">
                             {userData.profile_photo_path ? (
                                 <Image
                                     source={{ uri: userData.profile_photo_path }}
-                                    style={styles.avatar}
+                                    className="w-20 h-20 rounded-full bg-gray-200"
                                 />
                             ) : (
-                                <View style={styles.avatar}>
+                                <View className="w-20 h-20 rounded-full bg-gray-200 justify-center items-center">
                                     <Feather name="user" size={40} color="black"/>
                                 </View>
                             )}
                         </View>
 
                         {/* PRO Badge */}
-                        <View style={styles.proBadgeContainer}>
-                            <View style={styles.proBadge}>
+                        <View className="mb-2.5">
+                            <View className="flex-row items-center bg-gray-500 px-3 py-1.5 rounded-full">
                                 <Feather name="award" size={18} color="white"/>
-                                <Text style={styles.proBadgeText}>Regular</Text>
+                                <Text className="text-white ml-1.5 font-bold">Regular</Text>
                             </View>
                         </View>
 
-                        <Text style={styles.userName}>{userData.name || 'User'}</Text>
-                        <Text style={styles.userEmail}>{userData.email || 'email@example.com'}</Text>
+                        <Text className="text-2xl font-bold mb-1.5">{userData.name || 'User'}</Text>
+                        <Text className="text-base text-gray-600 mb-4">{userData.email || 'email@example.com'}</Text>
 
-                        <TouchableOpacity style={styles.infoButton} onPress={() => router.push('/EditProfileScreen')}>
-                            <Text style={styles.infoButtonText}>Edit Profile</Text>
+                        <TouchableOpacity 
+                            className="border border-gray-300 rounded-full py-2 px-6 mt-2.5"
+                            onPress={() => router.push('/EditProfileScreen')}
+                        >
+                            <Text className="text-base">Edit Profile</Text>
                         </TouchableOpacity>
                     </View>
                 )}
@@ -421,54 +417,53 @@ export default function ProfileScreen() {
                 {menuItems
                     .filter(section => !isGuest || section.visibleForGuest)
                     .map((section, sectionIndex) => (
-                        <View key={sectionIndex} style={styles.section}>
-                            <Text style={styles.sectionTitle}>{section.title}</Text>
+                        <View key={sectionIndex} className="my-4 px-2.5 py-5 bg-white rounded-xl">
+                            <Text className="text-xl font-bold ml-4 mb-2.5">{section.title}</Text>
 
                             {section.items
                                 .filter(item => !isGuest || item.visibleForGuest)
-                                .map((item, itemIndex) => (
-                                    <TouchableOpacity
-                                        key={itemIndex}
-                                        style={[
-                                            styles.menuItem,
-                                            itemIndex === section.items.filter(it => !isGuest || it.visibleForGuest).length - 1 && styles.lastMenuItem
-                                        ]}
-                                        onPress={item.onPress}
-                                    >
-                                        <View style={styles.menuItemLeft}>
-                                            {item.icon}
-                                            <Text style={[
-                                                styles.menuItemText,
-                                                item.isBold && styles.boldText,
-                                                item.color && {color: item.color}
-                                            ]}>
-                                                {item.label}
-                                            </Text>
-                                        </View>
-                                        {item.rightIcon}
-                                    </TouchableOpacity>
-                                ))}
+                                .map((item, itemIndex) => {
+                                    const isLastItem = itemIndex === section.items.filter(it => !isGuest || it.visibleForGuest).length - 1;
+                                    return (
+                                        <TouchableOpacity
+                                            key={itemIndex}
+                                            className={`flex-row items-center justify-between bg-white py-4 px-4 ${!isLastItem ? 'border-b border-gray-200' : ''}`}
+                                            onPress={item.onPress}
+                                        >
+                                            <View className="flex-row items-center">
+                                                {item.icon}
+                                                <Text 
+                                                    className={`text-base ml-4 ${item.isBold ? 'font-bold' : ''}`}
+                                                    style={item.color ? {color: item.color} : {}}
+                                                >
+                                                    {item.label}
+                                                </Text>
+                                            </View>
+                                            {item.rightIcon}
+                                        </TouchableOpacity>
+                                    );
+                                })}
                         </View>
                     ))}
 
                 {/* Logout and Delete Account Buttons for logged in users */}
                 {!isGuest && (
-                    <View style={styles.accountActionsContainer}>
+                    <View className="mb-8 pb-10 gap-4">
                         {/* Logout Button */}
                         <TouchableOpacity
-                            style={styles.logoutButton}
+                            className="flex-row items-center justify-center p-4 bg-white rounded-xl border border-gray-200"
                             onPress={handleLogout}
                         >
-                            <Text style={styles.logoutText}>Logout</Text>
+                            <Text className="text-primary text-base font-bold mr-2">Logout</Text>
                             <Feather name="log-out" size={20} color="#9A563A"/>
                         </TouchableOpacity>
 
                         {/* Delete Account Button */}
                         <TouchableOpacity
-                            style={styles.deleteAccountButton}
+                            className="flex-row items-center justify-center p-4 bg-white rounded-xl border border-gray-200"
                             onPress={handleDeleteAccount}
                         >
-                            <Text style={styles.deleteAccountText}>Delete Account</Text>
+                            <Text className="text-red-500 text-base font-bold mr-2">Delete Account</Text>
                             <Feather name="trash-2" size={20} color="#FF3B30"/>
                         </TouchableOpacity>
                     </View>
@@ -476,12 +471,12 @@ export default function ProfileScreen() {
 
                 {/* "Exit Guest Mode" Button for guests */}
                 {isGuest && (
-                    <View style={styles.accountActionsContainer}>
+                    <View className="mb-8 pb-10 gap-4">
                         <TouchableOpacity
-                            style={styles.logoutButton}
+                            className="flex-row items-center justify-center p-4 bg-white rounded-xl border border-gray-200"
                             onPress={handleLogout}
                         >
-                            <Text style={styles.logoutText}>Exit Guest Mode</Text>
+                            <Text className="text-primary text-base font-bold mr-2">Exit Guest Mode</Text>
                             <Feather name="log-out" size={20} color="#9A563A"/>
                         </TouchableOpacity>
                     </View>
@@ -499,21 +494,18 @@ export default function ProfileScreen() {
                     setPasswordError('');
                 }}
             >
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Delete Account</Text>
-                        <Text style={styles.modalMessage}>
+                <View className="flex-1 justify-center items-center bg-black/50">
+                    <View className="w-4/5 bg-white rounded-xl p-5 items-center shadow-lg">
+                        <Text className="text-xl font-bold mb-4 text-red-500">Delete Account</Text>
+                        <Text className="text-base mb-5 text-center leading-6">
                             This action cannot be undone. All your data including addresses and bookings will be permanently deleted.
                         </Text>
-                        <Text style={styles.modalMessage}>
+                        <Text className="text-base mb-5 text-center leading-6">
                             Please enter your password to confirm:
                         </Text>
 
                         <TextInput
-                            style={[
-                                styles.passwordInput,
-                                passwordError ? styles.inputError : null
-                            ]}
+                            className={`w-full h-11 border rounded-md mb-2.5 px-2.5 ${passwordError ? 'border-red-500' : 'border-gray-300'}`}
                             placeholder="Enter your password"
                             secureTextEntry
                             value={password}
@@ -522,12 +514,12 @@ export default function ProfileScreen() {
                         />
 
                         {passwordError ? (
-                            <Text style={styles.errorText}>{passwordError}</Text>
+                            <Text className="text-red-500 mb-2.5 text-sm self-start">{passwordError}</Text>
                         ) : null}
 
-                        <View style={styles.modalButtons}>
+                        <View className="flex-row justify-between w-full mt-5">
                             <TouchableOpacity
-                                style={styles.cancelButton}
+                                className="flex-1 p-3 rounded-md items-center bg-gray-200 mr-2.5"
                                 onPress={() => {
                                     setDeleteModalVisible(false);
                                     setPassword('');
@@ -535,18 +527,18 @@ export default function ProfileScreen() {
                                 }}
                                 disabled={isDeleting}
                             >
-                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                                <Text className="text-base text-gray-800">Cancel</Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                                style={styles.confirmDeleteButton}
+                                className="flex-1 p-3 rounded-md items-center bg-red-500"
                                 onPress={performDeleteAccount}
                                 disabled={isDeleting}
                             >
                                 {isDeleting ? (
                                     <ActivityIndicator size="small" color="#fff" />
                                 ) : (
-                                    <Text style={styles.confirmDeleteText}>Delete</Text>
+                                    <Text className="text-base text-white font-bold">Delete</Text>
                                 )}
                             </TouchableOpacity>
                         </View>
@@ -556,231 +548,3 @@ export default function ProfileScreen() {
         </SafeAreaView>
     );
 }
-
-const styles = StyleSheet.create({
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#f5f5f5',
-    },
-    container: {
-        flex: 1,
-        backgroundColor: '#f5f5f5',
-        margin: 20,
-        paddingBottom: 50,
-        marginBottom: 50,
-    },
-    profileHeader: {
-        marginTop: 20,
-        borderRadius: 10,
-        alignItems: 'center',
-        padding: 20,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    avatarContainer: {
-        marginBottom: 10,
-    },
-    avatar: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: '#f0f0f0',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    proBadgeContainer: {
-        marginBottom: 10,
-    },
-    proBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#9e9e9e',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-    },
-    proBadgeText: {
-        color: 'white',
-        marginLeft: 5,
-        fontWeight: 'bold',
-    },
-    userName: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 5,
-    },
-    userEmail: {
-        fontSize: 16,
-        color: '#666',
-        marginBottom: 15,
-    },
-    boldText: {
-        fontWeight: 'bold',
-    },
-    infoButton: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 20,
-        paddingVertical: 8,
-        paddingHorizontal: 24,
-        marginTop: 10,
-    },
-    infoButtonText: {
-        fontSize: 16,
-    },
-    section: {
-        marginVertical: 15,
-        paddingHorizontal: 10,
-        paddingVertical: 20,
-        backgroundColor: '#fff',
-        borderRadius: 10,
-    },
-    sectionTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginLeft: 15,
-        marginBottom: 10,
-    },
-    menuItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        backgroundColor: '#fff',
-        paddingVertical: 15,
-        paddingHorizontal: 15,
-        borderBottomColor: '#f0f0f0',
-    },
-    lastMenuItem: {
-        borderBottomWidth: 0,
-    },
-    menuItemLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    menuItemText: {
-        fontSize: 16,
-        marginLeft: 15,
-    },
-    accountActionsContainer: {
-        marginBottom: 30,
-        paddingBottom: 40,
-        gap: 15,
-    },
-    logoutButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 15,
-        backgroundColor: '#fff',
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: '#f0f0f0',
-    },
-    logoutText: {
-        color: '#9A563A',
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginRight: 8,
-    },
-    deleteAccountButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 15,
-        backgroundColor: '#fff',
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: '#f0f0f0',
-    },
-    deleteAccountText: {
-        color: '#FF3B30',
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginRight: 8,
-    },
-    // Modal styles
-    modalContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    },
-    modalContent: {
-        width: '85%',
-        backgroundColor: 'white',
-        borderRadius: 10,
-        padding: 20,
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: {
-            width: 0,
-            height: 2
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
-        elevation: 5
-    },
-    modalTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        marginBottom: 15,
-        color: '#FF3B30'
-    },
-    modalMessage: {
-        fontSize: 16,
-        marginBottom: 20,
-        textAlign: 'center',
-        lineHeight: 22,
-    },
-    passwordInput: {
-        width: '100%',
-        height: 45,
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 5,
-        marginBottom: 10,
-        paddingHorizontal: 10,
-    },
-    inputError: {
-        borderColor: '#FF3B30',
-    },
-    errorText: {
-        color: '#FF3B30',
-        marginBottom: 10,
-        fontSize: 14,
-        alignSelf: 'flex-start',
-    },
-    modalButtons: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        width: '100%',
-        marginTop: 20,
-    },
-    cancelButton: {
-        flex: 1,
-        padding: 12,
-        borderRadius: 5,
-        alignItems: 'center',
-        backgroundColor: '#f0f0f0',
-        marginRight: 10,
-    },
-    cancelButtonText: {
-        fontSize: 16,
-        color: '#333',
-    },
-    confirmDeleteButton: {
-        flex: 1,
-        padding: 12,
-        borderRadius: 5,
-        alignItems: 'center',
-        backgroundColor: '#FF3B30',
-    },
-    confirmDeleteText: {
-        fontSize: 16,
-        color: 'white',
-        fontWeight: 'bold',
-    },
-});
