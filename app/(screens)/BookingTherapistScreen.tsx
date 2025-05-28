@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
-    StyleSheet,
     TouchableOpacity,
     SafeAreaView,
     ActivityIndicator,
@@ -159,11 +158,11 @@ const BookingTherapistScreen = () => {
         return availableDays.length > 0 ? availableDays.join(', ') : 'No availability';
     };
 
-    // Helper function to get availability status color
-    const getAvailabilityColor = (count: number) => {
-        if (count === 0) return '#DC2626'; // Red
-        if (count < 5) return '#F59E0B'; // Orange
-        return '#10B981'; // Green
+    // Helper function to get availability status color classes
+    const getAvailabilityColorClass = (count: number) => {
+        if (count === 0) return 'text-red-600';
+        if (count < 5) return 'text-amber-500';
+        return 'text-emerald-500';
     };
 
     React.useLayoutEffect(() => {
@@ -200,37 +199,43 @@ const BookingTherapistScreen = () => {
 
     const renderTherapistCard = ({ item }: { item: Therapist }) => {
         const isSelected = selectedTherapist?.id === item.id;
-        const availabilityColor = getAvailabilityColor(item.available_slots_count);
+        const availabilityColorClass = getAvailabilityColorClass(item.available_slots_count);
 
         return (
             <TouchableOpacity
-                style={[
-                    styles.therapistCard,
-                    isSelected && styles.selectedTherapistCard
-                ]}
+                className={`bg-white rounded-2xl p-5 border-2 relative ${
+                    isSelected ? 'border-amber-700 bg-orange-50' : 'border-transparent'
+                }`}
+                style={{
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 8,
+                    elevation: 4,
+                }}
                 onPress={() => handleTherapistSelect(item)}
                 activeOpacity={0.7}
             >
                 {/* Selection indicator */}
                 {isSelected && (
-                    <View style={styles.selectedBadge}>
+                    <View className="absolute top-4 right-4 bg-amber-700 w-7 h-7 rounded-full justify-center items-center z-10">
                         <Feather name="check" size={16} color="#fff" />
                     </View>
                 )}
 
                 {/* Therapist Header */}
-                <View style={styles.therapistHeader}>
+                <View className="flex-row mb-4">
                     {/* Profile Image */}
-                    <View style={styles.imageContainer}>
+                    <View className="mr-4">
                         {item.image ? (
                             <Image
                                 source={{ uri: item.image }}
-                                style={styles.therapistImage}
+                                className="w-20 h-20 rounded-full"
                                 resizeMode="cover"
                             />
                         ) : (
-                            <View style={styles.imagePlaceholder}>
-                                <Text style={styles.initials}>
+                            <View className="w-20 h-20 rounded-full bg-amber-700 justify-center items-center">
+                                <Text className="text-white text-2xl font-bold">
                                     {item.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                                 </Text>
                             </View>
@@ -238,40 +243,48 @@ const BookingTherapistScreen = () => {
                     </View>
 
                     {/* Therapist Info */}
-                    <View style={styles.therapistInfo}>
-                        <Text style={styles.therapistName}>{item.name}</Text>
-                        <Text style={styles.therapistContact}>{item.email}</Text>
-                        <Text style={styles.therapistContact}>{item.phone}</Text>
+                    <View className="flex-1 justify-center">
+                        <Text className="text-xl font-bold text-gray-800 mb-1">{item.name}</Text>
+                        <Text className="text-sm text-gray-500 mb-0.5">{item.email}</Text>
+                        <Text className="text-sm text-gray-500">{item.phone}</Text>
                     </View>
                 </View>
 
                 {/* Availability Summary */}
-                <View style={styles.availabilitySummary}>
-                    <View style={styles.availabilityRow}>
-                        <View style={styles.availabilityItem}>
+                <View className="mb-4">
+                    <View className="mb-2">
+                        <View className="flex-row items-center">
                             <MaterialIcons name="today" size={16} color="#9A563A" />
-                            <Text style={styles.availabilityLabel}>Available Days</Text>
-                            <Text style={styles.availabilityValue}>
+                            <Text className="text-sm text-gray-500 ml-2 mr-2 flex-1">Available Days</Text>
+                            <Text className="text-sm font-semibold text-gray-800">
                                 {formatAvailableDays(item.schedule)}
                             </Text>
                         </View>
                     </View>
 
-                    <View style={styles.availabilityRow}>
-                        <View style={styles.availabilityItem}>
-                            <MaterialIcons name="event-available" size={16} color={availabilityColor} />
-                            <Text style={styles.availabilityLabel}>Next 3 Months</Text>
-                            <Text style={[styles.availabilityValue, { color: availabilityColor }]}>
+                    <View className="mb-2">
+                        <View className="flex-row items-center">
+                            <MaterialIcons 
+                                name="event-available" 
+                                size={16} 
+                                color={item.available_dates_count === 0 ? '#DC2626' : item.available_dates_count < 5 ? '#F59E0B' : '#10B981'} 
+                            />
+                            <Text className="text-sm text-gray-500 ml-2 mr-2 flex-1">Next 3 Months</Text>
+                            <Text className={`text-sm font-semibold ${getAvailabilityColorClass(item.available_dates_count)}`}>
                                 {item.available_dates_count} days available
                             </Text>
                         </View>
                     </View>
 
-                    <View style={styles.availabilityRow}>
-                        <View style={styles.availabilityItem}>
-                            <MaterialIcons name="access-time" size={16} color={availabilityColor} />
-                            <Text style={styles.availabilityLabel}>Today</Text>
-                            <Text style={[styles.availabilityValue, { color: availabilityColor }]}>
+                    <View className="mb-2">
+                        <View className="flex-row items-center">
+                            <MaterialIcons 
+                                name="access-time" 
+                                size={16} 
+                                color={item.available_slots_count === 0 ? '#DC2626' : item.available_slots_count < 5 ? '#F59E0B' : '#10B981'} 
+                            />
+                            <Text className="text-sm text-gray-500 ml-2 mr-2 flex-1">Today</Text>
+                            <Text className={`text-sm font-semibold ${availabilityColorClass}`}>
                                 {item.available_slots_count} slots available
                             </Text>
                         </View>
@@ -280,25 +293,25 @@ const BookingTherapistScreen = () => {
 
                 {/* Bio */}
                 {item.bio && (
-                    <View style={styles.bioContainer}>
-                        <Text style={styles.bioText} numberOfLines={3}>{item.bio}</Text>
+                    <View className="mb-4 pt-4 border-t border-gray-200">
+                        <Text className="text-sm text-gray-500 leading-5" numberOfLines={3}>{item.bio}</Text>
                     </View>
                 )}
 
                 {/* Detailed Schedule */}
                 {item.schedule && item.schedule.length > 0 && (
-                    <View style={styles.scheduleContainer}>
-                        <Text style={styles.scheduleTitle}>Weekly Schedule</Text>
+                    <View className="pt-4 border-t border-gray-200">
+                        <Text className="text-base font-semibold text-gray-800 mb-3">Weekly Schedule</Text>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                            <View style={styles.scheduleItems}>
+                            <View className="flex-row">
                                 {item.schedule
                                     .filter(slot => slot.is_active)
                                     .map((slot, index) => (
-                                        <View key={index} style={styles.scheduleItem}>
-                                            <Text style={styles.scheduleDayText}>
+                                        <View key={index} className="bg-gray-100 px-3 py-2 rounded-lg mr-2 items-center min-w-[80px]">
+                                            <Text className="text-xs font-semibold text-amber-700 mb-0.5">
                                                 {slot.day_of_week.charAt(0).toUpperCase() + slot.day_of_week.slice(1, 3)}
                                             </Text>
-                                            <Text style={styles.scheduleTimeText}>
+                                            <Text className="text-xs text-gray-500">
                                                 {slot.start_time} - {slot.end_time}
                                             </Text>
                                         </View>
@@ -313,36 +326,36 @@ const BookingTherapistScreen = () => {
 
     if (loading) {
         return (
-            <View style={styles.loadingContainer}>
+            <View className="flex-1 justify-center items-center p-8">
                 <ActivityIndicator size="large" color="#9A563A" />
-                <Text style={styles.loadingText}>Loading therapists...</Text>
+                <Text className="mt-4 text-base text-gray-500">Loading therapists...</Text>
             </View>
         );
     }
 
     if (error) {
         return (
-            <View style={styles.errorContainer}>
+            <View className="flex-1 justify-center items-center p-8">
                 <MaterialIcons name="error-outline" size={64} color="#DC2626" />
-                <Text style={styles.errorTitle}>Oops! Something went wrong</Text>
-                <Text style={styles.errorText}>{error}</Text>
+                <Text className="text-xl font-bold text-red-600 mt-4 mb-2">Oops! Something went wrong</Text>
+                <Text className="text-base text-gray-500 text-center mb-6 leading-6">{error}</Text>
                 <TouchableOpacity
-                    style={styles.retryButton}
+                    className="bg-amber-700 py-3.5 px-7 rounded-xl"
                     onPress={fetchTherapists}
                 >
-                    <Text style={styles.retryButtonText}>Try Again</Text>
+                    <Text className="text-white text-base font-semibold">Try Again</Text>
                 </TouchableOpacity>
             </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.content}>
+        <SafeAreaView className="flex-1 bg-gray-50">
+            <View className="flex-1 p-4">
                 {/* Header */}
-                <View style={styles.header}>
-                    <Text style={styles.title}>Choose Your Therapist</Text>
-                    <Text style={styles.subtitle}>
+                <View className="mb-6">
+                    <Text className="text-3xl font-bold text-gray-800 mb-2">Choose Your Therapist</Text>
+                    <Text className="text-base text-gray-500 leading-6">
                         Select a therapist for your {serviceName} session
                     </Text>
                 </View>
@@ -352,15 +365,15 @@ const BookingTherapistScreen = () => {
                         data={therapists}
                         renderItem={renderTherapistCard}
                         keyExtractor={(item) => item.id.toString()}
-                        contentContainerStyle={styles.therapistsList}
+                        contentContainerStyle={{ paddingBottom: 100 }}
                         showsVerticalScrollIndicator={false}
-                        ItemSeparatorComponent={() => <View style={styles.separator} />}
+                        ItemSeparatorComponent={() => <View className="h-4" />}
                     />
                 ) : (
-                    <View style={styles.noTherapistsContainer}>
+                    <View className="flex-1 justify-center items-center p-8">
                         <MaterialIcons name="person-off" size={64} color="#9CA3AF" />
-                        <Text style={styles.noTherapistsTitle}>No Therapists Available</Text>
-                        <Text style={styles.noTherapistsText}>
+                        <Text className="text-xl font-bold text-gray-800 mt-4 mb-2">No Therapists Available</Text>
+                        <Text className="text-base text-gray-500 text-center leading-6">
                             There are currently no therapists available for this service. 
                             Please try again later or contact support.
                         </Text>
@@ -369,283 +382,25 @@ const BookingTherapistScreen = () => {
             </View>
 
             {/* Continue Button */}
-            <View style={styles.footer}>
+            <View className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200">
                 <TouchableOpacity
-                    style={[
-                        styles.continueButton,
-                        !selectedTherapist && styles.continueButtonDisabled
-                    ]}
+                    className={`py-4 px-6 rounded-xl flex-row items-center justify-center ${
+                        selectedTherapist ? 'bg-amber-700' : 'bg-gray-300'
+                    }`}
                     disabled={!selectedTherapist}
                     onPress={handleContinue}
                 >
-                    <Text style={styles.continueButtonText}>
+                    <Text className="text-white text-base font-semibold">
                         {selectedTherapist ? `Continue with ${selectedTherapist.name}` : 'Select a Therapist'}
                     </Text>
                     {selectedTherapist && (
-                        <Feather name="arrow-right" size={20} color="#fff" style={styles.continueIcon} />
+                        <Feather name="arrow-right" size={20} color="#fff" style={{ marginLeft: 8 }} />
                     )}
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
     );
 };
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F9FAFB',
-    },
-    content: {
-        flex: 1,
-        padding: 16,
-    },
-    header: {
-        marginBottom: 24,
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#1F2937',
-        marginBottom: 8,
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#6B7280',
-        lineHeight: 22,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 32,
-    },
-    loadingText: {
-        marginTop: 16,
-        fontSize: 16,
-        color: '#6B7280',
-    },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 32,
-    },
-    errorTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#DC2626',
-        marginTop: 16,
-        marginBottom: 8,
-    },
-    errorText: {
-        fontSize: 16,
-        color: '#6B7280',
-        textAlign: 'center',
-        marginBottom: 24,
-        lineHeight: 22,
-    },
-    retryButton: {
-        backgroundColor: '#9A563A',
-        paddingVertical: 14,
-        paddingHorizontal: 28,
-        borderRadius: 12,
-    },
-    retryButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    therapistsList: {
-        paddingBottom: 100, // Space for footer button
-    },
-    separator: {
-        height: 16,
-    },
-    therapistCard: {
-        backgroundColor: '#fff',
-        borderRadius: 16,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
-        borderWidth: 2,
-        borderColor: 'transparent',
-        position: 'relative',
-    },
-    selectedTherapistCard: {
-        borderColor: '#9A563A',
-        backgroundColor: '#FEF7F0',
-    },
-    selectedBadge: {
-        position: 'absolute',
-        top: 16,
-        right: 16,
-        backgroundColor: '#9A563A',
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 1,
-    },
-    therapistHeader: {
-        flexDirection: 'row',
-        marginBottom: 16,
-    },
-    imageContainer: {
-        marginRight: 16,
-    },
-    therapistImage: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-    },
-    imagePlaceholder: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: '#9A563A',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    initials: {
-        color: '#fff',
-        fontSize: 24,
-        fontWeight: 'bold',
-    },
-    therapistInfo: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    therapistName: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#1F2937',
-        marginBottom: 4,
-    },
-    therapistContact: {
-        fontSize: 14,
-        color: '#6B7280',
-        marginBottom: 2,
-    },
-    availabilitySummary: {
-        marginBottom: 16,
-    },
-    availabilityRow: {
-        marginBottom: 8,
-    },
-    availabilityItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    availabilityLabel: {
-        fontSize: 14,
-        color: '#6B7280',
-        marginLeft: 8,
-        marginRight: 8,
-        flex: 1,
-    },
-    availabilityValue: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#1F2937',
-    },
-    bioContainer: {
-        marginBottom: 16,
-        paddingTop: 16,
-        borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
-    },
-    bioText: {
-        fontSize: 14,
-        color: '#6B7280',
-        lineHeight: 20,
-    },
-    scheduleContainer: {
-        paddingTop: 16,
-        borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
-    },
-    scheduleTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#1F2937',
-        marginBottom: 12,
-    },
-    scheduleItems: {
-        flexDirection: 'row',
-    },
-    scheduleItem: {
-        backgroundColor: '#F3F4F6',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        marginRight: 8,
-        alignItems: 'center',
-        minWidth: 80,
-    },
-    scheduleDayText: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#9A563A',
-        marginBottom: 2,
-    },
-    scheduleTimeText: {
-        fontSize: 10,
-        color: '#6B7280',
-    },
-    noTherapistsContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 32,
-    },
-    noTherapistsTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#1F2937',
-        marginTop: 16,
-        marginBottom: 8,
-    },
-    noTherapistsText: {
-        fontSize: 16,
-        color: '#6B7280',
-        textAlign: 'center',
-        lineHeight: 22,
-    },
-    footer: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        padding: 16,
-        backgroundColor: '#fff',
-        borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
-    },
-    continueButton: {
-        backgroundColor: '#9A563A',
-        paddingVertical: 16,
-        paddingHorizontal: 24,
-        borderRadius: 12,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    continueButtonDisabled: {
-        backgroundColor: '#D1D5DB',
-    },
-    continueButtonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    continueIcon: {
-        marginLeft: 8,
-    },
-});
 
 // Wrap the component with the AuthGuard
 export default withAuthGuard(BookingTherapistScreen);
