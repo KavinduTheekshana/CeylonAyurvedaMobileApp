@@ -5,13 +5,14 @@ import { StatusBar, View, ActivityIndicator } from "react-native";
 import React, { useEffect, useState } from "react";
 import * as SplashScreen from 'expo-splash-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from "expo-router";
+import { useRouter, useSegments } from "expo-router";
 
 // Keep splash visible while loading
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const router = useRouter();
+  const segments = useSegments();
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
@@ -29,38 +30,46 @@ export default function RootLayout() {
         // Hide the splash screen
         await SplashScreen.hideAsync();
 
-        // Guest users are allowed to browse the app
-        if (userMode === 'guest' && expiry) {
-          const expiryDate = new Date(expiry);
-          const now = new Date();
-
-          if (expiryDate > now) {
-            setIsReady(true);
-            router.replace('/(tabs)');
-            return;
-          }
-        }
-
-        // Logged in users with valid tokens
-        if (token && expiry) {
-          const expiryDate = new Date(expiry);
-          const now = new Date();
-
-          if (expiryDate > now) {
-            setIsReady(true);
-            router.replace('/(tabs)');
-            return;
-          }
-        }
-
-        // Default: redirect to auth screen
+        // Set ready state first
         setIsReady(true);
-        router.replace('/(auth)');
+
+        // Use setTimeout to ensure navigation happens after component is fully mounted
+        setTimeout(() => {
+          // Guest users are allowed to browse the app
+          if (userMode === 'guest' && expiry) {
+            const expiryDate = new Date(expiry);
+            const now = new Date();
+
+            if (expiryDate > now) {
+              router.replace('/(tabs)');
+              return;
+            }
+          }
+
+          // Logged in users with valid tokens
+          if (token && expiry) {
+            const expiryDate = new Date(expiry);
+            const now = new Date();
+
+            if (expiryDate > now) {
+              router.replace('/(tabs)');
+              return;
+            }
+          }
+
+          // Default: redirect to auth screen
+          router.replace('/(auth)');
+        }, 100);
+
       } catch (error) {
         console.error("Error during initialization:", error);
         await SplashScreen.hideAsync();
         setIsReady(true);
-        router.replace('/(auth)');
+        
+        // Delay navigation to ensure component is mounted
+        setTimeout(() => {
+          router.replace('/(auth)');
+        }, 100);
       }
     }
 

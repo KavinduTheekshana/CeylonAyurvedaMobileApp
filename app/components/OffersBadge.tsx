@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 
 interface OffersBadgeProps {
   size?: 'small' | 'medium' | 'large';
@@ -14,75 +14,83 @@ const OffersBadge: React.FC<OffersBadgeProps> = ({
   color = '#FF6B6B',
   position = 'topRight'
 }) => {
-  // Determine position styles
-  const positionStyles = {
-    topRight: { top: 8, right: 8 },
-    topLeft: { top: 8, left: 8 },
-    bottomRight: { bottom: 8, right: 8 },
-    bottomLeft: { bottom: 8, left: 8 }
-  };
-
-  // Determine size styles
-  const sizeStyles = {
-    small: {
-      paddingHorizontal: 6,
-      paddingVertical: 3,
-      borderRadius: 12,
-      fontSize: 10
-    },
-    medium: {
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 14,
-      fontSize: 12
-    },
-    large: {
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 16,
-      fontSize: 14
+  // Position styles using absolute positioning
+  const getPositionStyles = () => {
+    switch (position) {
+      case 'topLeft':
+        return { top: 8, left: 8 };
+      case 'bottomRight':
+        return { bottom: 8, right: 8 };
+      case 'bottomLeft':
+        return { bottom: 8, left: 8 };
+      case 'topRight':
+      default:
+        return { top: 8, right: 8 };
     }
   };
+
+  // Size styles
+  const getSizeStyles = () => {
+    switch (size) {
+      case 'medium':
+        return {
+          paddingHorizontal: 8,
+          paddingVertical: 4,
+          borderRadius: 14,
+          fontSize: 12
+        };
+      case 'large':
+        return {
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 16,
+          fontSize: 14
+        };
+      case 'small':
+      default:
+        return {
+          paddingHorizontal: 6,
+          paddingVertical: 3,
+          borderRadius: 12,
+          fontSize: 10
+        };
+    }
+  };
+
+  const positionStyles = getPositionStyles();
+  const sizeStyles = getSizeStyles();
 
   return (
     <View
       style={[
-        styles.container,
-        positionStyles[position],
         {
+          position: 'absolute',
           backgroundColor: color,
-          paddingHorizontal: sizeStyles[size].paddingHorizontal,
-          paddingVertical: sizeStyles[size].paddingVertical,
-          borderRadius: sizeStyles[size].borderRadius
-        }
+          zIndex: 1000,
+          elevation: 20, // High elevation for Android
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.3,
+          shadowRadius: 4,
+          paddingHorizontal: sizeStyles.paddingHorizontal,
+          paddingVertical: sizeStyles.paddingVertical,
+          borderRadius: sizeStyles.borderRadius,
+        },
+        positionStyles
       ]}
     >
       <Text
-        style={[
-          styles.text,
-          { fontSize: sizeStyles[size].fontSize }
-        ]}
+        style={{
+          color: 'white',
+          fontWeight: 'bold',
+          fontSize: sizeStyles.fontSize,
+          textAlign: 'center'
+        }}
       >
         {text}
       </Text>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    zIndex: 10,
-    elevation: 2, // For Android shadow effect
-    shadowColor: '#000', // iOS shadow
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1
-  },
-  text: {
-    color: 'white',
-    fontWeight: 'bold'
-  }
-});
 
 export default OffersBadge;

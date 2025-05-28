@@ -23,7 +23,7 @@ interface Treatment {
   name: string;
   image: string | null;
   description: string;
-  offers: boolean; // Added the offers field
+  offers: number; // Changed from boolean to number since API returns 1/0
 }
 
 const TreatmentsScreen = () => {
@@ -37,14 +37,17 @@ const TreatmentsScreen = () => {
   // Check if user is a guest and show notification
   useEffect(() => {
     const checkGuestStatus = async () => {
-      const userMode = await AsyncStorage.getItem('user_mode');
-      const notificationShown = await AsyncStorage.getItem('guest_notification_shown');
-      
-      if (userMode === 'guest' && notificationShown !== 'true') {
-        setIsGuest(true);
-        setShowGuestNotification(true);
-        // Mark notification as shown to avoid showing it again
-        await AsyncStorage.setItem('guest_notification_shown', 'true');
+      try {
+        const userMode = await AsyncStorage.getItem('user_mode');
+        const notificationShown = await AsyncStorage.getItem('guest_notification_shown');
+        
+        if (userMode === 'guest' && notificationShown !== 'true') {
+          setIsGuest(true);
+          setShowGuestNotification(true);
+          await AsyncStorage.setItem('guest_notification_shown', 'true');
+        }
+      } catch (error) {
+        console.error('Error checking guest status:', error);
       }
     };
     
@@ -58,9 +61,7 @@ const TreatmentsScreen = () => {
           if (data.success && Array.isArray(data.data)) {
             const updatedData = data.data.map((item: Treatment) => ({
               ...item,
-              image: item.image
-                  ? `${API_BASE_URL}/storage/${item.image}`
-                  : null,
+              image: item.image ? `${API_BASE_URL}/storage/${item.image}` : null,
             }));
             setTreatments(updatedData);
           }
@@ -91,79 +92,81 @@ const TreatmentsScreen = () => {
 
   if (loading) {
     return (
-        <ActivityIndicator
-            size="large"
-            color="#9A563A"
-            className="flex-1 justify-center items-center"
-        />
+      <View className="flex-1 justify-center items-center bg-gray-100">
+        <ActivityIndicator size="large" color="#9A563A" />
+      </View>
     );
   }
 
   return (
-      <View className="flex-1 p-4 mb-20 bg-gray-100">
-        {/* Guest Notification */}
-        <GuestNotification
-          visible={showGuestNotification}
-          onLogin={handleLogin}
-          onDismiss={handleDismissNotification}
-          message="Login or create an account to book appointments"
-        />
-        
-        <Text className="w-full text-3xl pb-3 text-black font-bold">
-          Treatments
-        </Text>
-        <FlatList
-            data={treatments}
-            keyExtractor={(item) => item.id.toString()}
-            numColumns={2}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 20 }}
-            refreshControl={
-              <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={onRefresh}
-                  colors={["#9A563A"]} // Android
-                  tintColor="#9A563A" // iOS
-              />
+    <View className="flex-1 p-4 mb-20 bg-gray-100">
+      <GuestNotification
+        visible={showGuestNotification}
+        onLogin={handleLogin}
+        onDismiss={handleDismissNotification}
+        message="Login or create an account to book appointments"
+      />
+      
+      <Text className="w-full text-3xl pb-3 text-black font-bold">
+        Treatments
+      </Text>
+      
+      <FlatList
+        data={treatments}
+        keyExtractor={(item) => `treatment-${item.id}`}
+        numColumns={2}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 20 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#9A563A"]}
+            tintColor="#9A563A"
+          />
+        }
+        renderItem={({ item, index }) => (
+          <TouchableOpacity
+            key={`treatment-item-${item.id}`}
+            onPress={() =>
+              router.push({
+                pathname: "/(screens)/[id]",
+                params: {
+                  id: item.id.toString(),
+                  treatmentId: item.id.toString(),
+                  treatmentName: item.name
+                },
+              })
             }
-            renderItem={({ item }) => (
-                <TouchableOpacity
-                    onPress={() =>
-                        router.push({
-                          pathname: "/(screens)/[id]",
-                          params: {
-                            id: item.id.toString(),
-                            treatmentId: item.id.toString(),
-                            treatmentName: item.name
-                          },
-                        })
-                    }
-                    className="bg-white rounded-[14px] overflow-hidden mb-4 w-[48%] shadow-sm m-1 relative"
-                >
-                  {item.image && (
-                      <Image
-                          source={{ uri: item.image }}
-                          className="w-full h-[120px] rounded-t-md"
-                      />
-                  )}
-                  
-                  {/* Offer Badge - Using custom component */}
-                  {item.offers && (
-                    <OffersBadge 
-                      size="small" 
-                      position="topRight"
-                      color="#FF6B6B"
-                      text="Offers Available"
-                    />
-                  )}
-                  
-                  <Text className="text-base font-bold mt-1 text-center px-2 py-2">
-                    {item.name}
-                  </Text>
-                </TouchableOpacity>
+            className="bg-white rounded-[14px] mb-4 w-[48%] shadow-sm m-1 relative"
+          >
+            {item.image && (
+              <Image
+                source={{ uri: item.image }}
+                className="w-full h-[120px] rounded-t-[14px]"
+                resizeMode="cover"
+              />
             )}
-        />
-      </View>
+            
+            {/* Fixed condition: Check for 1 instead of true */}
+            {item.offers === 1 && (
+              <OffersBadge 
+                size="small" 
+                position="topRight"
+                color="#FF6B6B"
+                text="Offers Available"
+              />
+            )}
+            
+            <View className="pt-3 pb-3">
+              <Text className="text-base font-bold text-center text-black">
+                {item.name}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+      />
+    </View>
   );
 };
 
