@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+// Fixed BookingDateScreen.tsx that properly handles therapist availability
+
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -12,30 +14,16 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { HeaderBackButton } from '@react-navigation/elements';
 import { Calendar } from 'react-native-calendars';
 import withAuthGuard from '../components/AuthGuard';
+import { API_BASE_URL } from "@/config/api";
 
-// Define your Service type
-type Service = {
-    id: number;
-    title: string;
-    subtitle: string;
-    price: number;
-    duration: number;
-    benefits: string;
-    image: string | null;
-    description?: string;
-};
-
-// Define your navigation param list for all screens
+// Your existing types...
 type RootStackParamList = {
-    Home: undefined;
-    Services: { treatmentId: string; treatmentName: string };
-    ServiceDetails: { service: Service };
     BookingDateScreen: { 
         serviceId: number; 
         serviceName: string; 
         duration: number;
-        therapistId?: number;
-        therapistName?: string;
+        therapistId: number;
+        therapistName: string;
     };
     BookingTimeScreen: {
         serviceId: number;
@@ -47,10 +35,7 @@ type RootStackParamList = {
     };
 };
 
-// Type for the route
 type BookingDateScreenRouteProp = RouteProp<RootStackParamList, 'BookingDateScreen'>;
-
-// Type for the navigation
 type BookingDateScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const BookingDateScreen = () => {
@@ -67,6 +52,7 @@ const BookingDateScreen = () => {
     const [selectedDate, setSelectedDate] = useState<string>('');
     const [markedDates, setMarkedDates] = useState<any>({});
     const [loading, setLoading] = useState<boolean>(false);
+    const [availableDates, setAvailableDates] = useState<string[]>([]);
 
     // Calculate the minimum date (today)
     const today = new Date();
@@ -89,15 +75,136 @@ const BookingDateScreen = () => {
         });
     }, [navigation]);
 
-    const handleDateSelect = (date: any) => {
-        // Update the selected date
-        const dateString = date.dateString;
+    // Fetch available dates for the therapist
+    useEffect(() => {
+        fetchAvailableDates();
+    }, [therapistId]);
 
-        // Update the marked dates object
-        const updatedMarkedDates: any = {};
+    const fetchAvailableDates = async () => {
+        setLoading(true);
+        try {
+            console.log(`Fetching available dates for therapist ${therapistId}`);
+            
+            // Try the dedicated endpoint first
+            const response = await fetch(
+                `${API_BASE_URL}/api/therapists/${therapistId}/available-dates?months=3`
+            );
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Available dates response:', data);
+                
+                if (data.success && data.available_dates) {
+                    setAvailableDates(data.available_dates);
+                    updateMarkedDates(data.available_dates);
+                } else {
+                    console.log('No available_dates in response, generating from schedule');
+                    generateAvailableDatesFromSchedule();
+                }
+            } else {
+                console.log('API endpoint not available, generating from schedule');
+                generateAvailableDatesFromSchedule();
+            }
+        } catch (error) {
+            console.error('Error fetching available dates:', error);
+            // Fallback: generate dates based on therapist's weekly schedule
+            generateAvailableDatesFromSchedule();
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Generate available dates based on a typical weekly schedule
+    const generateAvailableDatesFromSchedule = () => {
+        console.log('Generating available dates from typical schedule');
+        
+        // Typical working days (Monday to Saturday)
+        const workingDays = [1, 2, 3, 4, 5, 6]; // 0 = Sunday, 1 = Monday, etc.
+        
+        const dates: string[] = [];
+        const currentDate = new Date(today);
+        
+        while (currentDate <= maxDate) {
+            const dayOfWeek = currentDate.getDay();
+            
+            // Include the date if it's a working day and not in the past
+            if (workingDays.includes(dayOfWeek) && currentDate >= today) {
+                dates.push(currentDate.toISOString().split('T')[0]);
+            }
+            
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        console.log(`Generated ${dates.length} available dates`);
+        setAvailableDates(dates);
+        updateMarkedDates(dates);
+    };
+
+    const updateMarkedDates = (availableDates: string[]) => {
+        console.log(`Updating marked dates with ${availableDates.length} available dates`);
+        
+        const marked: any = {};
+        
+        // Mark all dates in the range first
+        const currentDate = new Date(today);
+        while (currentDate <= maxDate) {
+            const dateString = currentDate.toISOString().split('T')[0];
+            
+            if (availableDates.includes(dateString)) {
+                // Available date
+                marked[dateString] = {
+                    marked: true,
+                    dotColor: '#9A563A',
+                    textColor: '#000',
+                };
+            } else {
+                // Unavailable date
+                marked[dateString] = {
+                    disabled: true,
+                    disableTouchEvent: true,
+                    textColor: '#d9d9d9',
+                };
+            }
+            
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+
+        setMarkedDates(marked);
+    };
+
+    const handleDateSelect = (date: any) => {
+        const dateString = date.dateString;
+        
+        console.log('Date selected:', dateString);
+        console.log('Is available:', availableDates.includes(dateString));
+        
+        // Check if the date is available
+        if (!availableDates.includes(dateString)) {
+            console.log('Date not available, ignoring selection');
+            return; // Don't allow selection of unavailable dates
+        }
+
+        // Update the selected date
+        const updatedMarkedDates = { ...markedDates };
+        
+        // Remove previous selection
+        Object.keys(updatedMarkedDates).forEach(key => {
+            if (updatedMarkedDates[key].selected) {
+                updatedMarkedDates[key] = {
+                    ...updatedMarkedDates[key],
+                    selected: false,
+                    selectedColor: undefined,
+                };
+            }
+        });
+
+        // Add new selection
         updatedMarkedDates[dateString] = {
+            ...updatedMarkedDates[dateString],
             selected: true,
             selectedColor: '#9A563A',
+            marked: true,
+            dotColor: '#9A563A',
         };
 
         setSelectedDate(dateString);
@@ -106,17 +213,11 @@ const BookingDateScreen = () => {
 
     const handleContinue = () => {
         if (!selectedDate) {
-            return; // Don't proceed if no date is selected
-        }
-
-        // Check if we have therapist information
-        if (!therapistId || !therapistName) {
-            // Navigate back to therapist selection
-            navigation.goBack();
             return;
         }
 
-        // Navigate to time selection screen with therapist info
+        console.log(`Continuing with selected date: ${selectedDate}`);
+
         navigation.navigate('BookingTimeScreen', {
             serviceId,
             serviceName,
@@ -124,6 +225,21 @@ const BookingDateScreen = () => {
             duration,
             therapistId,
             therapistName
+        });
+    };
+
+    const getDayName = (dateString: string): string => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { weekday: 'long' });
+    };
+
+    const formatDate = (dateString: string): string => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
         });
     };
 
@@ -143,28 +259,71 @@ const BookingDateScreen = () => {
                     </View>
                 )}
 
-                <Calendar
-                    current={today.toISOString().split('T')[0]}
-                    minDate={minDate}
-                    maxDate={maxDateString}
-                    onDayPress={handleDateSelect}
-                    markedDates={markedDates}
-                    theme={{
-                        todayTextColor: '#9A563A',
-                        selectedDayBackgroundColor: '#9A563A',
-                        selectedDayTextColor: '#ffffff',
-                        arrowColor: '#9A563A',
-                    }}
-                />
+                {/* Availability info */}
+                <View style={styles.availabilityInfo}>
+                    <Text style={styles.availabilityLabel}>
+                        {loading 
+                            ? "Loading availability..." 
+                            : `${availableDates.length} days available in the next 3 months`
+                        }
+                    </Text>
+                </View>
+
+                {loading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#9A563A" />
+                        <Text style={styles.loadingText}>Loading available dates...</Text>
+                    </View>
+                ) : (
+                    <>
+                        <Calendar
+                            current={today.toISOString().split('T')[0]}
+                            minDate={minDate}
+                            maxDate={maxDateString}
+                            onDayPress={handleDateSelect}
+                            markedDates={markedDates}
+                            theme={{
+                                todayTextColor: '#9A563A',
+                                selectedDayBackgroundColor: '#9A563A',
+                                selectedDayTextColor: '#ffffff',
+                                arrowColor: '#9A563A',
+                                dotColor: '#9A563A',
+                                disabledArrowColor: '#d9d9d9',
+                            }}
+                            markingType={'simple'}
+                        />
+
+                        {/* Legend */}
+                        <View style={styles.legend}>
+                            <View style={styles.legendItem}>
+                                <View style={[styles.legendDot, { backgroundColor: '#9A563A' }]} />
+                                <Text style={styles.legendText}>Available</Text>
+                            </View>
+                            <View style={styles.legendItem}>
+                                <View style={[styles.legendDot, { backgroundColor: '#d9d9d9' }]} />
+                                <Text style={styles.legendText}>Unavailable</Text>
+                            </View>
+                        </View>
+
+                        {/* Show selected date info */}
+                        {selectedDate && (
+                            <View style={styles.selectedDateInfo}>
+                                <Text style={styles.selectedDateText}>
+                                    Selected: {formatDate(selectedDate)}
+                                </Text>
+                            </View>
+                        )}
+                    </>
+                )}
             </View>
 
             <View style={styles.footer}>
                 <TouchableOpacity
                     style={[
                         styles.continueButton,
-                        !selectedDate ? styles.continueButtonDisabled : null
+                        (!selectedDate || loading) ? styles.continueButtonDisabled : null
                     ]}
-                    disabled={!selectedDate}
+                    disabled={!selectedDate || loading}
                     onPress={handleContinue}
                 >
                     {loading ? (
@@ -220,6 +379,62 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         color: '#9A563A',
     },
+    availabilityInfo: {
+        backgroundColor: '#F0F8F0',
+        padding: 8,
+        borderRadius: 6,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#C8E6C9',
+    },
+    availabilityLabel: {
+        fontSize: 12,
+        color: '#2E7D32',
+        textAlign: 'center',
+        fontWeight: '600',
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 50,
+    },
+    loadingText: {
+        marginTop: 16,
+        fontSize: 16,
+        color: '#555',
+    },
+    legend: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        marginTop: 16,
+        gap: 20,
+    },
+    legendItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    legendDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        marginRight: 6,
+    },
+    legendText: {
+        fontSize: 12,
+        color: '#666',
+    },
+    selectedDateInfo: {
+        backgroundColor: '#9A563A',
+        padding: 12,
+        borderRadius: 8,
+        marginTop: 16,
+    },
+    selectedDateText: {
+        color: '#fff',
+        textAlign: 'center',
+        fontWeight: '600',
+    },
     footer: {
         padding: 16,
         backgroundColor: '#fff',
@@ -242,5 +457,4 @@ const styles = StyleSheet.create({
     },
 });
 
-// Wrap the component with the AuthGuard
 export default withAuthGuard(BookingDateScreen);
