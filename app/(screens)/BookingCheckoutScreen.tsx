@@ -1,3 +1,5 @@
+// BookingCheckoutScreen.tsx - Updated to show therapist information and pass it to confirmation
+
 import React, { useState, useEffect } from 'react';
 import {
     View,
@@ -19,7 +21,6 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { HeaderBackButton } from '@react-navigation/elements';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from "@/config/api";
-// Import validation functions
 import { validateDerbyServiceArea, quickDerbyAreaCheck } from '@/utils/locationHelper';
 
 // Define your Service type
@@ -58,6 +59,8 @@ type RootStackParamList = {
         serviceName: string;
         selectedDate: string;
         duration: number;
+        therapistId: number;
+        therapistName: string;
     };
     BookingCheckoutScreen: {
         serviceId: number;
@@ -65,6 +68,8 @@ type RootStackParamList = {
         selectedDate: string;
         selectedTime: string;
         duration: number;
+        therapistId: number;
+        therapistName: string;
     };
     BookingConfirmationScreen: {
         bookingId: number;
@@ -86,7 +91,15 @@ const BOOKING_API_URL = `${API_BASE_URL}/api/bookings`;
 const BookingCheckoutScreen = () => {
     const route = useRoute<BookingCheckoutScreenRouteProp>();
     const navigation = useNavigation<BookingCheckoutScreenNavigationProp>();
-    const { serviceId, serviceName, selectedDate, selectedTime, duration } = route.params;
+    const { 
+        serviceId, 
+        serviceName, 
+        selectedDate, 
+        selectedTime, 
+        duration, 
+        therapistId, 
+        therapistName 
+    } = route.params;
 
     // States
     const [loading, setLoading] = useState<boolean>(true);
@@ -140,7 +153,6 @@ const BookingCheckoutScreen = () => {
     const checkAuthentication = async () => {
         try {
             const token = await AsyncStorage.getItem('access_token');
-            // Log token retrieval status (helpful for debugging Android issues)
             console.log('Authentication check - token exists:', !!token);
             setIsAuthenticated(!!token);
         } catch (error) {
@@ -151,9 +163,7 @@ const BookingCheckoutScreen = () => {
 
     const fetchServiceDetails = async () => {
         try {
-            // Get the service details from the API - FIXED URL PATH
             const response = await fetch(`${SERVICE_API_URL}/detail/${serviceId}`);
-
             console.log('Fetching service details from:', `${SERVICE_API_URL}/detail/${serviceId}`);
 
             const data = await response.json();
@@ -162,16 +172,14 @@ const BookingCheckoutScreen = () => {
             if (data.success && data.data) {
                 setServiceDetails(data.data);
             } else {
-                // If API returns an error
                 console.error('API error response:', data);
                 setError('Could not retrieve service details. Please try again.');
 
-                // Create a placeholder service for testing
                 setServiceDetails({
                     id: serviceId,
                     title: serviceName,
                     subtitle: 'Service details',
-                    price: 75, // Sample price
+                    price: 75,
                     duration: duration,
                     benefits: '',
                     image: null
@@ -181,12 +189,11 @@ const BookingCheckoutScreen = () => {
             console.error('Error fetching service details:', error);
             setError('Network error. Please check your connection and try again.');
 
-            // Create a placeholder service for testing
             setServiceDetails({
                 id: serviceId,
                 title: serviceName,
                 subtitle: 'Service details',
-                price: 75, // Sample price
+                price: 75,
                 duration: duration,
                 benefits: '',
                 image: null
@@ -196,7 +203,6 @@ const BookingCheckoutScreen = () => {
 
     const fetchSavedAddresses = async () => {
         try {
-            // Get the authentication token from AsyncStorage
             const token = await AsyncStorage.getItem('access_token');
             console.log('Token for address fetch:', token ? 'Token found' : 'No token');
 
@@ -206,12 +212,11 @@ const BookingCheckoutScreen = () => {
                 return;
             }
 
-            // Get the user's bookings addresses with authentication token
             const response = await fetch(ADDRESS_API_URL, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
-                    'Accept': 'application/json' // Added for Android compatibility
+                    'Accept': 'application/json'
                 }
             });
 
@@ -221,26 +226,21 @@ const BookingCheckoutScreen = () => {
             if (data.success && Array.isArray(data.data)) {
                 setSavedAddresses(data.data);
 
-                // If there's a default address, select it
                 const defaultAddress = data.data.find((address: Address) => address.is_default);
                 if (defaultAddress) {
                     setSelectedAddressId(defaultAddress.id);
                     prefillAddressForm(defaultAddress);
                 } else if (data.data.length > 0) {
-                    // Otherwise select the first address
                     setSelectedAddressId(data.data[0].id);
                     prefillAddressForm(data.data[0]);
                 } else {
-                    // If no addresses, show the form
                     setShowAddressForm(true);
                 }
             } else {
-                // If no bookings addresses or error, show the form
                 setShowAddressForm(true);
             }
         } catch (error) {
             console.error('Error fetching bookings addresses:', error);
-            // If error fetching addresses, show the form
             setShowAddressForm(true);
         }
     };
@@ -290,7 +290,6 @@ const BookingCheckoutScreen = () => {
     };
 
     const validateForm = () => {
-        // Basic validation
         if (!name.trim()) {
             Alert.alert('Error', 'Please enter your name');
             return false;
@@ -301,7 +300,6 @@ const BookingCheckoutScreen = () => {
             return false;
         }
 
-        // Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             Alert.alert('Error', 'Please enter a valid email address');
@@ -325,12 +323,9 @@ const BookingCheckoutScreen = () => {
         if (!validateForm()) return;
         if (!serviceDetails) return;
 
-        // Dismiss keyboard before submission (helps on Android)
         Keyboard.dismiss();
 
-        // If showing address form (not using saved address), validate the postcode
         if (showAddressForm || selectedAddressId === null) {
-            // First, quick check if postcode might be in Derby area
             if (!quickDerbyAreaCheck(postcode)) {
                 Alert.alert(
                     'Service Area Notice',
@@ -349,10 +344,8 @@ const BookingCheckoutScreen = () => {
                 return;
             }
 
-            // If quick check passes, do full validation
             performLocationValidation();
         } else {
-            // If using a saved address, proceed directly
             submitBookingData();
         }
     };
@@ -361,7 +354,6 @@ const BookingCheckoutScreen = () => {
         setValidatingLocation(true);
 
         try {
-            // Validate the postcode is within Derby service area
             const validationResult = await validateDerbyServiceArea(postcode);
 
             if (!validationResult.isValid) {
@@ -379,11 +371,9 @@ const BookingCheckoutScreen = () => {
                 return;
             }
 
-            // If validation passes, submit the booking
             await submitBookingData();
         } catch (error) {
             console.error('Location validation error:', error);
-            // If validation fails, give option to continue anyway
             Alert.alert(
                 'Location Validation Error',
                 'We could not validate the location. Would you like to continue with the booking anyway?',
@@ -403,10 +393,10 @@ const BookingCheckoutScreen = () => {
         }
     };
 
+    // UPDATED: Include therapist information in booking data
     const submitBookingData = async () => {
         setSubmitting(true);
 
-        // Prepare the booking data to match your backend structure
         const bookingData = {
             service_id: serviceId,
             date: selectedDate,
@@ -419,22 +409,22 @@ const BookingCheckoutScreen = () => {
             city,
             postcode,
             notes,
-            save_address: saveAddress // Make sure this is being sent as a boolean
+            save_address: saveAddress,
+            // Include therapist information
+            therapist_id: therapistId,
+            therapist_name: therapistName
         };
 
         console.log('Booking data being sent:', JSON.stringify(bookingData));
 
         try {
-            // Get the authentication token
             const token = await AsyncStorage.getItem('access_token');
 
-            // Set up request headers
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json' // Add Accept header for Android compatibility
+                'Accept': 'application/json'
             };
 
-            // Add auth token if available
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
                 console.log('Sending request with auth token');
@@ -444,9 +434,8 @@ const BookingCheckoutScreen = () => {
 
             console.log('Submitting booking to:', BOOKING_API_URL);
 
-            // Send booking data to the API with timeout for Android
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
 
             const response = await fetch(BOOKING_API_URL, {
                 method: 'POST',
@@ -457,7 +446,6 @@ const BookingCheckoutScreen = () => {
 
             clearTimeout(timeoutId);
 
-            // Check for network issues
             if (!response.ok) {
                 console.error('Server response not ok:', response.status, response.statusText);
                 throw new Error(`Server responded with status: ${response.status}`);
@@ -467,14 +455,12 @@ const BookingCheckoutScreen = () => {
             console.log('Booking response:', data);
 
             if (data.success && data.data && data.data.id) {
-                // Navigate to confirmation screen
                 try {
                     navigation.navigate('BookingConfirmationScreen', {
                         bookingId: data.data.id
                     });
                 } catch (navError) {
                     console.error('Navigation error:', navError);
-                    // Fallback if navigation fails
                     Alert.alert(
                         'Booking Successful',
                         'Your appointment has been booked successfully. You will receive a confirmation email shortly.',
@@ -492,7 +478,6 @@ const BookingCheckoutScreen = () => {
         } catch (error) {
             console.error('Booking submission error:', error);
 
-            // More detailed error handling for Android
             let errorMessage = 'Network error occurred.';
 
             if (error instanceof TypeError) {
@@ -501,7 +486,6 @@ const BookingCheckoutScreen = () => {
                 errorMessage = error.message;
             }
 
-            // Show error alert but offer test success option in development
             Alert.alert(
                 'Error',
                 `There was an error processing your booking: ${errorMessage}. Would you like to see a test confirmation?`,
@@ -515,7 +499,7 @@ const BookingCheckoutScreen = () => {
                         onPress: () => {
                             try {
                                 navigation.navigate('BookingConfirmationScreen', {
-                                    bookingId: 999 // Test booking ID
+                                    bookingId: 999
                                 });
                             } catch (navError) {
                                 console.error('Navigation error during test:', navError);
@@ -567,7 +551,7 @@ const BookingCheckoutScreen = () => {
             <SafeAreaView style={styles.container}>
                 <ScrollView
                     style={styles.content}
-                    keyboardShouldPersistTaps="handled" // Important for Android
+                    keyboardShouldPersistTaps="handled"
                 >
                     <Text style={styles.title}>Booking Summary</Text>
 
@@ -585,6 +569,11 @@ const BookingCheckoutScreen = () => {
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Price:</Text>
                             <Text style={styles.detailValue}>£{serviceDetails.price}</Text>
+                        </View>
+                        {/* NEW: Display therapist information */}
+                        <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>Therapist:</Text>
+                            <Text style={styles.detailValue}>{therapistName}</Text>
                         </View>
                     </View>
 
@@ -643,7 +632,6 @@ const BookingCheckoutScreen = () => {
                                 </TouchableOpacity>
                             ))}
 
-                            {/* Add New Address button for users with existing addresses */}
                             <TouchableOpacity
                                 style={styles.addAddressButton}
                                 onPress={navigateToAddAddressScreen}
@@ -651,7 +639,6 @@ const BookingCheckoutScreen = () => {
                                 <Text style={styles.addAddressButtonText}>+ Add New Address</Text>
                             </TouchableOpacity>
 
-                            {/* Use a different address without saving */}
                             <TouchableOpacity
                                 style={styles.useNewAddressButton}
                                 onPress={() => setShowAddressForm(!showAddressForm)}
@@ -794,7 +781,6 @@ const BookingCheckoutScreen = () => {
                         </View>
                     </View>
 
-                    {/* Add extra padding at bottom to ensure content is visible when keyboard is open */}
                     <View style={{ height: Platform.OS === 'android' ? 100 : 20 }} />
                 </ScrollView>
 
@@ -817,7 +803,6 @@ const BookingCheckoutScreen = () => {
         </KeyboardAvoidingView>
     );
 };
-
 
 const styles = StyleSheet.create({
     container: {

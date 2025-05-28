@@ -38,9 +38,9 @@ type RootStackParamList = {
     Home: undefined;
     Services: { treatmentId: string; treatmentName: string };
     ServiceDetails: { service: Service };
-    BookingDateScreen: { 
-        serviceId: number; 
-        serviceName: string; 
+    BookingDateScreen: {
+        serviceId: number;
+        serviceName: string;
         duration: number;
         therapistId?: number;
         therapistName?: string;
@@ -76,13 +76,13 @@ const API_URL = `${API_BASE_URL}/api/timeslots`;
 const BookingTimeScreen = () => {
     const route = useRoute<BookingTimeScreenRouteProp>();
     const navigation = useNavigation<BookingTimeScreenNavigationProp>();
-    const { 
-        serviceId, 
-        serviceName, 
-        selectedDate, 
+    const {
+        serviceId,
+        serviceName,
+        selectedDate,
         duration,
         therapistId,
-        therapistName 
+        therapistName
     } = route.params;
 
     const [selectedTime, setSelectedTime] = useState<string>('');
@@ -100,7 +100,7 @@ const BookingTimeScreen = () => {
         // Include therapist ID in the API request for availability
         const apiUrl = `${API_URL}?serviceId=${serviceId}&date=${selectedDate}&duration=${duration}&therapistId=${therapistId}`;
         console.log('Fetching time slots:', apiUrl);
-        
+
         // Request available time slots from the API with therapist availability
         fetch(apiUrl)
             .then(response => response.json())
@@ -215,7 +215,7 @@ const BookingTimeScreen = () => {
                 <Text style={styles.subtitle}>
                     Available time slots for {selectedDate}
                 </Text>
-                
+
                 {/* Show service and therapist info */}
                 <View style={styles.bookingInfo}>
                     <View style={styles.infoRow}>

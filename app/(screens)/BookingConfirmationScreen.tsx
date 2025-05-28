@@ -15,7 +15,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from "@/config/api";
 
-// Define booking type
+// Define booking type - UPDATED to include therapist information
 type Booking = {
     id: number;
     service_id: number;
@@ -33,6 +33,8 @@ type Booking = {
     price: number;
     reference: string;
     status: string;
+    therapist_id?: number;
+    therapist_name?: string;
     service?: {
         id: number;
         title: string;
@@ -66,13 +68,12 @@ const BookingConfirmationScreen = () => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Add this to hide the back button in the header
         navigation.setOptions({
             headerLeft: () => null,
             headerTitle: "Booking Confirmation",
-            headerBackVisible: false, // For newer React Navigation versions
-            headerBackTitle: null, // For iOS
-            headerLeftContainerStyle: { width: 0 }, // Force no space for the button
+            headerBackVisible: false,
+            headerBackTitle: null,
+            headerLeftContainerStyle: { width: 0 },
         })
 
         fetchBookingDetails();
@@ -80,10 +81,8 @@ const BookingConfirmationScreen = () => {
 
     const fetchBookingDetails = async () => {
         try {
-            // Get auth token
             const token = await AsyncStorage.getItem('access_token');
 
-            // Headers
             const headers: Record<string, string> = {
                 'Content-Type': 'application/json'
             };
@@ -92,7 +91,6 @@ const BookingConfirmationScreen = () => {
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
-            // Fetch booking details
             const response = await fetch(`${API_BASE_URL}/api/bookings/${bookingId}`, {
                 headers
             });
@@ -122,37 +120,32 @@ const BookingConfirmationScreen = () => {
         return new Date(dateString).toLocaleDateString(undefined, options);
     };
 
-    // Alternative formatTime function for 12-hour format with AM/PM
     const formatTime12Hour = (timeString: string) => {
         try {
             let hours: number;
             let minutes: number;
 
-            // If it's already in HH:MM format
             if (/^\d{2}:\d{2}$/.test(timeString)) {
                 const [h, m] = timeString.split(':').map(Number);
                 hours = h;
                 minutes = m;
             }
-            // If it's an ISO date string
             else if (timeString.includes('T')) {
                 const date = new Date(timeString);
                 hours = date.getUTCHours();
                 minutes = date.getUTCMinutes();
             }
-            // If it's in HH:MM:SS format
             else if (/^\d{2}:\d{2}:\d{2}$/.test(timeString)) {
                 const [h, m] = timeString.substring(0, 5).split(':').map(Number);
                 hours = h;
                 minutes = m;
             }
             else {
-                return timeString; // Fallback
+                return timeString;
             }
 
-            // Convert to 12-hour format
             const period = hours >= 12 ? 'PM' : 'AM';
-            const displayHours = hours % 12 || 12; // Convert 0 to 12
+            const displayHours = hours % 12 || 12;
 
             return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
         } catch (error) {
@@ -199,8 +192,17 @@ const BookingConfirmationScreen = () => {
                         </View>
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Service:</Text>
-                            <Text style={styles.detailValue} numberOfLines={2} ellipsizeMode="tail">{booking.service_name || 'N/A'}</Text>
+                            <Text style={styles.detailValue} numberOfLines={2} ellipsizeMode="tail">
+                                {booking.service?.title || 'N/A'}
+                            </Text>
                         </View>
+                        {/* NEW: Display therapist information if available */}
+                        {booking.therapist_name && (
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Therapist:</Text>
+                                <Text style={styles.detailValue}>{booking.therapist_name}</Text>
+                            </View>
+                        )}
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Date:</Text>
                             <Text style={styles.detailValue}>{formatDate(booking.date)}</Text>
@@ -240,6 +242,12 @@ const BookingConfirmationScreen = () => {
                         If you need to change or cancel your appointment, please contact us at least 24 hours in
                         advance.
                     </Text>
+                    {/* NEW: Additional information about therapist */}
+                    {booking?.therapist_name && (
+                        <Text style={styles.infoText}>
+                            Your appointment is scheduled with {booking.therapist_name}. Please arrive 10 minutes early for your session.
+                        </Text>
+                    )}
                 </View>
 
                 <TouchableOpacity
@@ -331,15 +339,15 @@ const styles = StyleSheet.create({
     detailLabel: {
         fontSize: 16,
         color: '#555',
-        flex: 1, // Take up 1 part of the space
+        flex: 1,
     },
     detailValue: {
         fontSize: 16,
         fontWeight: '500',
         color: '#333',
-        flex: 2, // Take up 2 parts of the space
-        flexWrap: 'wrap', // Allow text wrapping
-        textAlign: 'right', // Align text to the right
+        flex: 2,
+        flexWrap: 'wrap',
+        textAlign: 'right',
     },
     statusText: {
         color: '#9A563A',
