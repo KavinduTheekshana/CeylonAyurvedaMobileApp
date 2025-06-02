@@ -109,7 +109,7 @@ const BookingTherapistScreen = () => {
         try {
             console.log(`Fetching therapists for service ${serviceId}`);
             console.log(`API URL: ${API_URL}/${serviceId}/therapists`);
-            
+
             const response = await fetch(`${API_URL}/${serviceId}/therapists`);
             const data = await response.json();
 
@@ -140,7 +140,7 @@ const BookingTherapistScreen = () => {
         const daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
         const dayAbbreviations = {
             'monday': 'Mon',
-            'tuesday': 'Tue', 
+            'tuesday': 'Tue',
             'wednesday': 'Wed',
             'thursday': 'Thu',
             'friday': 'Fri',
@@ -203,9 +203,8 @@ const BookingTherapistScreen = () => {
 
         return (
             <TouchableOpacity
-                className={`bg-white rounded-2xl p-5 border-2 relative ${
-                    isSelected ? 'border-amber-700 bg-orange-50' : 'border-transparent'
-                }`}
+                className={`bg-white rounded-2xl p-5 border-2 relative ${isSelected ? 'border-amber-700 bg-orange-50' : 'border-transparent'
+                    }`}
                 style={{
                     shadowColor: '#000',
                     shadowOffset: { width: 0, height: 2 },
@@ -264,10 +263,10 @@ const BookingTherapistScreen = () => {
 
                     <View className="mb-2">
                         <View className="flex-row items-center">
-                            <MaterialIcons 
-                                name="event-available" 
-                                size={16} 
-                                color={item.available_dates_count === 0 ? '#DC2626' : item.available_dates_count < 5 ? '#F59E0B' : '#10B981'} 
+                            <MaterialIcons
+                                name="event-available"
+                                size={16}
+                                color={item.available_dates_count === 0 ? '#DC2626' : item.available_dates_count < 5 ? '#F59E0B' : '#10B981'}
                             />
                             <Text className="text-sm text-gray-500 ml-2 mr-2 flex-1">Next 3 Months</Text>
                             <Text className={`text-sm font-semibold ${getAvailabilityColorClass(item.available_dates_count)}`}>
@@ -278,10 +277,10 @@ const BookingTherapistScreen = () => {
 
                     <View className="mb-2">
                         <View className="flex-row items-center">
-                            <MaterialIcons 
-                                name="access-time" 
-                                size={16} 
-                                color={item.available_slots_count === 0 ? '#DC2626' : item.available_slots_count < 5 ? '#F59E0B' : '#10B981'} 
+                            <MaterialIcons
+                                name="access-time"
+                                size={16}
+                                color={item.available_slots_count === 0 ? '#DC2626' : item.available_slots_count < 5 ? '#F59E0B' : '#10B981'}
                             />
                             <Text className="text-sm text-gray-500 ml-2 mr-2 flex-1">Today</Text>
                             <Text className={`text-sm font-semibold ${availabilityColorClass}`}>
@@ -302,22 +301,24 @@ const BookingTherapistScreen = () => {
                 {item.schedule && item.schedule.length > 0 && (
                     <View className="pt-4 border-t border-gray-200">
                         <Text className="text-base font-semibold text-gray-800 mb-3">Weekly Schedule</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                            <View className="flex-row">
-                                {item.schedule
-                                    .filter(slot => slot.is_active)
-                                    .map((slot, index) => (
-                                        <View key={index} className="bg-gray-100 px-3 py-2 rounded-lg mr-2 items-center min-w-[80px]">
-                                            <Text className="text-xs font-semibold text-amber-700 mb-0.5">
-                                                {slot.day_of_week.charAt(0).toUpperCase() + slot.day_of_week.slice(1, 3)}
-                                            </Text>
-                                            <Text className="text-xs text-gray-500">
-                                                {slot.start_time} - {slot.end_time}
-                                            </Text>
-                                        </View>
-                                    ))}
-                            </View>
-                        </ScrollView>
+                        <View className="flex-row flex-wrap">
+                            {item.schedule
+                                .filter(slot => slot.is_active)
+                                .map((slot, index) => (
+                                    <View
+                                        key={index}
+                                        className="bg-gray-100 px-3 py-2 rounded-lg mr-2 mb-2 items-center"
+                                        style={{ minWidth: 80, flexBasis: 'auto' }}
+                                    >
+                                        <Text className="text-xs font-semibold text-amber-700 mb-0.5">
+                                            {slot.day_of_week.charAt(0).toUpperCase() + slot.day_of_week.slice(1, 3)}
+                                        </Text>
+                                        <Text className="text-xs text-gray-500">
+                                            {slot.start_time} - {slot.end_time}
+                                        </Text>
+                                    </View>
+                                ))}
+                        </View>
                     </View>
                 )}
             </TouchableOpacity>
@@ -374,7 +375,7 @@ const BookingTherapistScreen = () => {
                         <MaterialIcons name="person-off" size={64} color="#9CA3AF" />
                         <Text className="text-xl font-bold text-gray-800 mt-4 mb-2">No Therapists Available</Text>
                         <Text className="text-base text-gray-500 text-center leading-6">
-                            There are currently no therapists available for this service. 
+                            There are currently no therapists available for this service.
                             Please try again later or contact support.
                         </Text>
                     </View>
@@ -384,9 +385,8 @@ const BookingTherapistScreen = () => {
             {/* Continue Button */}
             <View className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200">
                 <TouchableOpacity
-                    className={`py-4 px-6 rounded-xl flex-row items-center justify-center ${
-                        selectedTherapist ? 'bg-amber-700' : 'bg-gray-300'
-                    }`}
+                    className={`py-4 px-6 rounded-xl flex-row items-center justify-center ${selectedTherapist ? 'bg-amber-700' : 'bg-gray-300'
+                        }`}
                     disabled={!selectedTherapist}
                     onPress={handleContinue}
                 >
