@@ -6,7 +6,8 @@ import {
     TouchableOpacity,
     SafeAreaView,
     ActivityIndicator,
-    FlatList
+    FlatList,
+    Alert
 } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -31,6 +32,25 @@ type TimeSlot = {
     id: string;
     time: string;
     available: boolean;
+    formatted_time?: string;
+};
+
+// Define therapist schedule type
+type TherapistSchedule = {
+    day_of_week: string;
+    start_time: string;
+    end_time: string;
+    is_active: boolean;
+};
+
+// Define booking type
+type ExistingBooking = {
+    id: number;
+    date: string;
+    time: string;
+    service: {
+        duration: number;
+    };
 };
 
 // Define your navigation param list for all screens
@@ -70,9 +90,6 @@ type BookingTimeScreenRouteProp = RouteProp<RootStackParamList, 'BookingTimeScre
 // Type for the navigation
 type BookingTimeScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
-// API URL for available time slots
-const API_URL = `${API_BASE_URL}/api/timeslots`;
-
 const BookingTimeScreen = () => {
     const route = useRoute<BookingTimeScreenRouteProp>();
     const navigation = useNavigation<BookingTimeScreenNavigationProp>();
@@ -88,65 +105,203 @@ const BookingTimeScreen = () => {
     const [selectedTime, setSelectedTime] = useState<string>('');
     const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+    const [therapistSchedule, setTherapistSchedule] = useState<TherapistSchedule[]>([]);
+    const [existingBookings, setExistingBookings] = useState<ExistingBooking[]>([]);
 
     useEffect(() => {
-        // Fetch available time slots from the API including therapist availability
-        fetchTimeSlots();
+        // Fetch therapist schedule and existing bookings
+        fetchTherapistData();
     }, [serviceId, selectedDate, duration, therapistId]);
 
-    const fetchTimeSlots = () => {
+    const fetchTherapistData = async () => {
         setLoading(true);
-
-        // Include therapist ID in the API request for availability
-        const apiUrl = `${API_URL}?serviceId=${serviceId}&date=${selectedDate}&duration=${duration}&therapistId=${therapistId}`;
-        console.log('Fetching time slots:', apiUrl);
-
-        // Request available time slots from the API with therapist availability
-        fetch(apiUrl)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && Array.isArray(data.data)) {
-                    setTimeSlots(data.data);
-                } else {
-                    // If the API is not available or there's an error, use sample data
-                    generateSampleTimeSlots();
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching time slots:', error);
-                // Generate sample time slots if API fails
-                generateSampleTimeSlots();
-            })
-            .finally(() => {
-                setLoading(false);
-            });
+        try {
+            console.log(`Fetching data for therapist ${therapistId} on ${selectedDate}`);
+            
+            // Fetch therapist schedule
+            await Promise.all([
+                fetchTherapistSchedule(),
+                fetchExistingBookings()
+            ]);
+            
+        } catch (error) {
+            console.error('Error fetching therapist data:', error);
+            Alert.alert('Error', 'Failed to load available time slots. Please try again.');
+        }
     };
 
-    const generateSampleTimeSlots = () => {
-        // Generate sample time slots for testing
-        const slots: TimeSlot[] = [];
-
-        // Business hours from 9am to 5pm with 30-minute intervals
-        const startHour = 9;
-        const endHour = 17;
-        const intervalMinutes = 30;
-
-        for (let hour = startHour; hour < endHour; hour++) {
-            for (let minute = 0; minute < 60; minute += intervalMinutes) {
-                const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-
-                // Randomly mark some slots as unavailable (simulating therapist's schedule)
-                const available = Math.random() > 0.3;
-
-                slots.push({
-                    id: `slot-${hour}-${minute}`,
-                    time: timeStr,
-                    available: available
-                });
+    const fetchTherapistSchedule = async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/services/${serviceId}/therapists`);
+            const data = await response.json();
+            
+            if (data.success && Array.isArray(data.data)) {
+                const therapist = data.data.find((t: any) => t.id === therapistId);
+                
+                if (therapist && therapist.schedule) {
+                    console.log('Therapist schedule:', therapist.schedule);
+                    setTherapistSchedule(therapist.schedule);
+                    return therapist.schedule;
+                }
             }
+            
+            // Fallback schedule if API doesn't provide one
+            const fallbackSchedule = [
+                { day_of_week: 'monday', start_time: '09:00', end_time: '17:00', is_active: true },
+                { day_of_week: 'tuesday', start_time: '09:00', end_time: '17:00', is_active: true },
+                { day_of_week: 'wednesday', start_time: '09:00', end_time: '17:00', is_active: true },
+                { day_of_week: 'thursday', start_time: '09:00', end_time: '17:00', is_active: true },
+                { day_of_week: 'friday', start_time: '09:00', end_time: '17:00', is_active: true },
+                { day_of_week: 'saturday', start_time: '09:00', end_time: '17:00', is_active: true }
+            ];
+            
+            console.log('Using fallback schedule');
+            setTherapistSchedule(fallbackSchedule);
+            return fallbackSchedule;
+            
+        } catch (error) {
+            console.error('Error fetching therapist schedule:', error);
+            throw error;
         }
+    };
 
+    const fetchExistingBookings = async () => {
+        try {
+            // This would be your API endpoint to get existing bookings for the therapist on the selected date
+            console.log(`Fetching existing bookings for therapist ${therapistId} on ${selectedDate}`);
+            const response = await fetch(
+                `${API_BASE_URL}/api/therapists/${therapistId}/bookings?date=${selectedDate}`
+            );
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                if (data.success && Array.isArray(data.data)) {
+                    console.log('Existing bookings:', data.data);
+                    setExistingBookings(data.data);
+                    return data.data;
+                }
+            }
+            
+            // If endpoint doesn't exist or fails, return empty array
+            console.log('No existing bookings found or endpoint not available');
+            setExistingBookings([]);
+            return [];
+            
+        } catch (error) {
+            console.error('Error fetching existing bookings:', error);
+            setExistingBookings([]);
+            return [];
+        }
+    };
+
+    // Generate time slots based on therapist schedule and existing bookings
+    useEffect(() => {
+        if (therapistSchedule.length > 0) {
+            generateTimeSlots();
+        }
+    }, [therapistSchedule, existingBookings, selectedDate, duration]);
+
+    const generateTimeSlots = () => {
+        console.log('Generating time slots for', selectedDate);
+        
+        // Get the day of the week for the selected date
+        const selectedDateObj = new Date(selectedDate);
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const selectedDayName = dayNames[selectedDateObj.getDay()];
+        
+        console.log('Selected day:', selectedDayName);
+        
+        // Find the therapist's schedule for this day
+        const daySchedule = therapistSchedule.filter(
+            schedule => schedule.day_of_week.toLowerCase() === selectedDayName && schedule.is_active
+        );
+        
+        if (daySchedule.length === 0) {
+            console.log('No schedule found for', selectedDayName);
+            setTimeSlots([]);
+            setLoading(false);
+            return;
+        }
+        
+        console.log('Day schedule:', daySchedule);
+        
+        const slots: TimeSlot[] = [];
+        const slotInterval = 30; // 30-minute intervals
+        const now = new Date();
+        const isToday = selectedDate === now.toISOString().split('T')[0];
+        
+        daySchedule.forEach((schedule, scheduleIndex) => {
+            const startTime = parseTime(schedule.start_time);
+            const endTime = parseTime(schedule.end_time);
+            
+            let currentTime = new Date(startTime);
+            
+            while (currentTime < endTime) {
+                const timeString = formatTime(currentTime);
+                const slotEndTime = new Date(currentTime.getTime() + duration * 60000); // Add service duration
+                
+                // Check if slot end time exceeds the schedule end time
+                if (slotEndTime > endTime) {
+                    break;
+                }
+                
+                // Check if this slot is in the past (for today only)
+                let isPastTime = false;
+                if (isToday) {
+                    const slotDateTime = new Date();
+                    slotDateTime.setHours(currentTime.getHours(), currentTime.getMinutes(), 0, 0);
+                    isPastTime = slotDateTime <= now;
+                }
+                
+                // Check if this slot conflicts with existing bookings
+                const isBooked = existingBookings.some(booking => {
+                    const bookingStart = parseTime(booking.time);
+                    const bookingEnd = new Date(bookingStart.getTime() + (booking.service?.duration || 60) * 60000);
+                    
+                    // Check for time overlap
+                    return (currentTime < bookingEnd && slotEndTime > bookingStart);
+                });
+                
+                const isAvailable = !isPastTime && !isBooked;
+                
+                slots.push({
+                    id: `${scheduleIndex}-${timeString}`,
+                    time: timeString,
+                    available: isAvailable,
+                    formatted_time: formatTime12Hour(currentTime)
+                });
+                
+                // Move to next slot
+                currentTime = new Date(currentTime.getTime() + slotInterval * 60000);
+            }
+        });
+        
+        console.log(`Generated ${slots.length} time slots, ${slots.filter(s => s.available).length} available`);
         setTimeSlots(slots);
+        setLoading(false);
+    };
+
+    // Helper function to parse time string (HH:MM) to Date object
+    const parseTime = (timeString: string): Date => {
+        const [hours, minutes] = timeString.split(':').map(Number);
+        const date = new Date();
+        date.setHours(hours, minutes, 0, 0);
+        return date;
+    };
+
+    // Helper function to format Date object to HH:MM string
+    const formatTime = (date: Date): string => {
+        return date.toTimeString().slice(0, 5);
+    };
+
+    // Helper function to format time in 12-hour format
+    const formatTime12Hour = (date: Date): string => {
+        return date.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
     };
 
     React.useLayoutEffect(() => {
@@ -167,10 +322,12 @@ const BookingTimeScreen = () => {
 
     const handleContinue = () => {
         if (!selectedTime) {
-            return; // Don't proceed if no time is selected
+            Alert.alert('Please Select Time', 'Please select an available time slot to continue.');
+            return;
         }
 
-        // Navigate to checkout screen with therapist info
+        console.log(`Continuing with selected time: ${selectedTime}`);
+
         navigation.navigate('BookingCheckoutScreen', {
             serviceId,
             serviceName,
@@ -202,10 +359,23 @@ const BookingTimeScreen = () => {
                         isSelected && styles.selectedTimeText
                     ]}
                 >
-                    {item.time}
+                    {item.formatted_time || item.time}
                 </Text>
+                {!item.available && (
+                    <Text style={styles.unavailableLabel}>Booked</Text>
+                )}
             </TouchableOpacity>
         );
+    };
+
+    const formatSelectedDate = (dateString: string): string => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
     };
 
     return (
@@ -213,7 +383,7 @@ const BookingTimeScreen = () => {
             <View style={styles.content}>
                 <Text style={styles.title}>Select a Time</Text>
                 <Text style={styles.subtitle}>
-                    Available time slots for {selectedDate}
+                    Available time slots for {formatSelectedDate(selectedDate)}
                 </Text>
 
                 {/* Show service and therapist info */}
@@ -239,18 +409,33 @@ const BookingTimeScreen = () => {
                     </View>
                 ) : (
                     timeSlots.length > 0 ? (
-                        <FlatList
-                            data={timeSlots}
-                            renderItem={renderTimeSlot}
-                            keyExtractor={(item) => item.id}
-                            numColumns={3}
-                            contentContainerStyle={styles.timeSlotsContainer}
-                        />
+                        <>
+                            <View style={styles.slotsHeader}>
+                                <Text style={styles.slotsHeaderText}>
+                                    {timeSlots.filter(slot => slot.available).length} Available Slots
+                                </Text>
+                            </View>
+                            <FlatList
+                                data={timeSlots}
+                                renderItem={renderTimeSlot}
+                                keyExtractor={(item) => item.id}
+                                numColumns={3}
+                                contentContainerStyle={styles.timeSlotsContainer}
+                                showsVerticalScrollIndicator={false}
+                            />
+                        </>
                     ) : (
                         <View style={styles.noTimesContainer}>
                             <Text style={styles.noTimesText}>
-                                No available time slots for this therapist on this date. Please try another date.
+                                No available time slots for {therapistName} on this date. 
+                                Please try another date.
                             </Text>
+                            <TouchableOpacity 
+                                style={styles.backButton}
+                                onPress={() => navigation.goBack()}
+                            >
+                                <Text style={styles.backButtonText}>Choose Different Date</Text>
+                            </TouchableOpacity>
                         </View>
                     )
                 )}
@@ -265,7 +450,9 @@ const BookingTimeScreen = () => {
                     disabled={!selectedTime}
                     onPress={handleContinue}
                 >
-                    <Text style={styles.continueButtonText}>Continue</Text>
+                    <Text style={styles.continueButtonText}>
+                        {selectedTime ? `Continue with ${timeSlots.find(slot => slot.time === selectedTime)?.formatted_time}` : 'Select a Time'}
+                    </Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
@@ -326,6 +513,15 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#555',
     },
+    slotsHeader: {
+        paddingVertical: 12,
+        paddingHorizontal: 4,
+    },
+    slotsHeaderText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#333',
+    },
     timeSlotsContainer: {
         paddingVertical: 8,
     },
@@ -337,6 +533,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         alignItems: 'center',
         justifyContent: 'center',
+        minHeight: 60,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
@@ -357,10 +554,15 @@ const styles = StyleSheet.create({
     },
     selectedTimeText: {
         color: '#fff',
+        fontWeight: '600',
     },
     unavailableTimeText: {
         color: '#999',
-        textDecorationLine: 'line-through',
+    },
+    unavailableLabel: {
+        fontSize: 10,
+        color: '#999',
+        marginTop: 2,
     },
     noTimesContainer: {
         flex: 1,
@@ -372,6 +574,19 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#666',
         textAlign: 'center',
+        marginBottom: 20,
+        lineHeight: 24,
+    },
+    backButton: {
+        backgroundColor: '#9A563A',
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderRadius: 8,
+    },
+    backButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
     },
     footer: {
         padding: 16,
@@ -395,5 +610,4 @@ const styles = StyleSheet.create({
     },
 });
 
-// Wrap the component with the AuthGuard
 export default withAuthGuard(BookingTimeScreen);

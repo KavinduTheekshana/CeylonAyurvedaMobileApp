@@ -383,7 +383,7 @@ const BookingTherapistScreen = () => {
             </View>
 
             {/* Continue Button */}
-            <View className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200">
+               <View className="p-4 bg-white border-t border-gray-200">
                 <TouchableOpacity
                     className={`py-4 px-6 rounded-xl flex-row items-center justify-center ${selectedTherapist ? 'bg-amber-700' : 'bg-gray-300'
                         }`}
