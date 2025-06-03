@@ -23,6 +23,10 @@ const Layout = () => {
           options={{ headerShown: true }}
         />
         <Stack.Screen
+          name="TherapistDetailsScreen"
+          options={{ headerShown: true }}
+        />
+        <Stack.Screen
           name="BookingTimeScreen"
           options={{ headerShown: true }}
         />

@@ -1,0 +1,381 @@
+import React, { useState, useEffect } from 'react';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    SafeAreaView,
+    ActivityIndicator,
+    ScrollView,
+    Image,
+    Alert,
+    Linking,
+    Dimensions
+} from 'react-native';
+import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { HeaderBackButton } from '@react-navigation/elements';
+import { API_BASE_URL } from "@/config/api";
+import { Feather, MaterialIcons, Ionicons } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
+
+// Define Therapist type with all details from API
+type TherapistDetails = {
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+    image: string | null;
+    bio: string | null;
+    status: boolean;
+    created_at: string;
+    updated_at: string;
+    schedule: {
+        day_of_week: string;
+        start_time: string;
+        end_time: string;
+        is_active: boolean;
+    }[];
+    available_days: string;
+    services: {
+        id: number;
+        title: string;
+        price: string;
+        duration: number;
+    }[];
+    availability_stats: {
+        available_dates_count: number;
+        today_slots_count: number;
+        next_available_dates: string[];
+    };
+    specializations: string[];
+    certifications: string[];
+    experience_years: number | null;
+    languages: string[];
+};
+
+// Define your navigation param list
+type RootStackParamList = {
+    TherapistDetailsScreen: {
+        therapistId: number;
+        therapistName: string;
+    };
+};
+
+// Type for the route
+type TherapistDetailsScreenRouteProp = RouteProp<RootStackParamList, 'TherapistDetailsScreen'>;
+
+// Type for the navigation
+type TherapistDetailsScreenNavigationProp = StackNavigationProp<RootStackParamList>;
+
+const TherapistDetailsScreen = () => {
+    const route = useRoute<TherapistDetailsScreenRouteProp>();
+    const navigation = useNavigation<TherapistDetailsScreenNavigationProp>();
+    const { therapistId, therapistName } = route.params;
+
+    const [therapist, setTherapist] = useState<TherapistDetails | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        fetchTherapistDetails();
+    }, [therapistId]);
+
+    const fetchTherapistDetails = async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            console.log(`Fetching therapist details for ID: ${therapistId}`);
+            
+            const response = await fetch(`${API_BASE_URL}/api/therapists/details/${therapistId}`);
+            const data = await response.json();
+
+            console.log('Therapist details response:', data);
+
+            if (data.success && data.data) {
+                setTherapist(data.data);
+            } else {
+                throw new Error(data.message || 'Failed to fetch therapist details');
+            }
+        } catch (error) {
+            console.error('Error fetching therapist details:', error);
+            setError('Failed to load therapist details. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Helper function to format day names
+    const formatDayName = (day: string) => {
+        const days = {
+            'monday': 'Mon',
+            'tuesday': 'Tue',
+            'wednesday': 'Wed',
+            'thursday': 'Thu',
+            'friday': 'Fri',
+            'saturday': 'Sat',
+            'sunday': 'Sun'
+        };
+        return days[day as keyof typeof days] || day;
+    };
+
+    // Helper function to format dates
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-GB', { 
+            weekday: 'short', 
+            day: 'numeric',
+            month: 'short'
+        });
+    };
+
+    // Handle phone call
+    const handlePhoneCall = () => {
+        if (therapist?.phone) {
+            const phoneUrl = `tel:${therapist.phone}`;
+            Linking.canOpenURL(phoneUrl)
+                .then((supported) => {
+                    if (supported) {
+                        Linking.openURL(phoneUrl);
+                    } else {
+                        Alert.alert('Error', 'Phone call not supported on this device');
+                    }
+                })
+                .catch((err) => console.error('An error occurred', err));
+        }
+    };
+
+    // Handle email
+    const handleEmail = () => {
+        if (therapist?.email) {
+            const emailUrl = `mailto:${therapist.email}`;
+            Linking.canOpenURL(emailUrl)
+                .then((supported) => {
+                    if (supported) {
+                        Linking.openURL(emailUrl);
+                    } else {
+                        Alert.alert('Error', 'Email not supported on this device');
+                    }
+                })
+                .catch((err) => console.error('An error occurred', err));
+        }
+    };
+
+    React.useLayoutEffect(() => {
+        navigation.setOptions({
+            title: therapistName || 'Therapist Details',
+            headerLeft: () => (
+                <HeaderBackButton
+                    onPress={() => navigation.goBack()}
+                    tintColor="#000"
+                />
+            ),
+        });
+    }, [navigation, therapistName]);
+
+    if (loading) {
+        return (
+            <View className="flex-1 justify-center items-center p-8 bg-gray-50">
+                <ActivityIndicator size="large" color="#9A563A" />
+                <Text className="mt-4 text-base text-gray-500">Loading therapist details...</Text>
+            </View>
+        );
+    }
+
+    if (error || !therapist) {
+        return (
+            <View className="flex-1 justify-center items-center p-8 bg-gray-50">
+                <MaterialIcons name="error-outline" size={64} color="#DC2626" />
+                <Text className="text-xl font-bold text-red-600 mt-4 mb-2">Oops! Something went wrong</Text>
+                <Text className="text-base text-gray-500 text-center mb-6 leading-6">{error}</Text>
+                <TouchableOpacity
+                    className="bg-amber-700 py-3.5 px-7 rounded-xl"
+                    onPress={fetchTherapistDetails}
+                >
+                    <Text className="text-white text-base font-semibold">Try Again</Text>
+                </TouchableOpacity>
+            </View>
+        );
+    }
+
+    return (
+        <SafeAreaView className="flex-1 bg-gray-50">
+            <ScrollView 
+                className="flex-1"
+                contentContainerStyle={{ paddingBottom: 20 }}
+                showsVerticalScrollIndicator={false}
+            >
+                {/* Hero Section with Gradient Background */}
+                <View className="bg-gradient-to-br from-amber-700 to-amber-800 pt-6 pb-8 px-6 relative overflow-hidden">
+                    {/* Decorative circles */}
+                    <View className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
+                    <View className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/5 rounded-full" />
+                    
+                    <View className="flex-row items-center">
+                        {/* Profile Image */}
+                        <View className="mr-4">
+                            {therapist.image ? (
+                                <Image
+                                    source={{ uri: therapist.image }}
+                                    className="w-24 h-24 rounded-full border-4 border-white/20"
+                                    resizeMode="cover"
+                                />
+                            ) : (
+                                <View className="w-24 h-24 rounded-full bg-white/20 justify-center items-center border-4 border-white/20">
+                                    <Text className="text-white text-2xl font-bold">
+                                        {therapist.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+
+                        {/* Therapist Info */}
+                        <View className="flex-1">
+                            <Text className="text-2xl font-bold text-black mb-1">{therapist.name}</Text>
+                            <View className={`px-3 py-1 rounded-full self-start ${therapist.status ? 'bg-green-500' : 'bg-red-500'}`}>
+                                <Text className="text-white text-xs font-semibold">
+                                    {therapist.status ? 'Available' : 'Unavailable'}
+                                </Text>
+                            </View>
+                            <Text className="text-amber-700 mt-2 text-sm">
+                                {therapist.available_days}
+                            </Text>
+                        </View>
+                    </View>
+                </View>
+
+                {/* Quick Stats Cards */}
+                <View className="px-4 -mt-4 mb-6">
+                    <View className="bg-white rounded-2xl p-4 flex-row shadow-lg">
+                        <View className="flex-1 items-center">
+                            <Text className="text-2xl font-bold text-amber-700">{therapist.availability_stats.available_dates_count}</Text>
+                            <Text className="text-xs text-gray-500 text-center">Available Days</Text>
+                        </View>
+                        <View className="w-px bg-gray-200 mx-4" />
+                        <View className="flex-1 items-center">
+                            <Text className="text-2xl font-bold text-green-600">{therapist.services.length}</Text>
+                            <Text className="text-xs text-gray-500 text-center">Services</Text>
+                        </View>
+                        <View className="w-px bg-gray-200 mx-4" />
+                        <View className="flex-1 items-center">
+                            <Text className="text-2xl font-bold text-blue-600">{therapist.availability_stats.today_slots_count}</Text>
+                            <Text className="text-xs text-gray-500 text-center">Today's Slots</Text>
+                        </View>
+                    </View>
+                </View>
+
+                {/* Contact Buttons */}
+                <View className="flex-row px-4 mb-6 space-x-3">
+                    <TouchableOpacity
+                        className="flex-1 bg-amber-700 py-4 m-2 rounded-xl flex-row items-center justify-center"
+                        onPress={handlePhoneCall}
+                    >
+                        <Feather name="phone" size={18} color="#fff" />
+                        <Text className="text-white font-semibold ml-2">Call</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                        className="flex-1 bg-gray-200 py-4 m-2 rounded-xl flex-row items-center justify-center"
+                        onPress={handleEmail}
+                    >
+                        <Feather name="mail" size={18} color="#374151" />
+                        <Text className="text-gray-700 font-semibold ml-2">Email</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* About Section */}
+                {therapist.bio && (
+                    <View className="bg-white rounded-2xl mx-4 p-6 mb-6 shadow-sm">
+                        <Text className="text-xl font-bold text-gray-800 mb-3">About</Text>
+                        <Text className="text-gray-700 leading-6">{therapist.bio}</Text>
+                    </View>
+                )}
+
+                {/* Services Section */}
+                <View className="bg-white rounded-2xl mx-4 p-6 mb-6 shadow-sm">
+                    <Text className="text-xl font-bold text-gray-800 mb-4">Services Offered</Text>
+                    <View className="space-y-3">
+                        {therapist.services.map((service, index) => (
+                            <View key={service.id} className="flex-row items-center justify-between p-3 mb-2 bg-gray-50 rounded-xl">
+                                <View className="flex-1">
+                                    <Text className="text-base font-semibold text-gray-800" numberOfLines={1}>
+                                        {service.title}
+                                    </Text>
+                                    <Text className="text-sm text-gray-500">
+                                        {service.duration} minutes
+                                    </Text>
+                                </View>
+                                <Text className="text-lg font-bold text-amber-700">
+                                    £{parseFloat(service.price).toFixed(0)}
+                                </Text>
+                            </View>
+                        ))}
+                    </View>
+                </View>
+
+                {/* Weekly Schedule */}
+                <View className="bg-white rounded-2xl mx-4 p-6 mb-6 shadow-sm">
+                    <Text className="text-xl font-bold text-gray-800 mb-4">Weekly Schedule</Text>
+                    <View className="space-y-3">
+                        {therapist.schedule.map((slot, index) => (
+                            <View key={index} className="flex-row items-center justify-between mb-2 py-3 px-4 bg-gray-50 rounded-xl">
+                                <View className="flex-row items-center">
+                                    <View className="w-10 h-10 bg-amber-700 rounded-full items-center justify-center mr-3">
+                                        <Text className="text-white font-bold text-xs">
+                                            {formatDayName(slot.day_of_week)}
+                                        </Text>
+                                    </View>
+                                    <Text className="text-base font-medium text-gray-800 capitalize">
+                                        {slot.day_of_week}
+                                    </Text>
+                                </View>
+                                <Text className="text-gray-600 font-medium">
+                                    {slot.start_time} - {slot.end_time}
+                                </Text>
+                            </View>
+                        ))}
+                    </View>
+                </View>
+
+                {/* Next Available Dates */}
+                <View className="bg-white rounded-2xl mx-4 p-6 mb-6 shadow-sm">
+                    <Text className="text-xl font-bold text-gray-800 mb-4">Next Available Dates</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} className="space-x-3">
+                        <View className="flex-row space-x-3">
+                            {therapist.availability_stats.next_available_dates.map((date, index) => (
+                                <View key={index} className="bg-gradient-to-b from-amber-100 to-amber-50 m-1 px-4 py-3 rounded-xl border border-amber-700 min-w-[80px] items-center">
+                                    <Text className="text-amber-700 font-bold text-xs">
+                                        {formatDate(date)}
+                                    </Text>
+                                </View>
+                            ))}
+                        </View>
+                    </ScrollView>
+                </View>
+
+                {/* Contact Information */}
+                <View className="bg-white rounded-2xl mx-4 p-6 mb-6 shadow-sm">
+                    <Text className="text-xl font-bold text-gray-800 mb-4">Contact Information</Text>
+                    <View className="space-y-4">
+                        <View className="flex-row items-center">
+                            <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-3">
+                                <Feather name="mail" size={16} color="#3B82F6" />
+                            </View>
+                            <Text className="text-gray-700 flex-1">{therapist.email}</Text>
+                        </View>
+                        
+                        <View className="flex-row items-center">
+                            <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mr-3">
+                                <Feather name="phone" size={16} color="#10B981" />
+                            </View>
+                            <Text className="text-gray-700 flex-1">{therapist.phone}</Text>
+                        </View>
+                    </View>
+                </View>
+            </ScrollView>
+        </SafeAreaView>
+    );
+};
+
+export default TherapistDetailsScreen;

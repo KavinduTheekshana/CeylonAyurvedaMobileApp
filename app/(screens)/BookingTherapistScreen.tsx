@@ -59,6 +59,10 @@ type RootStackParamList = {
         serviceName: string;
         duration: number;
     };
+    TherapistDetailsScreen: {
+        therapistId: number;
+        therapistName: string;
+    };
     BookingTimeScreen: {
         serviceId: number;
         serviceName: string;
@@ -181,6 +185,15 @@ const BookingTherapistScreen = () => {
         setSelectedTherapist(therapist);
     };
 
+    // Handle view profile
+    const handleViewProfile = (therapist: Therapist) => {
+        // Navigate to therapist details screen
+        navigation.navigate('TherapistDetailsScreen', {
+            therapistId: therapist.id,
+            therapistName: therapist.name
+        });
+    };
+
     const handleContinue = () => {
         if (!selectedTherapist) {
             Alert.alert('Error', 'Please select a therapist to continue');
@@ -221,6 +234,8 @@ const BookingTherapistScreen = () => {
                         <Feather name="check" size={16} color="#fff" />
                     </View>
                 )}
+
+
 
                 {/* Therapist Header */}
                 <View className="flex-row mb-4">
@@ -295,7 +310,11 @@ const BookingTherapistScreen = () => {
                     <View className="mb-4 pt-4 border-t border-gray-200">
                         <Text className="text-sm text-gray-500 leading-5" numberOfLines={3}>{item.bio}</Text>
                     </View>
+
+
                 )}
+
+
 
                 {/* Detailed Schedule */}
                 {item.schedule && item.schedule.length > 0 && (
@@ -321,6 +340,26 @@ const BookingTherapistScreen = () => {
                         </View>
                     </View>
                 )}
+
+                {/* View Profile Button - Bottom Right Corner */}
+              <View className="mt-4 flex-row justify-end">
+                    <TouchableOpacity
+                        className="bg-white border border-amber-700 px-4 py-2 rounded-lg flex-row items-center shadow-md"
+                        onPress={() => handleViewProfile(item)}
+                        activeOpacity={0.7}
+                        style={{
+                            elevation: 3,
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.22,
+                            shadowRadius: 2.22,
+                        }}
+                    >
+                        <Feather name="eye" size={16} color="#9A563A" />
+                        <Text className="text-amber-700 text-sm font-semibold ml-2">View Profile</Text>
+                    </TouchableOpacity>
+                </View>
+
             </TouchableOpacity>
         );
     };
@@ -383,7 +422,7 @@ const BookingTherapistScreen = () => {
             </View>
 
             {/* Continue Button */}
-               <View className="p-4 bg-white border-t border-gray-200">
+            <View className="p-4 bg-white border-t border-gray-200">
                 <TouchableOpacity
                     className={`py-4 px-6 rounded-xl flex-row items-center justify-center ${selectedTherapist ? 'bg-amber-700' : 'bg-gray-300'
                         }`}
