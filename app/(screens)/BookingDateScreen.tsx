@@ -1,4 +1,4 @@
-// Updated BookingDateScreen.tsx with NativeWind styling
+// Updated BookingDateScreen.tsx with work_start_date handling
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -52,6 +52,7 @@ const BookingDateScreen = () => {
     const [markedDates, setMarkedDates] = useState<any>({});
     const [loading, setLoading] = useState<boolean>(false);
     const [availableDates, setAvailableDates] = useState<string[]>([]);
+    const [therapistData, setTherapistData] = useState<any>(null);
 
     // Calculate the minimum date (today)
     const today = new Date();
@@ -84,7 +85,7 @@ const BookingDateScreen = () => {
         try {
             console.log(`Fetching available dates for therapist ${therapistId}`);
 
-            // First, get therapist schedule from the service endpoint
+            // Get therapist schedule from the service endpoint
             const therapistResponse = await fetch(
                 `${API_BASE_URL}/api/services/${serviceId}/therapists`
             );
@@ -97,34 +98,22 @@ const BookingDateScreen = () => {
                     // Find the specific therapist
                     const therapist = therapistData.data.find((t: any) => t.id === therapistId);
 
-                    if (therapist && therapist.schedule) {
-                        console.log('Found therapist schedule:', therapist.schedule);
-                        generateAvailableDatesFromSchedule(therapist.schedule);
-                        return;
+                    if (therapist) {
+                        console.log('Found therapist:', therapist);
+                        setTherapistData(therapist);
+                        
+                        if (therapist.schedule) {
+                            console.log('Found therapist schedule:', therapist.schedule);
+                            generateAvailableDatesFromSchedule(therapist.schedule, therapist.work_start_date);
+                            return;
+                        }
                     }
                 }
             }
 
-            // Try the dedicated endpoint as fallback
-            const response = await fetch(
-                `${API_BASE_URL}/api/therapists/${therapistId}/available-dates?months=3`
-            );
-
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Available dates response:', data);
-
-                if (data.success && data.available_dates) {
-                    setAvailableDates(data.available_dates);
-                    updateMarkedDates(data.available_dates);
-                } else {
-                    console.log('No available_dates in response, using fallback schedule');
-                    generateAvailableDatesFromSchedule();
-                }
-            } else {
-                console.log('API endpoint not available, using fallback schedule');
-                generateAvailableDatesFromSchedule();
-            }
+            // Fallback if no data found
+            console.log('No therapist data found, using fallback schedule');
+            generateAvailableDatesFromSchedule();
         } catch (error) {
             console.error('Error fetching available dates:', error);
             // Fallback: generate dates based on default schedule
@@ -134,9 +123,10 @@ const BookingDateScreen = () => {
         }
     };
 
-    // Generate available dates based on therapist's actual schedule
-    const generateAvailableDatesFromSchedule = (schedule?: any[]) => {
+    // Generate available dates based on therapist's actual schedule and work start date
+    const generateAvailableDatesFromSchedule = (schedule?: any[], workStartDate?: string) => {
         console.log('Generating available dates from schedule:', schedule);
+        console.log('Work start date:', workStartDate);
 
         let workingDays: number[] = [];
 
@@ -166,13 +156,27 @@ const BookingDateScreen = () => {
         }
 
         const dates: string[] = [];
-        const currentDate = new Date(today);
+        
+        // Determine the effective start date
+        let effectiveStartDate = new Date(today);
+        
+        if (workStartDate) {
+            const workStart = new Date(workStartDate);
+            // If work start date is in the future, use that as the start date
+            if (workStart > today) {
+                effectiveStartDate = workStart;
+                console.log('Using work start date as effective start:', workStartDate);
+            }
+        }
 
+        const currentDate = new Date(effectiveStartDate);
+        
+        // Ensure we don't go beyond our max date
         while (currentDate <= maxDate) {
             const dayOfWeek = currentDate.getDay();
 
-            // Include the date if it's a working day and not in the past
-            if (workingDays.includes(dayOfWeek) && currentDate >= today) {
+            // Include the date if it's a working day and not before the effective start date
+            if (workingDays.includes(dayOfWeek) && currentDate >= effectiveStartDate) {
                 dates.push(currentDate.toISOString().split('T')[0]);
             }
 
@@ -180,11 +184,13 @@ const BookingDateScreen = () => {
         }
 
         console.log(`Generated ${dates.length} available dates for working days:`, workingDays);
+        console.log(`Effective start date: ${effectiveStartDate.toISOString().split('T')[0]}`);
+        
         setAvailableDates(dates);
-        updateMarkedDates(dates);
+        updateMarkedDates(dates, effectiveStartDate);
     };
 
-    const updateMarkedDates = (availableDates: string[]) => {
+    const updateMarkedDates = (availableDates: string[], effectiveStartDate: Date) => {
         console.log(`Updating marked dates with ${availableDates.length} available dates`);
 
         const marked: any = {};
@@ -291,6 +297,30 @@ const BookingDateScreen = () => {
         });
     };
 
+    // Get the effective minimum date for calendar display
+    const getEffectiveMinDate = (): string => {
+        if (therapistData?.work_start_date) {
+            const workStartDate = new Date(therapistData.work_start_date);
+            if (workStartDate > today) {
+                return therapistData.work_start_date;
+            }
+        }
+        return minDate;
+    };
+
+    // Get work status message
+    const getWorkStatusMessage = (): string => {
+        if (!therapistData) return '';
+        
+        if (therapistData.work_start_date) {
+            const workStartDate = new Date(therapistData.work_start_date);
+            if (workStartDate > today) {
+                return `Available from ${formatDate(therapistData.work_start_date)}`;
+            }
+        }
+        return 'Currently available';
+    };
+
     return (
         <SafeAreaView className="flex-1 bg-gray-100">
             <View className="flex-1 p-4">
@@ -304,6 +334,11 @@ const BookingDateScreen = () => {
                     <View className="bg-white p-3 rounded-lg mb-4 shadow-sm">
                         <Text className="text-sm text-gray-600 mb-1">Selected Therapist:</Text>
                         <Text className="text-base font-semibold text-amber-800">{therapistName}</Text>
+                        {therapistData && (
+                            <Text className="text-xs text-gray-500 mt-1">
+                                {getWorkStatusMessage()}
+                            </Text>
+                        )}
                     </View>
                 )}
 
@@ -312,7 +347,9 @@ const BookingDateScreen = () => {
                     <Text className="text-xs text-green-800 text-center font-semibold">
                         {loading
                             ? "Loading availability..."
-                            : `${availableDates.length} days available in the next 3 months`
+                            : therapistData?.available_dates_count 
+                                ? `${therapistData.available_dates_count} days available (API count)`
+                                : `${availableDates.length} days available in the next 3 months`
                         }
                     </Text>
                 </View>
@@ -325,8 +362,8 @@ const BookingDateScreen = () => {
                 ) : (
                     <>
                         <Calendar
-                            current={today.toISOString().split('T')[0]}
-                            minDate={minDate}
+                            current={getEffectiveMinDate()}
+                            minDate={getEffectiveMinDate()}
                             maxDate={maxDateString}
                             onDayPress={handleDateSelect}
                             markedDates={markedDates}
