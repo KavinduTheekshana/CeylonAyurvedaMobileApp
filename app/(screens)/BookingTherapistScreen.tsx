@@ -17,7 +17,7 @@ import { API_BASE_URL } from "@/config/api";
 import withAuthGuard from '../components/AuthGuard';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 
-// Define Therapist type with all availability data
+// Define Therapist type with all availability data including work_start_date
 type Therapist = {
     id: number;
     name: string;
@@ -25,6 +25,7 @@ type Therapist = {
     phone: string;
     image: string | null;
     bio: string | null;
+    work_start_date: string; // Added work start date
     status: boolean;
     available_slots_count: number;
     available_dates_count: number;
@@ -53,7 +54,14 @@ type RootStackParamList = {
     Home: undefined;
     Services: { treatmentId: string; treatmentName: string };
     ServiceDetails: { service: Service };
-    BookingDateScreen: { serviceId: number; serviceName: string; duration: number };
+    BookingDateScreen: { 
+        serviceId: number; 
+        serviceName: string; 
+        duration: number;
+        therapistId: number;
+        therapistName: string;
+        therapistWorkStartDate: string; // Added work start date parameter
+    };
     BookingTherapistScreen: {
         serviceId: number;
         serviceName: string;
@@ -121,9 +129,14 @@ const BookingTherapistScreen = () => {
             console.log(JSON.stringify(data, null, 2));
 
             if (data.success && Array.isArray(data.data)) {
-                // Use the actual data from the API
-                setTherapists(data.data);
-                console.log('Therapists loaded successfully:', data.data.length);
+                // Show all active therapists, regardless of work start date
+                const activeTherapists = data.data.filter((therapist: Therapist) => {
+                    // Only filter by status - show all active therapists
+                    return therapist.status;
+                });
+
+                setTherapists(activeTherapists);
+                console.log('Therapists loaded successfully:', activeTherapists.length);
             } else {
                 throw new Error(data.message || 'Failed to fetch therapists');
             }
@@ -133,6 +146,32 @@ const BookingTherapistScreen = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Helper function to format work start date
+    const formatWorkStartDate = (dateString: string) => {
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+            });
+        } catch (error) {
+            return dateString;
+        }
+    };
+
+    // Helper function to check if therapist has started work
+    const hasTherapistStartedWork = (therapist: Therapist) => {
+        if (!therapist.work_start_date) return true; // No start date means available
+        
+        const workStartDate = new Date(therapist.work_start_date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        workStartDate.setHours(0, 0, 0, 0);
+        
+        return workStartDate <= today;
     };
 
     // Helper function to format available days
@@ -200,19 +239,21 @@ const BookingTherapistScreen = () => {
             return;
         }
 
-        // Navigate to date selection screen with therapist info
+        // Navigate to date selection screen with therapist info and work start date
         navigation.navigate('BookingDateScreen', {
             serviceId,
             serviceName,
             duration,
             therapistId: selectedTherapist.id,
-            therapistName: selectedTherapist.name
+            therapistName: selectedTherapist.name,
+            therapistWorkStartDate: selectedTherapist.work_start_date // Pass work start date
         });
     };
 
     const renderTherapistCard = ({ item }: { item: Therapist }) => {
         const isSelected = selectedTherapist?.id === item.id;
         const availabilityColorClass = getAvailabilityColorClass(item.available_slots_count);
+        const hasStartedWork = hasTherapistStartedWork(item);
 
         return (
             <TouchableOpacity
@@ -235,7 +276,14 @@ const BookingTherapistScreen = () => {
                     </View>
                 )}
 
-
+                {/* Work status indicator */}
+                {/* {!hasStartedWork && (
+                    <View className="absolute top-4 right-4 bg-blue-500 px-3 py-1 rounded-full z-10">
+                        <Text className="text-white text-xs font-semibold">
+                            Starts {formatWorkStartDate(item.work_start_date)}
+                        </Text>
+                    </View>
+                )} */}
 
                 {/* Therapist Header */}
                 <View className="flex-row mb-4">
@@ -262,6 +310,32 @@ const BookingTherapistScreen = () => {
                         <Text className="text-sm text-gray-500 mb-0.5">{item.email}</Text>
                         <Text className="text-sm text-gray-500">{item.phone}</Text>
                     </View>
+                </View>
+
+                {/* Work Start Date Section */}
+                <View className="mb-4 pt-2 border-t border-gray-200">
+                    <View className="flex-row items-center">
+                        <MaterialIcons 
+                            name="work" 
+                            size={16} 
+                            color={hasStartedWork ? "#10B981" : "#3B82F6"} 
+                        />
+                        <Text className="text-sm text-gray-500 ml-2 mr-2 flex-1">
+                            {hasStartedWork ? 'Started Work' : 'Will Start Work'}
+                        </Text>
+                        <Text className={`text-sm font-semibold ${hasStartedWork ? 'text-green-600' : 'text-blue-600'}`}>
+                            {formatWorkStartDate(item.work_start_date)}
+                        </Text>
+                    </View>
+                    
+                    {!hasStartedWork && (
+                        <View className="mt-2 flex-row items-center">
+                            <MaterialIcons name="schedule" size={14} color="#6B7280" />
+                            <Text className="text-xs text-gray-500 ml-2">
+                                Bookings available from {formatWorkStartDate(item.work_start_date)}
+                            </Text>
+                        </View>
+                    )}
                 </View>
 
                 {/* Availability Summary */}
@@ -297,9 +371,11 @@ const BookingTherapistScreen = () => {
                                 size={16}
                                 color={item.available_slots_count === 0 ? '#DC2626' : item.available_slots_count < 5 ? '#F59E0B' : '#10B981'}
                             />
-                            <Text className="text-sm text-gray-500 ml-2 mr-2 flex-1">Today</Text>
+                            <Text className="text-sm text-gray-500 ml-2 mr-2 flex-1">
+                                {hasStartedWork ? 'Today' : 'From Start Date'}
+                            </Text>
                             <Text className={`text-sm font-semibold ${availabilityColorClass}`}>
-                                {item.available_slots_count} slots available
+                                {hasStartedWork ? `${item.available_slots_count} slots available` : 'Future bookings available'}
                             </Text>
                         </View>
                     </View>
@@ -310,11 +386,7 @@ const BookingTherapistScreen = () => {
                     <View className="mb-4 pt-4 border-t border-gray-200">
                         <Text className="text-sm text-gray-500 leading-5" numberOfLines={3}>{item.bio}</Text>
                     </View>
-
-
                 )}
-
-
 
                 {/* Detailed Schedule */}
                 {item.schedule && item.schedule.length > 0 && (
@@ -342,7 +414,7 @@ const BookingTherapistScreen = () => {
                 )}
 
                 {/* View Profile Button - Bottom Right Corner */}
-              <View className="mt-4 flex-row justify-end">
+                <View className="mt-4 flex-row justify-end">
                     <TouchableOpacity
                         className="bg-white border border-amber-700 px-4 py-2 rounded-lg flex-row items-center shadow-md"
                         onPress={() => handleViewProfile(item)}
@@ -359,7 +431,6 @@ const BookingTherapistScreen = () => {
                         <Text className="text-amber-700 text-sm font-semibold ml-2">View Profile</Text>
                     </TouchableOpacity>
                 </View>
-
             </TouchableOpacity>
         );
     };
@@ -414,7 +485,7 @@ const BookingTherapistScreen = () => {
                         <MaterialIcons name="person-off" size={64} color="#9CA3AF" />
                         <Text className="text-xl font-bold text-gray-800 mt-4 mb-2">No Therapists Available</Text>
                         <Text className="text-base text-gray-500 text-center leading-6">
-                            There are currently no therapists available for this service.
+                            There are currently no active therapists available for this service.
                             Please try again later or contact support.
                         </Text>
                     </View>

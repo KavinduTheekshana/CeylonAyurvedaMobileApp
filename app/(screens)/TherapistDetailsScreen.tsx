@@ -16,6 +16,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { HeaderBackButton } from '@react-navigation/elements';
 import { API_BASE_URL } from "@/config/api";
 import { Feather, MaterialIcons, Ionicons } from '@expo/vector-icons';
+// import { format } from 'date-fns'; // if you're formatting the date
 
 const { width } = Dimensions.get('window');
 
@@ -27,6 +28,7 @@ type TherapistDetails = {
     phone: string;
     image: string | null;
     bio: string | null;
+    work_start_date: string; // Added work start date
     status: boolean;
     created_at: string;
     updated_at: string;
@@ -54,6 +56,7 @@ type TherapistDetails = {
     languages: string[];
 };
 
+
 // Define your navigation param list
 type RootStackParamList = {
     TherapistDetailsScreen: {
@@ -77,6 +80,8 @@ const TherapistDetailsScreen = () => {
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
 
+
+
     useEffect(() => {
         fetchTherapistDetails();
     }, [therapistId]);
@@ -87,7 +92,7 @@ const TherapistDetailsScreen = () => {
 
         try {
             console.log(`Fetching therapist details for ID: ${therapistId}`);
-            
+
             const response = await fetch(`${API_BASE_URL}/api/therapists/details/${therapistId}`);
             const data = await response.json();
 
@@ -123,12 +128,14 @@ const TherapistDetailsScreen = () => {
     // Helper function to format dates
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
-        return date.toLocaleDateString('en-GB', { 
-            weekday: 'short', 
+        return date.toLocaleDateString('en-GB', {
+            weekday: 'short',
             day: 'numeric',
             month: 'short'
         });
     };
+
+
 
     // Handle phone call
     const handlePhoneCall = () => {
@@ -199,9 +206,13 @@ const TherapistDetailsScreen = () => {
         );
     }
 
+    const today = new Date();
+    const workStartDate = new Date(therapist.work_start_date);
+    const isFutureDate = workStartDate > today;
+    
     return (
         <SafeAreaView className="flex-1 bg-gray-50">
-            <ScrollView 
+            <ScrollView
                 className="flex-1"
                 contentContainerStyle={{ paddingBottom: 20 }}
                 showsVerticalScrollIndicator={false}
@@ -211,7 +222,7 @@ const TherapistDetailsScreen = () => {
                     {/* Decorative circles */}
                     <View className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
                     <View className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/5 rounded-full" />
-                    
+
                     <View className="flex-row items-center">
                         {/* Profile Image */}
                         <View className="mr-4">
@@ -229,13 +240,20 @@ const TherapistDetailsScreen = () => {
                                 </View>
                             )}
                         </View>
-
+                        {/* therapist.work_start_date */}
                         {/* Therapist Info */}
                         <View className="flex-1">
                             <Text className="text-2xl font-bold text-black mb-1">{therapist.name}</Text>
                             <View className={`px-3 py-1 rounded-full self-start ${therapist.status ? 'bg-green-500' : 'bg-red-500'}`}>
                                 <Text className="text-white text-xs font-semibold">
-                                    {therapist.status ? 'Available' : 'Unavailable'}
+                                    {therapist.status && !isFutureDate
+                                        ? 'Available'
+                                        : isFutureDate
+                                            ? `Available on: ${new Date(workStartDate).toLocaleDateString()}`
+                                            : 'Unavailable'
+                                    }
+
+
                                 </Text>
                             </View>
                             <Text className="text-amber-700 mt-2 text-sm">
@@ -274,7 +292,7 @@ const TherapistDetailsScreen = () => {
                         <Feather name="phone" size={18} color="#fff" />
                         <Text className="text-white font-semibold ml-2">Call</Text>
                     </TouchableOpacity>
-                    
+
                     <TouchableOpacity
                         className="flex-1 bg-gray-200 py-4 m-2 rounded-xl flex-row items-center justify-center"
                         onPress={handleEmail}
@@ -364,8 +382,8 @@ const TherapistDetailsScreen = () => {
                             </View>
                             <Text className="text-gray-700 flex-1">{therapist.email}</Text>
                         </View>
-                        
-                        <View className="flex-row items-center">
+
+                        <View className="flex-row items-center mt-1">
                             <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mr-3">
                                 <Feather name="phone" size={16} color="#10B981" />
                             </View>
