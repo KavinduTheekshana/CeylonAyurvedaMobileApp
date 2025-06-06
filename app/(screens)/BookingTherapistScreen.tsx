@@ -257,7 +257,7 @@ const BookingTherapistScreen = () => {
 
         return (
             <TouchableOpacity
-                className={`bg-white rounded-2xl p-5 border-2 relative ${isSelected ? 'border-amber-700 bg-orange-50' : 'border-transparent'
+                className={`bg-white rounded-2xl p-5 m-2 border-2 relative ${isSelected ? 'border-amber-700 bg-orange-50' : 'border-transparent'
                     }`}
                 style={{
                     shadowColor: '#000',
@@ -382,11 +382,11 @@ const BookingTherapistScreen = () => {
                 </View>
 
                 {/* Bio */}
-                {item.bio && (
+                {/* {item.bio && (
                     <View className="mb-4 pt-4 border-t border-gray-200">
                         <Text className="text-sm text-gray-500 leading-5" numberOfLines={3}>{item.bio}</Text>
                     </View>
-                )}
+                )} */}
 
                 {/* Detailed Schedule */}
                 {item.schedule && item.schedule.length > 0 && (
