@@ -13,17 +13,18 @@ import { API_BASE_URL } from "@/config/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import GuestNotification from "../components/GuestNotification";
 import OffersBadge from "../components/OffersBadge";
+import LocationSwitcher from "../components/LocationSwitcher";
+import { useLocation } from "../contexts/LocationContext";
 
 // Define API endpoint
 const API_URL = `${API_BASE_URL}/api/treatments`;
 
-// Define the TypeScript interface for the Treatment object
 interface Treatment {
   id: number;
   name: string;
   image: string | null;
   description: string;
-  offers: number; // Changed from boolean to number since API returns 1/0
+  offers: number;
 }
 
 const TreatmentsScreen = () => {
@@ -33,8 +34,8 @@ const TreatmentsScreen = () => {
   const [isGuest, setIsGuest] = useState<boolean>(false);
   const [showGuestNotification, setShowGuestNotification] = useState<boolean>(false);
   const router = useRouter();
+  const { selectedLocation } = useLocation();
 
-  // Check if user is a guest and show notification
   useEffect(() => {
     const checkGuestStatus = async () => {
       try {
@@ -55,7 +56,12 @@ const TreatmentsScreen = () => {
   }, []);
 
   const fetchTreatments = useCallback(() => {
-    fetch(API_URL)
+    // Filter treatments by location if location is selected
+    const url = selectedLocation 
+        ? `${API_URL}?location_id=${selectedLocation.id}`
+        : API_URL;
+        
+    fetch(url)
         .then((response) => response.json())
         .then((data) => {
           if (data.success && Array.isArray(data.data)) {
@@ -71,7 +77,7 @@ const TreatmentsScreen = () => {
           setLoading(false);
           setRefreshing(false);
         });
-  }, []);
+  }, [selectedLocation]);
 
   useEffect(() => {
     fetchTreatments();
@@ -106,6 +112,9 @@ const TreatmentsScreen = () => {
         onDismiss={handleDismissNotification}
         message="Login or create an account to book appointments"
       />
+      
+      {/* Location Switcher */}
+      <LocationSwitcher />
       
       <Text className="w-full text-3xl pb-3 text-black font-bold">
         Treatments
@@ -148,7 +157,6 @@ const TreatmentsScreen = () => {
               />
             )}
             
-            {/* Fixed condition: Check for 1 instead of true */}
             {item.offers === 1 && (
               <OffersBadge 
                 size="small" 
