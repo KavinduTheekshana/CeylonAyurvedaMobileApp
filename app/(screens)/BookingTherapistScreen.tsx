@@ -16,6 +16,7 @@ import { HeaderBackButton } from '@react-navigation/elements';
 import { API_BASE_URL } from "@/config/api";
 import withAuthGuard from '../components/AuthGuard';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
+import { useLocation } from '../contexts/LocationContext'; // Import location context
 
 // Define Therapist type with all availability data including work_start_date
 type Therapist = {
@@ -103,6 +104,9 @@ const BookingTherapistScreen = () => {
     const route = useRoute<BookingTherapistScreenRouteProp>();
     const navigation = useNavigation<BookingTherapistScreenNavigationProp>();
     const { serviceId, serviceName, duration } = route.params;
+    
+    // Get selected location from context
+    const { selectedLocation } = useLocation();
 
     const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
     const [therapists, setTherapists] = useState<Therapist[]>([]);
@@ -112,7 +116,7 @@ const BookingTherapistScreen = () => {
     useEffect(() => {
         // Fetch available therapists for the service from the API
         fetchTherapists();
-    }, [serviceId]);
+    }, [serviceId, selectedLocation]); // Add selectedLocation as dependency
 
     const fetchTherapists = async () => {
         setLoading(true);
@@ -120,29 +124,41 @@ const BookingTherapistScreen = () => {
 
         try {
             console.log(`Fetching therapists for service ${serviceId}`);
-            console.log(`API URL: ${API_URL}/${serviceId}/therapists`);
+            
+            // Build API URL with location parameter if location is selected
+            let apiUrl = `${API_URL}/${serviceId}/therapists`;
+            
+            if (selectedLocation) {
+                apiUrl += `?location_id=${selectedLocation.id}`;
+                console.log(`Filtering by location: ${selectedLocation.name} (ID: ${selectedLocation.id})`);
+            }
+            
+            console.log(`API URL: ${apiUrl}`);
 
-            const response = await fetch(`${API_URL}/${serviceId}/therapists`);
+            const response = await fetch(apiUrl);
             const data = await response.json();
 
             console.log('=== FULL API RESPONSE ===');
             console.log(JSON.stringify(data, null, 2));
 
             if (data.success && Array.isArray(data.data)) {
-                // Show all active therapists, regardless of work start date
+                // Show all active therapists (location filtering is now done on backend)
                 const activeTherapists = data.data.filter((therapist: Therapist) => {
-                    // Only filter by status - show all active therapists
                     return therapist.status;
                 });
 
                 setTherapists(activeTherapists);
                 console.log('Therapists loaded successfully:', activeTherapists.length);
+                
+                if (activeTherapists.length === 0 && selectedLocation) {
+                    console.log(`No therapists found for location: ${selectedLocation.name}`);
+                }
             } else {
                 throw new Error(data.message || 'Failed to fetch therapists');
             }
         } catch (error) {
             console.error('Error fetching therapists:', error);
-            setError('Failed to load therapists. Please try again.');
+            setError('Failed to load therapists for this location. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -276,15 +292,6 @@ const BookingTherapistScreen = () => {
                     </View>
                 )}
 
-                {/* Work status indicator */}
-                {/* {!hasStartedWork && (
-                    <View className="absolute top-4 right-4 bg-blue-500 px-3 py-1 rounded-full z-10">
-                        <Text className="text-white text-xs font-semibold">
-                            Starts {formatWorkStartDate(item.work_start_date)}
-                        </Text>
-                    </View>
-                )} */}
-
                 {/* Therapist Header */}
                 <View className="flex-row mb-4">
                     {/* Profile Image */}
@@ -381,13 +388,6 @@ const BookingTherapistScreen = () => {
                     </View>
                 </View>
 
-                {/* Bio */}
-                {/* {item.bio && (
-                    <View className="mb-4 pt-4 border-t border-gray-200">
-                        <Text className="text-sm text-gray-500 leading-5" numberOfLines={3}>{item.bio}</Text>
-                    </View>
-                )} */}
-
                 {/* Detailed Schedule */}
                 {item.schedule && item.schedule.length > 0 && (
                     <View className="pt-4 border-t border-gray-200">
@@ -440,6 +440,11 @@ const BookingTherapistScreen = () => {
             <View className="flex-1 justify-center items-center p-8">
                 <ActivityIndicator size="large" color="#9A563A" />
                 <Text className="mt-4 text-base text-gray-500">Loading therapists...</Text>
+                {selectedLocation && (
+                    <Text className="mt-2 text-sm text-gray-400">
+                        Searching in {selectedLocation.name}
+                    </Text>
+                )}
             </View>
         );
     }
@@ -469,6 +474,14 @@ const BookingTherapistScreen = () => {
                     <Text className="text-base text-gray-500 leading-6">
                         Select a therapist for your {serviceName} session
                     </Text>
+                    {selectedLocation && (
+                        <View className="flex-row items-center mt-2">
+                            <Feather name="map-pin" size={14} color="#9A563A" />
+                            <Text className="text-sm text-gray-600 ml-1">
+                                Available in {selectedLocation.name}
+                            </Text>
+                        </View>
+                    )}
                 </View>
 
                 {therapists.length > 0 ? (
@@ -483,9 +496,16 @@ const BookingTherapistScreen = () => {
                 ) : (
                     <View className="flex-1 justify-center items-center p-8">
                         <MaterialIcons name="person-off" size={64} color="#9CA3AF" />
-                        <Text className="text-xl font-bold text-gray-800 mt-4 mb-2">No Therapists Available</Text>
+                        <Text className="text-xl font-bold text-gray-800 mt-4 mb-2">
+                            No Therapists Available
+                        </Text>
                         <Text className="text-base text-gray-500 text-center leading-6">
-                            There are currently no active therapists available for this service.
+                            {selectedLocation 
+                                ? `There are currently no active therapists available for this service in ${selectedLocation.name}.`
+                                : "There are currently no active therapists available for this service."
+                            }
+                        </Text>
+                        <Text className="text-base text-gray-500 text-center leading-6 mt-2">
                             Please try again later or contact support.
                         </Text>
                     </View>

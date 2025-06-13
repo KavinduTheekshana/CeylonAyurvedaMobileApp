@@ -60,7 +60,7 @@ const BookingDateScreen = () => {
 
     // Calculate the maximum date (3 months from today)
     const maxDate = new Date(today);
-    maxDate.setMonth(maxDate.getMonth() + 3);
+    maxDate.setMonth(maxDate.getMonth() + 12);
     const maxDateString = maxDate.toISOString().split('T')[0];
 
     React.useLayoutEffect(() => {
