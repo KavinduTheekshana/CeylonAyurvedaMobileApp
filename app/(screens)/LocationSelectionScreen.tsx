@@ -17,18 +17,9 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@/config/api';
 import { Feather } from '@expo/vector-icons';
-import { useLocation } from '../contexts/LocationContext';
+import { useLocation, type Location } from '../contexts/LocationContext';
 
 const { width } = Dimensions.get('window');
-
-interface Location {
-    id: number;
-    name: string;
-    slug: string;
-    city: string;
-    address: string;
-    image?: string;
-}
 
 const LocationSelectionScreen = () => {
     const router = useRouter();
@@ -50,14 +41,29 @@ const LocationSelectionScreen = () => {
             console.log('Locations response:', data);
 
             if (data.success && Array.isArray(data.data)) {
-                // Add full image URLs if needed
-                const updatedLocations = data.data.map((location: Location) => ({
-                    ...location,
+                // Map the API response to our Location interface
+                const mappedLocations: Location[] = data.data.map((location: any) => ({
+                    id: location.id,
+                    name: location.name,
+                    slug: location.slug,
+                    city: location.city,
+                    address: location.address,
+                    postcode: location.postcode || '',
+                    latitude: location.latitude ? parseFloat(location.latitude) : null,
+                    longitude: location.longitude ? parseFloat(location.longitude) : null,
+                    phone: location.phone || null,
+                    email: location.email || null,
+                    description: location.description || null,
+                    operating_hours: location.operating_hours || null,
                     image: location.image ? 
                         (location.image.startsWith('http') ? location.image : `${API_BASE_URL}/storage/${location.image}`) 
-                        : null
+                        : null,
+                    status: location.status !== false, // Default to true if not specified
+                    service_radius_miles: location.service_radius_miles || 5 // Default to 5 miles
                 }));
-                setLocations(updatedLocations);
+
+                setLocations(mappedLocations);
+                console.log('Mapped locations:', mappedLocations.length);
             } else {
                 // Fallback with mock data if API fails
                 console.warn('API failed, using fallback locations');
@@ -68,7 +74,16 @@ const LocationSelectionScreen = () => {
                         slug: 'derby-city-centre',
                         city: 'Derby',
                         address: 'Market Place, Derby DE1 3AH',
-                        image: null
+                        postcode: 'DE1 3AH',
+                        latitude: 52.9225,
+                        longitude: -1.4746,
+                        phone: null,
+                        email: null,
+                        description: null,
+                        operating_hours: null,
+                        image: null,
+                        status: true,
+                        service_radius_miles: 5
                     },
                     {
                         id: 2,
@@ -76,7 +91,16 @@ const LocationSelectionScreen = () => {
                         slug: 'derby-south',
                         city: 'Derby',
                         address: 'Osmaston Road, Derby DE24 8AA',
-                        image: null
+                        postcode: 'DE24 8AA',
+                        latitude: 52.8900,
+                        longitude: -1.4700,
+                        phone: null,
+                        email: null,
+                        description: null,
+                        operating_hours: null,
+                        image: null,
+                        status: true,
+                        service_radius_miles: 5
                     }
                 ]);
             }
@@ -88,7 +112,7 @@ const LocationSelectionScreen = () => {
                 [{ text: 'OK' }]
             );
             
-            // Fallback locations
+            // Fallback locations with proper coordinates
             setLocations([
                 {
                     id: 1,
@@ -96,7 +120,16 @@ const LocationSelectionScreen = () => {
                     slug: 'derby-city-centre',
                     city: 'Derby',
                     address: 'Market Place, Derby DE1 3AH',
-                    image: null
+                    postcode: 'DE1 3AH',
+                    latitude: 52.9225,
+                    longitude: -1.4746,
+                    phone: null,
+                    email: null,
+                    description: null,
+                    operating_hours: null,
+                    image: null,
+                    status: true,
+                    service_radius_miles: 5
                 },
                 {
                     id: 2,
@@ -104,7 +137,16 @@ const LocationSelectionScreen = () => {
                     slug: 'derby-south',
                     city: 'Derby',
                     address: 'Osmaston Road, Derby DE24 8AA',
-                    image: null
+                    postcode: 'DE24 8AA',
+                    latitude: 52.8900,
+                    longitude: -1.4700,
+                    phone: null,
+                    email: null,
+                    description: null,
+                    operating_hours: null,
+                    image: null,
+                    status: true,
+                    service_radius_miles: 5
                 }
             ]);
         } finally {
@@ -130,6 +172,7 @@ const LocationSelectionScreen = () => {
             await setSelectedLocation(selectedLocation);
             
             console.log('Location selected:', selectedLocation.name);
+            console.log('Service radius:', selectedLocation.service_radius_miles, 'miles');
             
             // Navigate to main app
             router.replace('/(tabs)');
@@ -141,6 +184,7 @@ const LocationSelectionScreen = () => {
 
     const renderLocationItem = ({ item }: { item: Location }) => {
         const isSelected = selectedLocationId === item.id;
+        const hasCoordinates = item.latitude !== null && item.longitude !== null;
         
         return (
             <TouchableOpacity
@@ -183,6 +227,24 @@ const LocationSelectionScreen = () => {
                             {item.address}
                         </Text>
                     </View>
+                    
+                    {/* Service radius info */}
+                    <View style={styles.serviceInfo}>
+                        <Feather name="circle" size={12} color="#10B981" />
+                        <Text style={styles.serviceText}>
+                            {item.service_radius_miles || 5} mile service radius
+                        </Text>
+                    </View>
+                    
+                    {/* Coordinates availability indicator */}
+                    {!hasCoordinates && (
+                        <View style={styles.warningInfo}>
+                            <Feather name="alert-triangle" size={12} color="#F59E0B" />
+                            <Text style={styles.warningText}>
+                                Limited address validation
+                            </Text>
+                        </View>
+                    )}
                 </View>
             </TouchableOpacity>
         );
@@ -209,7 +271,7 @@ const LocationSelectionScreen = () => {
                 <View style={styles.header}>
                     <Text style={styles.title}>Choose Your Location</Text>
                     <Text style={styles.subtitle}>
-                        Select a location to see available services and therapists in your area
+                        Select a location to see available services and validate your addresses
                     </Text>
                 </View>
 
@@ -359,6 +421,7 @@ const styles = StyleSheet.create({
     addressRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
+        marginBottom: 8,
     },
     locationAddress: {
         fontSize: 14,
@@ -366,6 +429,27 @@ const styles = StyleSheet.create({
         marginLeft: 6,
         flex: 1,
         lineHeight: 20,
+    },
+    serviceInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    serviceText: {
+        fontSize: 12,
+        color: '#10B981',
+        marginLeft: 4,
+        fontWeight: '500',
+    },
+    warningInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    warningText: {
+        fontSize: 12,
+        color: '#F59E0B',
+        marginLeft: 4,
+        fontWeight: '500',
     },
     footer: {
         paddingVertical: 20,

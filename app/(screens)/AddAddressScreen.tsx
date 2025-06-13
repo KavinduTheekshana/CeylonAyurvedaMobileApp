@@ -16,9 +16,10 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { HeaderBackButton } from '@react-navigation/elements';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {API_BASE_URL} from "@/config/api";
-// Fix the import path for locationHelper
-import { validateDerbyServiceArea, quickDerbyAreaCheck } from '@/utils/locationHelper';
+import { API_BASE_URL } from "@/config/api";
+import { validatePostcodeWithLocationSuggestions, smartQuickLocationCheck } from '@/utils/enhancedLocationHelper';
+import { useLocation } from '../contexts/LocationContext'; // Import location context
+import { Feather } from '@expo/vector-icons';
 
 // Type for the navigation
 type RootStackParamList = {
@@ -38,6 +39,8 @@ const ADDRESS_API_URL = `${API_BASE_URL}/api/addresses`;
 
 const AddAddressScreen = () => {
     const navigation = useNavigation<AddAddressScreenNavigationProp>();
+    // Add setSelectedLocation function from context
+    const { selectedLocation, setSelectedLocation } = useLocation(); // Get selected location and setter
 
     // Form states
     const [name, setName] = useState<string>('');
@@ -98,11 +101,28 @@ const AddAddressScreen = () => {
     const handleSaveAddress = async () => {
         if (!validateForm()) return;
 
-        // First, quick check if postcode might be in Derby area
-        if (!quickDerbyAreaCheck(postcode)) {
+        // Check if location is selected
+        if (!selectedLocation) {
+            Alert.alert(
+                'Location Required',
+                'Please select a location first to validate your address.',
+                [
+                    {
+                        text: 'OK',
+                        style: 'default'
+                    }
+                ]
+            );
+            return;
+        }
+
+        // First, smart quick check using database locations
+        const quickCheckResult = await smartQuickLocationCheck(postcode, selectedLocation);
+        
+        if (!quickCheckResult) {
             Alert.alert(
                 'Service Area Notice',
-                'This postcode may be outside our service area (5 miles from Derby). Would you like to continue checking?',
+                `This postcode may be outside our service areas. Would you like to continue with validation?`,
                 [
                     {
                         text: 'Cancel',
@@ -122,23 +142,57 @@ const AddAddressScreen = () => {
     };
 
     const performLocationValidation = async () => {
+        if (!selectedLocation) {
+            Alert.alert('Error', 'No location selected for validation.');
+            return;
+        }
+
         setValidatingLocation(true);
 
         try {
-            // Validate the postcode is within Derby service area
-            const validationResult = await validateDerbyServiceArea(postcode);
+            // Use enhanced validation with location suggestions
+            const validationResult = await validatePostcodeWithLocationSuggestions(postcode, selectedLocation);
 
             if (!validationResult.isValid) {
-                Alert.alert(
-                    'Outside Service Area',
-                    validationResult.errorMessage || 'This address is outside our service area (5 miles from Derby).',
-                    [
-                        {
-                            text: 'OK',
-                            style: 'default'
-                        }
-                    ]
-                );
+                // Check if there are suggested alternative locations
+                if (validationResult.suggestedLocations && validationResult.suggestedLocations.length > 0) {
+                    const suggestedLocation = validationResult.suggestedLocations[0];
+                    
+                    Alert.alert(
+                        'Alternative Location Available',
+                        `${validationResult.errorMessage}\n\nWould you like to switch to ${suggestedLocation.name} instead?`,
+                        [
+                            {
+                                text: 'Cancel',
+                                style: 'cancel'
+                            },
+                            {
+                                text: `Switch to ${suggestedLocation.name}`,
+                                onPress: async () => {
+                                    // Switch to the suggested location
+                                    await setSelectedLocation(suggestedLocation);
+                                    // Then save the address
+                                    await saveAddressToServer();
+                                }
+                            },
+                            {
+                                text: 'Save Anyway',
+                                onPress: () => saveAddressToServer()
+                            }
+                        ]
+                    );
+                } else {
+                    Alert.alert(
+                        'Outside Service Area',
+                        validationResult.errorMessage || `This address is outside our service area for ${selectedLocation.name}.`,
+                        [
+                            {
+                                text: 'OK',
+                                style: 'default'
+                            }
+                        ]
+                    );
+                }
                 setValidatingLocation(false);
                 return;
             }
@@ -179,7 +233,8 @@ const AddAddressScreen = () => {
             address_line2: addressLine2,
             city,
             postcode,
-            is_default: isDefault
+            is_default: isDefault,
+            location_id: selectedLocation?.id // Include location ID
         };
 
         try {
@@ -226,6 +281,15 @@ const AddAddressScreen = () => {
         }
     };
 
+    const getServiceAreaText = () => {
+        if (!selectedLocation) {
+            return 'Please select a location first';
+        }
+        
+        const radius = selectedLocation.service_radius_miles || 5;
+        return `We currently service addresses within ${radius} miles of ${selectedLocation.name}`;
+    };
+
     return (
         <KeyboardAvoidingView
             style={styles.container}
@@ -235,9 +299,25 @@ const AddAddressScreen = () => {
             <SafeAreaView style={styles.container}>
                 <ScrollView style={styles.content}>
                     <Text style={styles.title}>Add New Address</Text>
-                    <Text style={styles.serviceAreaNote}>
-                        We currently service addresses within 5 miles of Derby
-                    </Text>
+                    
+                    {/* Selected Location Display */}
+                    {selectedLocation ? (
+                        <View style={styles.locationCard}>
+                            <View style={styles.locationHeader}>
+                                <Feather name="map-pin" size={16} color="#9A563A" />
+                                <Text style={styles.locationTitle}>Selected Location</Text>
+                            </View>
+                            <Text style={styles.locationName}>{selectedLocation.name}</Text>
+                            <Text style={styles.serviceAreaNote}>{getServiceAreaText()}</Text>
+                        </View>
+                    ) : (
+                        <View style={styles.warningCard}>
+                            <Feather name="alert-triangle" size={16} color="#F59E0B" />
+                            <Text style={styles.warningText}>
+                                No location selected. Please select a location to validate your address.
+                            </Text>
+                        </View>
+                    )}
 
                     <View style={styles.card}>
                         <Text style={styles.sectionTitle}>Personal Information</Text>
@@ -310,7 +390,9 @@ const AddAddressScreen = () => {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Postcode * (Derby area only)</Text>
+                            <Text style={styles.inputLabel}>
+                                Postcode * {selectedLocation ? `(${selectedLocation.name} area only)` : ''}
+                            </Text>
                             <TextInput
                                 style={styles.input}
                                 value={postcode}
@@ -334,9 +416,12 @@ const AddAddressScreen = () => {
 
                 <View style={styles.footer}>
                     <TouchableOpacity
-                        style={styles.saveButton}
+                        style={[
+                            styles.saveButton,
+                            (!selectedLocation || submitting || validatingLocation) && styles.saveButtonDisabled
+                        ]}
                         onPress={handleSaveAddress}
-                        disabled={submitting || validatingLocation}
+                        disabled={!selectedLocation || submitting || validatingLocation}
                     >
                         {submitting || validatingLocation ? (
                             <ActivityIndicator color="#fff" />
@@ -364,13 +449,53 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 24,
         fontWeight: 'bold',
-        marginBottom: 8,
+        marginBottom: 16,
+    },
+    locationCard: {
+        backgroundColor: '#E8F5E9',
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#81C784',
+    },
+    locationHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    locationTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#2E7D32',
+        marginLeft: 6,
+    },
+    locationName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#1B5E20',
+        marginBottom: 4,
+    },
+    warningCard: {
+        backgroundColor: '#FFF8E1',
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#FFB74D',
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    warningText: {
+        fontSize: 14,
+        color: '#E65100',
+        marginLeft: 8,
+        flex: 1,
     },
     serviceAreaNote: {
-        fontSize: 14,
-        color: '#666',
+        fontSize: 12,
+        color: '#4CAF50',
         fontStyle: 'italic',
-        marginBottom: 16,
     },
     card: {
         backgroundColor: '#fff',
@@ -444,6 +569,9 @@ const styles = StyleSheet.create({
         padding: 16,
         borderRadius: 8,
         alignItems: 'center',
+    },
+    saveButtonDisabled: {
+        backgroundColor: '#cccccc',
     },
     saveButtonText: {
         color: '#fff',

@@ -8,7 +8,16 @@ interface Location {
     slug: string;
     city: string;
     address: string;
-    image?: string;
+    postcode: string;
+    latitude: number | null;
+    longitude: number | null;
+    phone?: string | null;
+    email?: string | null;
+    description?: string | null;
+    operating_hours?: any;
+    image?: string | null;
+    status: boolean;
+    service_radius_miles: number;
 }
 
 interface LocationContextType {
