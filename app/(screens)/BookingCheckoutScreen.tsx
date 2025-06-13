@@ -1,4 +1,4 @@
-// BookingCheckoutScreen.tsx - Updated to show therapist information and pass it to confirmation
+// BookingCheckoutScreen.tsx - Updated with location validation and confirm button control
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -21,7 +21,8 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { HeaderBackButton } from '@react-navigation/elements';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from "@/config/api";
-import { validateDerbyServiceArea, quickDerbyAreaCheck } from '@/utils/locationHelper';
+import { useLocation } from '../contexts/LocationContext';
+import { Feather } from '@expo/vector-icons';
 
 // Define your Service type
 type Service = {
@@ -88,9 +89,123 @@ const SERVICE_API_URL = `${API_BASE_URL}/api/services`;
 const ADDRESS_API_URL = `${API_BASE_URL}/api/addresses`;
 const BOOKING_API_URL = `${API_BASE_URL}/api/bookings`;
 
+/**
+ * Calculate distance between two points using Haversine formula (in miles)
+ */
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 3959; // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+/**
+ * Get coordinates for a UK postcode using postcodes.io API
+ */
+async function getPostcodeCoordinates(postcode: string): Promise<{lat: number, lng: number} | null> {
+    try {
+        const cleanPostcode = postcode.replace(/\s+/g, '').toUpperCase();
+        const response = await fetch(`https://api.postcodes.io/postcodes/${cleanPostcode}`);
+        
+        if (!response.ok) {
+            console.log('Postcode API response not OK:', response.status);
+            return null;
+        }
+        
+        const data = await response.json();
+        
+        if (data.status === 200 && data.result) {
+            return {
+                lat: data.result.latitude,
+                lng: data.result.longitude
+            };
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error geocoding postcode:', error);
+        return null;
+    }
+}
+
+/**
+ * Validate if address is within location's service radius
+ */
+async function validateAddressLocation(postcode: string, selectedLocation: any): Promise<{
+    isValid: boolean;
+    distance?: number;
+    errorMessage?: string;
+}> {
+    if (!selectedLocation) {
+        return {
+            isValid: false,
+            errorMessage: 'No location selected for validation.'
+        };
+    }
+
+    // If no coordinates available for the location, be more permissive
+    if (!selectedLocation.latitude || !selectedLocation.longitude) {
+        console.log('Location coordinates not available, allowing address');
+        return { isValid: true };
+    }
+
+    try {
+        console.log(`Validating postcode: ${postcode} against location: ${selectedLocation.name}`);
+
+        // Get coordinates for the input postcode
+        const coordinates = await getPostcodeCoordinates(postcode);
+        
+        if (!coordinates) {
+            console.log('Could not get coordinates for postcode, allowing address');
+            return { isValid: true }; // Be permissive if we can't validate
+        }
+
+        console.log(`Postcode Coordinates: ${coordinates.lat}, ${coordinates.lng}`);
+        console.log(`Location Coordinates: ${selectedLocation.latitude}, ${selectedLocation.longitude}`);
+
+        // Calculate distance
+        const distance = calculateDistance(
+            selectedLocation.latitude,
+            selectedLocation.longitude,
+            coordinates.lat,
+            coordinates.lng
+        );
+
+        const serviceRadius = selectedLocation.service_radius_miles || 10; // Default to 10 miles if not set
+        
+        console.log(`Calculated Distance: ${distance.toFixed(2)} miles`);
+        console.log(`Service Radius: ${serviceRadius} miles`);
+        console.log(`Is Valid: ${distance <= serviceRadius}`);
+
+        if (distance <= serviceRadius) {
+            return {
+                isValid: true,
+                distance: Math.round(distance * 10) / 10
+            };
+        } else {
+            return {
+                isValid: false,
+                distance: Math.round(distance * 10) / 10,
+                errorMessage: `This address is ${Math.round(distance * 10) / 10} miles from ${selectedLocation.name}. We only service addresses within ${serviceRadius} miles of this location.`
+            };
+        }
+
+    } catch (error) {
+        console.error('Error validating location distance:', error);
+        // On error, allow the address to be saved
+        return { isValid: true };
+    }
+}
+
 const BookingCheckoutScreen = () => {
     const route = useRoute<BookingCheckoutScreenRouteProp>();
     const navigation = useNavigation<BookingCheckoutScreenNavigationProp>();
+    const { selectedLocation } = useLocation(); // Get selected location from context
     const { 
         serviceId, 
         serviceName, 
@@ -111,6 +226,11 @@ const BookingCheckoutScreen = () => {
     const [showAddressForm, setShowAddressForm] = useState<boolean>(false);
     const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+
+    // Location validation states
+    const [isAddressValid, setIsAddressValid] = useState<boolean>(true);
+    const [addressValidationMessage, setAddressValidationMessage] = useState<string>('');
+    const [addressValidationDistance, setAddressValidationDistance] = useState<number | null>(null);
 
     // Form fields
     const [name, setName] = useState<string>('');
@@ -149,6 +269,40 @@ const BookingCheckoutScreen = () => {
 
         return unsubscribe;
     }, [navigation, isAuthenticated]);
+
+    // Validate address whenever postcode changes
+    useEffect(() => {
+        if (postcode.trim() && selectedLocation) {
+            validateCurrentAddress();
+        } else {
+            setIsAddressValid(true);
+            setAddressValidationMessage('');
+            setAddressValidationDistance(null);
+        }
+    }, [postcode, selectedLocation]);
+
+    const validateCurrentAddress = async () => {
+        if (!postcode.trim() || !selectedLocation) return;
+
+        setValidatingLocation(true);
+        try {
+            const validationResult = await validateAddressLocation(postcode, selectedLocation);
+            
+            setIsAddressValid(validationResult.isValid);
+            setAddressValidationMessage(validationResult.errorMessage || '');
+            setAddressValidationDistance(validationResult.distance || null);
+            
+            if (validationResult.isValid && validationResult.distance) {
+                setAddressValidationMessage(`✓ Address is within service area (${validationResult.distance} miles from ${selectedLocation.name})`);
+            }
+        } catch (error) {
+            console.error('Address validation error:', error);
+            setIsAddressValid(true); // Be permissive on error
+            setAddressValidationMessage('');
+        } finally {
+            setValidatingLocation(false);
+        }
+    };
 
     const checkAuthentication = async () => {
         try {
@@ -323,74 +477,18 @@ const BookingCheckoutScreen = () => {
         if (!validateForm()) return;
         if (!serviceDetails) return;
 
-        Keyboard.dismiss();
-
-        if (showAddressForm || selectedAddressId === null) {
-            if (!quickDerbyAreaCheck(postcode)) {
-                Alert.alert(
-                    'Service Area Notice',
-                    'This postcode may be outside our service area (5 miles from Derby). Would you like to continue checking?',
-                    [
-                        {
-                            text: 'Cancel',
-                            style: 'cancel'
-                        },
-                        {
-                            text: 'Continue',
-                            onPress: () => performLocationValidation()
-                        }
-                    ]
-                );
-                return;
-            }
-
-            performLocationValidation();
-        } else {
-            submitBookingData();
-        }
-    };
-
-    const performLocationValidation = async () => {
-        setValidatingLocation(true);
-
-        try {
-            const validationResult = await validateDerbyServiceArea(postcode);
-
-            if (!validationResult.isValid) {
-                Alert.alert(
-                    'Outside Service Area',
-                    validationResult.errorMessage || 'This address is outside our service area (5 miles from Derby).',
-                    [
-                        {
-                            text: 'OK',
-                            style: 'default'
-                        }
-                    ]
-                );
-                setValidatingLocation(false);
-                return;
-            }
-
-            await submitBookingData();
-        } catch (error) {
-            console.error('Location validation error:', error);
+        // Check if address is valid (within service radius)
+        if (!isAddressValid) {
             Alert.alert(
-                'Location Validation Error',
-                'We could not validate the location. Would you like to continue with the booking anyway?',
-                [
-                    {
-                        text: 'Cancel',
-                        style: 'cancel'
-                    },
-                    {
-                        text: 'Continue Anyway',
-                        onPress: () => submitBookingData()
-                    }
-                ]
+                'Address Outside Service Area',
+                addressValidationMessage || 'This address is outside our service area for the selected location.',
+                [{ text: 'OK' }]
             );
-        } finally {
-            setValidatingLocation(false);
+            return;
         }
+
+        Keyboard.dismiss();
+        await submitBookingData();
     };
 
     // UPDATED: Include therapist information in booking data
@@ -412,7 +510,9 @@ const BookingCheckoutScreen = () => {
             save_address: saveAddress,
             // Include therapist information
             therapist_id: therapistId,
-            therapist_name: therapistName
+            therapist_name: therapistName,
+            // Include location information for validation
+            location_id: selectedLocation?.id
         };
 
         console.log('Booking data being sent:', JSON.stringify(bookingData));
@@ -514,6 +614,18 @@ const BookingCheckoutScreen = () => {
         }
     };
 
+    // Determine if the confirm button should be disabled
+    const isConfirmButtonDisabled = () => {
+        return (
+            submitting || 
+            validatingLocation || 
+            !isAddressValid || 
+            !selectedLocation ||
+            !serviceDetails ||
+            (showAddressForm && !postcode.trim())
+        );
+    };
+
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
@@ -554,6 +666,20 @@ const BookingCheckoutScreen = () => {
                     keyboardShouldPersistTaps="handled"
                 >
                     <Text style={styles.title}>Booking Summary</Text>
+
+                    {/* Location Info */}
+                    {selectedLocation && (
+                        <View style={styles.locationCard}>
+                            <View style={styles.locationHeader}>
+                                <Feather name="map-pin" size={16} color="#9A563A" />
+                                <Text style={styles.locationTitle}>Service Location</Text>
+                            </View>
+                            <Text style={styles.locationName}>{selectedLocation.name}</Text>
+                            <Text style={styles.serviceAreaNote}>
+                                Service radius: {selectedLocation.service_radius_miles || 10} miles
+                            </Text>
+                        </View>
+                    )}
 
                     {/* Service Details */}
                     <View style={styles.card}>
@@ -695,10 +821,7 @@ const BookingCheckoutScreen = () => {
                     {(showAddressForm || savedAddresses.length === 0) && (
                         <View style={styles.card}>
                             <Text style={styles.sectionTitle}>Address Details</Text>
-                            <Text style={styles.serviceAreaNote}>
-                                We currently service addresses within 5 miles of Derby
-                            </Text>
-
+                            
                             <View style={styles.inputGroup}>
                                 <Text style={styles.inputLabel}>Address Line 1 *</Text>
                                 <TextInput
@@ -733,15 +856,46 @@ const BookingCheckoutScreen = () => {
                             </View>
 
                             <View style={styles.inputGroup}>
-                                <Text style={styles.inputLabel}>Postcode * (Derby area only)</Text>
+                                <Text style={styles.inputLabel}>Postcode *</Text>
                                 <TextInput
-                                    style={styles.input}
+                                    style={[
+                                        styles.input,
+                                        !isAddressValid && styles.inputError
+                                    ]}
                                     value={postcode}
                                     onChangeText={setPostcode}
-                                    placeholder="Postcode"
+                                    placeholder="Postcode (e.g., DE1 3AH)"
                                     autoCapitalize="characters"
                                     returnKeyType="done"
                                 />
+                                
+                                {/* Address Validation Indicator */}
+                                {validatingLocation && (
+                                    <View style={styles.validationIndicator}>
+                                        <ActivityIndicator size="small" color="#9A563A" />
+                                        <Text style={styles.validationText}>Validating address...</Text>
+                                    </View>
+                                )}
+                                
+                                {/* Address Validation Message */}
+                                {addressValidationMessage && !validatingLocation && (
+                                    <View style={[
+                                        styles.validationMessage,
+                                        isAddressValid ? styles.validationSuccess : styles.validationError
+                                    ]}>
+                                        <Feather 
+                                            name={isAddressValid ? "check-circle" : "x-circle"} 
+                                            size={16} 
+                                            color={isAddressValid ? "#10B981" : "#EF4444"} 
+                                        />
+                                        <Text style={[
+                                            styles.validationMessageText,
+                                            isAddressValid ? styles.validationSuccessText : styles.validationErrorText
+                                        ]}>
+                                            {addressValidationMessage}
+                                        </Text>
+                                    </View>
+                                )}
                             </View>
 
                             {isAuthenticated && (
@@ -786,18 +940,33 @@ const BookingCheckoutScreen = () => {
 
                 <View style={styles.footer}>
                     <TouchableOpacity
-                        style={styles.confirmButton}
+                        style={[
+                            styles.confirmButton,
+                            isConfirmButtonDisabled() && styles.confirmButtonDisabled
+                        ]}
                         onPress={handleSubmitBooking}
-                        disabled={submitting || validatingLocation}
+                        disabled={isConfirmButtonDisabled()}
                     >
-                        {submitting || validatingLocation ? (
+                        {submitting ? (
                             <ActivityIndicator color="#fff" />
+                        ) : validatingLocation ? (
+                            <View style={styles.buttonContent}>
+                                <ActivityIndicator color="#fff" size="small" />
+                                <Text style={styles.confirmButtonText}>Validating Location...</Text>
+                            </View>
                         ) : (
                             <Text style={styles.confirmButtonText}>
-                                {validatingLocation ? 'Validating Location...' : 'Confirm Booking'}
+                                {!isAddressValid ? 'Address Outside Service Area' : 'Confirm Booking'}
                             </Text>
                         )}
                     </TouchableOpacity>
+                    
+                    {/* Additional validation info */}
+                    {!isAddressValid && addressValidationMessage && (
+                        <Text style={styles.footerValidationText}>
+                            Please use an address within the service area to continue
+                        </Text>
+                    )}
                 </View>
             </SafeAreaView>
         </KeyboardAvoidingView>
@@ -851,6 +1020,36 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 16,
     },
+    locationCard: {
+        backgroundColor: '#E8F5E9',
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#81C784',
+    },
+    locationHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    locationTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#2E7D32',
+        marginLeft: 6,
+    },
+    locationName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#1B5E20',
+        marginBottom: 4,
+    },
+    serviceAreaNote: {
+        fontSize: 12,
+        color: '#4CAF50',
+        fontStyle: 'italic',
+    },
     card: {
         backgroundColor: '#fff',
         borderRadius: 8,
@@ -867,12 +1066,6 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         marginBottom: 12,
         color: '#333',
-    },
-    serviceAreaNote: {
-        fontSize: 14,
-        color: '#666',
-        fontStyle: 'italic',
-        marginBottom: 12,
     },
     detailRow: {
         flexDirection: 'row',
@@ -925,9 +1118,52 @@ const styles = StyleSheet.create({
         padding: 12,
         fontSize: 16,
     },
+    inputError: {
+        borderColor: '#EF4444',
+        backgroundColor: '#FEF2F2',
+    },
     textArea: {
         minHeight: 100,
         textAlignVertical: 'top',
+    },
+    validationIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 8,
+        paddingHorizontal: 4,
+    },
+    validationText: {
+        marginLeft: 8,
+        fontSize: 14,
+        color: '#9A563A',
+    },
+    validationMessage: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 8,
+        padding: 8,
+        borderRadius: 6,
+    },
+    validationSuccess: {
+        backgroundColor: '#F0FDF4',
+        borderWidth: 1,
+        borderColor: '#BBF7D0',
+    },
+    validationError: {
+        backgroundColor: '#FEF2F2',
+        borderWidth: 1,
+        borderColor: '#FECACA',
+    },
+    validationMessageText: {
+        marginLeft: 8,
+        fontSize: 14,
+        flex: 1,
+    },
+    validationSuccessText: {
+        color: '#166534',
+    },
+    validationErrorText: {
+        color: '#DC2626',
     },
     addressOption: {
         padding: 12,
@@ -1048,10 +1284,24 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         alignItems: 'center',
     },
+    confirmButtonDisabled: {
+        backgroundColor: '#cccccc',
+    },
     confirmButtonText: {
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
+    },
+    buttonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    footerValidationText: {
+        fontSize: 12,
+        color: '#DC2626',
+        textAlign: 'center',
+        marginTop: 8,
+        fontStyle: 'italic',
     },
 });
 
