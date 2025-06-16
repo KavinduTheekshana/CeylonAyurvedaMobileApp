@@ -1,4 +1,4 @@
-// app/(screens)/_layout.tsx - Updated with therapist screen
+// app/(screens)/_layout.tsx - Updated with MessageAdminScreen
 
 import { View, Text, StatusBar } from "react-native";
 import React from "react";
@@ -14,6 +14,10 @@ const Layout = () => {
           options={{ headerShown: false }}
         />
         <Stack.Screen name="SecurityScreen" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="MessageAdminScreen"
+          options={{ headerShown: false }}
+        />
         <Stack.Screen
           name="BookingTherapistScreen"
           options={{ headerShown: true }}
