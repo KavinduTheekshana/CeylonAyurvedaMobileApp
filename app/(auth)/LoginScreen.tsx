@@ -22,9 +22,16 @@ import Logo from "@/app/components/Logo";
 import BottomLeftImage from "@/app/components/BottomLeftImage";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Google from 'expo-auth-session/providers/google';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
 
 // You should create this file to store your API URLs
 import { API_BASE_URL } from "@/config/api";
+
+// Complete the auth session for Google
+WebBrowser.maybeCompleteAuthSession();
 
 // Define TypeScript interfaces
 interface UserData {
@@ -47,6 +54,15 @@ interface LoginResponse {
   [key: string]: any;
 }
 
+interface SocialAuthData {
+  token?: string;
+  email: string;
+  name: string;
+  provider: 'google' | 'apple';
+  provider_id: string;
+  avatar_url?: string;
+}
+
 export default function Login() {
   const router = useRouter();
   const { width, height } = Dimensions.get("window");
@@ -60,10 +76,29 @@ export default function Login() {
   const [passwordFocus, setPasswordFocus] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
   const [errors, setErrors] = useState<LoginErrors>({
     email: "",
     password: "",
   });
+
+  // Google OAuth configuration
+  const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
+    // Android client ID from Google Cloud Console
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || 'your-android-client-id.apps.googleusercontent.com',
+    // iOS client ID from Google Cloud Console
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '754805117963-f8japisp2qr7nukjb2b77nm385h0gofm.apps.googleusercontent.com',
+    // Web client ID for Expo Go
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '754805117963-dt9ttk8idoisn63i0dhubstriq91nos9.apps.googleusercontent.com',
+    scopes: ['profile', 'email'],
+  });
+
+  // Handle Google OAuth response
+  React.useEffect(() => {
+    if (googleResponse?.type === 'success') {
+      handleGoogleSignIn(googleResponse.authentication?.accessToken);
+    }
+  }, [googleResponse]);
 
   // Store all user data function
   const storeUserData = async (userData: UserData): Promise<void> => {
@@ -95,7 +130,152 @@ export default function Login() {
     }
   };
 
-  // Handle login
+  // Handle social login success
+  const handleSocialLoginSuccess = async (response: LoginResponse) => {
+    try {
+      if (response.access_token) {
+        // Store token
+        await AsyncStorage.setItem("access_token", response.access_token);
+
+        // Store user data
+        if (response.user) {
+          await storeUserData(response.user);
+        }
+
+        // Set session expiration (90 days from now)
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + 90);
+        await AsyncStorage.setItem(
+          "session_expiry",
+          expirationDate.toISOString()
+        );
+
+        // Set user mode to logged in
+        await AsyncStorage.setItem("user_mode", "logged_in");
+
+        // Navigate to home
+        router.replace("/(tabs)");
+      }
+    } catch (error) {
+      console.error("Error handling social login success:", error);
+      Alert.alert("Error", "Failed to complete login. Please try again.");
+    }
+  };
+
+  // Google Sign In
+  const handleGoogleSignIn = async (token?: string) => {
+    if (!token) {
+      Alert.alert("Error", "Failed to get Google authentication token");
+      setSocialLoading(null);
+      return;
+    }
+
+    try {
+      setSocialLoading('google');
+
+      // Get user info from Google
+      const userInfoResponse = await fetch(
+        `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${token}`
+      );
+      const userInfo = await userInfoResponse.json();
+
+      if (!userInfo.email) {
+        throw new Error("Failed to get user email from Google");
+      }
+
+      // Prepare data for your backend
+      const socialAuthData: SocialAuthData = {
+        token,
+        email: userInfo.email,
+        name: userInfo.name || userInfo.email,
+        provider: 'google',
+        provider_id: userInfo.id,
+        avatar_url: userInfo.picture,
+      };
+
+      // Send to your backend
+      const response = await axios.post<LoginResponse>(
+        `${API_BASE_URL}/api/auth/social/login`,
+        socialAuthData
+      );
+
+      if (response.data.access_token) {
+        await handleSocialLoginSuccess(response.data);
+      } else {
+        throw new Error("No access token received from server");
+      }
+    } catch (error) {
+      console.error("Google sign in error:", error);
+      let errorMessage = "Google sign in failed. Please try again.";
+
+      if (axios.isAxiosError(error)) {
+        errorMessage = error.response?.data?.message || errorMessage;
+      }
+
+      Alert.alert("Google Sign In Error", errorMessage);
+    } finally {
+      setSocialLoading(null);
+    }
+  };
+
+  // Apple Sign In
+  const handleAppleSignIn = async () => {
+    try {
+      setSocialLoading('apple');
+
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!credential.user) {
+        throw new Error("Failed to get user data from Apple");
+      }
+
+      // Prepare data for your backend
+      const socialAuthData: SocialAuthData = {
+        email: credential.email || `${credential.user}@privaterelay.appleid.com`,
+        name: credential.fullName ?
+          `${credential.fullName.givenName || ''} ${credential.fullName.familyName || ''}`.trim() :
+          credential.email || 'Apple User',
+        provider: 'apple',
+        provider_id: credential.user,
+      };
+
+      // Send to your backend
+      const response = await axios.post<LoginResponse>(
+        `${API_BASE_URL}/api/auth/social/login`,
+        socialAuthData
+      );
+
+      if (response.data.access_token) {
+        await handleSocialLoginSuccess(response.data);
+      } else {
+        throw new Error("No access token received from server");
+      }
+    } catch (error) {
+      console.error("Apple sign in error:", error);
+
+      if (error.code === 'ERR_CANCELED') {
+        // User canceled the sign-in flow
+        return;
+      }
+
+      let errorMessage = "Apple sign in failed. Please try again.";
+
+      if (axios.isAxiosError(error)) {
+        errorMessage = error.response?.data?.message || errorMessage;
+      }
+
+      Alert.alert("Apple Sign In Error", errorMessage);
+    } finally {
+      setSocialLoading(null);
+    }
+  };
+
+  // Handle regular login
   const handleLogin = async (): Promise<void> => {
     // Reset errors
     setErrors({ email: "", password: "" });
@@ -158,30 +338,7 @@ export default function Login() {
 
       // Normal login flow
       if (response.data.access_token) {
-        // Store token
-        await AsyncStorage.setItem("access_token", response.data.access_token);
-
-        console.log(await AsyncStorage.getItem("access_token"));
-
-        // Store user data
-        if (response.data.user) {
-          // Store complete user data
-          await storeUserData(response.data.user);
-        }
-
-        // Set session expiration (90 days from now)
-        const expirationDate = new Date();
-        expirationDate.setDate(expirationDate.getDate() + 90);
-        await AsyncStorage.setItem(
-          "session_expiry",
-          expirationDate.toISOString()
-        );
-        
-        // Set user mode to logged in
-        await AsyncStorage.setItem("user_mode", "logged_in");
-
-        // Navigate to home or dashboard
-        router.replace("/(tabs)");
+        await handleSocialLoginSuccess(response.data);
       } else {
         Alert.alert("Error", "Login failed. Please try again.");
       }
@@ -227,15 +384,15 @@ export default function Login() {
       await AsyncStorage.removeItem("user_id");
       await AsyncStorage.removeItem("user_name");
       await AsyncStorage.removeItem("user_email");
-      
+
       // Set user mode to guest
       await AsyncStorage.setItem("user_mode", "guest");
-      
+
       // Set a temporary guest session (1 day)
       const expirationDate = new Date();
       expirationDate.setDate(expirationDate.getDate() + 1);
       await AsyncStorage.setItem("session_expiry", expirationDate.toISOString());
-      
+
       // Navigate to home
       router.replace("/(tabs)");
     } catch (error) {
@@ -274,15 +431,16 @@ export default function Login() {
                     Please login into your account
                   </Text>
 
+
+
                   {/* Email Input */}
                   <View
-                    className={`flex-row items-center bg-[#FFFFFF] mb-4 rounded-[14px] p-4 py-5 border ${
-                      emailFocus
-                        ? "border-primary"
-                        : errors.email
+                    className={`flex-row items-center bg-[#FFFFFF] mb-4 rounded-[14px] p-4 py-5 border ${emailFocus
+                      ? "border-primary"
+                      : errors.email
                         ? "border-red-500"
                         : "border-[#DFDFDF]"
-                    }`}
+                      }`}
                   >
                     <FontAwesome
                       name="envelope"
@@ -291,8 +449,8 @@ export default function Login() {
                         emailFocus
                           ? "#9A563A"
                           : errors.email
-                          ? "red"
-                          : "#DFDFDF"
+                            ? "red"
+                            : "#DFDFDF"
                       }
                       className="mr-3"
                     />
@@ -322,13 +480,12 @@ export default function Login() {
 
                   {/* Password Input */}
                   <View
-                    className={`flex-row items-center bg-[#FFFFFF] mb-4 rounded-[14px] p-4 py-5 border ${
-                      passwordFocus
-                        ? "border-primary"
-                        : errors.password
+                    className={`flex-row items-center bg-[#FFFFFF] mb-4 rounded-[14px] p-4 py-5 border ${passwordFocus
+                      ? "border-primary"
+                      : errors.password
                         ? "border-red-500"
                         : "border-[#DFDFDF]"
-                    }`}
+                      }`}
                   >
                     <FontAwesome
                       name="key"
@@ -337,8 +494,8 @@ export default function Login() {
                         passwordFocus
                           ? "#9A563A"
                           : errors.password
-                          ? "red"
-                          : "#DFDFDF"
+                            ? "red"
+                            : "#DFDFDF"
                       }
                       className="mr-3"
                     />
@@ -386,7 +543,7 @@ export default function Login() {
                   <TouchableOpacity
                     className="bg-primary py-5 items-center rounded-[14px]"
                     onPress={handleLogin}
-                    disabled={isLoading}
+                    disabled={isLoading || socialLoading !== null}
                   >
                     {isLoading ? (
                       <ActivityIndicator color="white" />
@@ -397,15 +554,71 @@ export default function Login() {
                     )}
                   </TouchableOpacity>
 
+                  {/* Divider */}
+                  <View className="flex-row items-center mb-4 mt-6">
+                    <View className="flex-1 h-px bg-gray-300" />
+                    <Text className="mx-4 text-gray-500 text-sm">or sign in with</Text>
+                    <View className="flex-1 h-px bg-gray-300" />
+                  </View>
+
+                  {/* Social Login Buttons */}
+                  <View className="mb-6">
+                    <View className="flex-row space-x-3 gap-3">
+                      {/* Google Sign In Button */}
+                      <TouchableOpacity
+                        className="flex-1 flex-row items-center justify-center bg-white border border-gray-300 py-4 px-3 rounded-[14px]"
+                        onPress={() => googlePromptAsync()}
+                        disabled={socialLoading !== null}
+                      >
+                        {socialLoading === 'google' ? (
+                          <ActivityIndicator size="small" color="#DB4437" />
+                        ) : (
+                          <>
+                            <FontAwesome name="google" size={18} color="#DB4437" />
+                            <Text className="text-gray-700 font-medium ml-2 text-sm">
+                              Google
+                            </Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+
+                      {/* Apple Sign In Button - Only show on iOS */}
+                      {Platform.OS === 'ios' ? (
+                        <TouchableOpacity
+                          className="flex-1 flex-row items-center justify-center bg-black py-3 px-3 rounded-[14px]"
+                          onPress={handleAppleSignIn}
+                          disabled={socialLoading !== null}
+                        >
+                          {socialLoading === 'apple' ? (
+                            <ActivityIndicator size="small" color="#FFFFFF" />
+                          ) : (
+                            <>
+                              <FontAwesome name="apple" size={18} color="#FFFFFF" />
+                              <Text className="text-white font-medium ml-2 text-sm">
+                                Apple
+                              </Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
+                      ) : (
+                        /* Placeholder for Android to keep Google button centered */
+                        <View className="flex-1" />
+                      )}
+                    </View>
+                  </View>
+
+
+
                   {/* Continue as guest */}
-                  <TouchableOpacity
+                  {/* <TouchableOpacity
                     className="bg-white border border-[#9A563A] mt-4 py-5 items-center rounded-[14px]"
                     onPress={handleContinueAsGuest}
+                    disabled={socialLoading !== null}
                   >
                     <Text className="text-[#9A563A] text-lg font-semibold">
                       Continue as Guest
                     </Text>
-                  </TouchableOpacity>
+                  </TouchableOpacity> */}
 
                   {/* Register Link */}
                   <View className="flex-row justify-center items-center mt-6">
@@ -420,6 +633,26 @@ export default function Login() {
                       </Text>
                     </TouchableOpacity>
                   </View>
+
+                  <View className="flex-row items-center mt-3">
+                    <View className="flex-1 h-px bg-gray-300" />
+                    <Text className="mx-4 text-gray-500 text-sm">OR</Text>
+                    <View className="flex-1 h-px bg-gray-300" />
+                  </View>
+
+
+                  <View className="flex-row justify-center items-center mt-3">
+
+                    <TouchableOpacity
+                      onPress={handleContinueAsGuest}
+                    >
+                      <Text className="text-brown-700 font-semibold color-primary ml-1">
+                        Continue as Guest
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+
                 </View>
               </ScrollView>
             </KeyboardAvoidingView>
