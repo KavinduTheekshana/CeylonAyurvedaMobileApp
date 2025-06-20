@@ -67,6 +67,14 @@ export default function Login() {
   const router = useRouter();
   const { width, height } = Dimensions.get("window");
 
+    React.useEffect(() => {
+    console.log('=== GOOGLE OAUTH DEBUG ===');
+    console.log('Android Client ID:', process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID);
+    console.log('iOS Client ID:', process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
+    console.log('Web Client ID:', process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
+    console.log('========================');
+  }, []);
+
   // Form state
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -82,13 +90,12 @@ export default function Login() {
     password: "",
   });
 
+  
+
   // Google OAuth configuration
   const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
-    // Android client ID from Google Cloud Console
     androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || 'your-android-client-id.apps.googleusercontent.com',
-    // iOS client ID from Google Cloud Console
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '754805117963-f8japisp2qr7nukjb2b77nm385h0gofm.apps.googleusercontent.com',
-    // Web client ID for Expo Go
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '754805117963-dt9ttk8idoisn63i0dhubstriq91nos9.apps.googleusercontent.com',
     scopes: ['profile', 'email'],
   });
