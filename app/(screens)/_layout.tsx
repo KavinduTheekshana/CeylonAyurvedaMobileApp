@@ -38,6 +38,10 @@ const Layout = () => {
           name="BookingCheckoutScreen"
           options={{ headerShown: true }}
         />
+         <Stack.Screen
+          name="MessageHistoryScreen"
+          options={{ headerShown: false }}
+        />
         <Stack.Screen
           name="BookingConfirmationScreen"
           options={{

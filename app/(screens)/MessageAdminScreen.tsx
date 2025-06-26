@@ -25,7 +25,7 @@ import { useLocation, type Location } from '../contexts/LocationContext';
 export default function MessageAdminScreen() {
     const router = useRouter();
     const { selectedLocation } = useLocation();
-    
+
     // Form state
     const [subject, setSubject] = useState('');
     const [message, setMessage] = useState('');
@@ -34,14 +34,14 @@ export default function MessageAdminScreen() {
     const [selectedBranch, setSelectedBranch] = useState<Location | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isGuest, setIsGuest] = useState(false);
-    
+
     // Branch selection modal state
     const [branchModalVisible, setBranchModalVisible] = useState(false);
     const [availableBranches, setAvailableBranches] = useState<Location[]>([]);
     const [loadingBranches, setLoadingBranches] = useState(false);
-    
+
     // Error states
-    const [errors, setErrors] = useState<{[key: string]: string}>({});
+    const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
     React.useEffect(() => {
         checkUserStatusAndLoadData();
@@ -93,15 +93,15 @@ export default function MessageAdminScreen() {
                     email: location.email || null,
                     description: location.description || null,
                     operating_hours: location.operating_hours || null,
-                    image: location.image ? 
-                        (location.image.startsWith('http') ? location.image : `${API_BASE_URL}/storage/${location.image}`) 
+                    image: location.image ?
+                        (location.image.startsWith('http') ? location.image : `${API_BASE_URL}/storage/${location.image}`)
                         : null,
                     status: location.status !== false,
                     service_radius_miles: location.service_radius_miles || 5
                 }));
 
                 setAvailableBranches(mappedLocations);
-                
+
                 // Set default branch if not already set
                 if (!selectedBranch && selectedLocation) {
                     const defaultBranch = mappedLocations.find(branch => branch.id === selectedLocation.id);
@@ -118,7 +118,7 @@ export default function MessageAdminScreen() {
     };
 
     const validateForm = () => {
-        const newErrors: {[key: string]: string} = {};
+        const newErrors: { [key: string]: string } = {};
 
         if (!selectedBranch) {
             newErrors.branch = 'Please select a branch';
@@ -157,7 +157,7 @@ export default function MessageAdminScreen() {
 
         try {
             const token = await AsyncStorage.getItem('access_token');
-            
+
             const messageData = {
                 subject: subject.trim(),
                 message: message.trim(),
@@ -209,11 +209,11 @@ export default function MessageAdminScreen() {
             }
         } catch (error: any) {
             console.error('Error sending message:', error);
-            
+
             if (axios.isAxiosError(error) && error.response?.status === 422) {
                 // Handle validation errors
                 if (error.response.data.errors) {
-                    const validationErrors: {[key: string]: string} = {};
+                    const validationErrors: { [key: string]: string } = {};
                     Object.entries(error.response.data.errors).forEach(([key, messages]) => {
                         validationErrors[key] = Array.isArray(messages) ? messages[0] : messages as string;
                     });
@@ -419,6 +419,19 @@ export default function MessageAdminScreen() {
                                 <Text style={styles.sendButtonText}>Send Message</Text>
                             </View>
                         )}
+                    </TouchableOpacity>
+
+                    {/* View History Button */}
+                    <TouchableOpacity
+                        className="bg-white border-2 border-[#9A563A] rounded-xl py-4 px-6 items-center mb-5 shadow-sm"
+                        onPress={() => router.push('/(screens)/MessageHistoryScreen')}
+                    >
+                        <View className="flex-row items-center">
+                            <Feather name="message-square" size={18} color="#9A563A" />
+                            <Text className="text-[#9A563A] text-base font-semibold ml-2">
+                                View Message History
+                            </Text>
+                        </View>
                     </TouchableOpacity>
 
                     {/* Additional Info */}
