@@ -1,3 +1,4 @@
+// app/(tabs)/profiles.tsx - Updated with Investment Progress
 import React, { useState, useCallback } from 'react';
 import {
     SafeAreaView,
@@ -24,6 +25,8 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import axios from 'axios';
 import { API_BASE_URL } from '@/config/api';
 import GuestProfileHeader from '../components/GuestProfileHeader';
+import InvestmentProgress from '../components/InvestmentProgress';
+import investmentService from '../services/investmentService';
 
 // Define TypeScript interfaces
 interface UserData {
@@ -49,6 +52,21 @@ interface MenuSection {
     visibleForGuest?: boolean;
 }
 
+interface InvestmentSummary {
+    total_invested: number;
+    total_investments: number;
+    pending_investments: number;
+    investments_by_location: Array<{
+        location: {
+            id: number;
+            name: string;
+            city: string;
+        };
+        total_amount: number;
+        investment_count: number;
+    }>;
+}
+
 export default function ProfileScreen() {
     const router = useRouter();
     const [userData, setUserData] = useState<UserData>({
@@ -60,7 +78,9 @@ export default function ProfileScreen() {
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [refreshing, setRefreshing] = useState<boolean>(false);
     const [isGuest, setIsGuest] = useState<boolean>(false);
-    
+    const [investmentSummary, setInvestmentSummary] = useState<InvestmentSummary | null>(null);
+    const [loadingInvestments, setLoadingInvestments] = useState<boolean>(false);
+
     // States for delete account modal
     const [deleteModalVisible, setDeleteModalVisible] = useState<boolean>(false);
     const [password, setPassword] = useState<string>('');
@@ -75,7 +95,7 @@ export default function ProfileScreen() {
             // Check if user is in guest mode
             const userMode = await AsyncStorage.getItem('user_mode');
             setIsGuest(userMode === 'guest');
-            
+
             if (userMode === 'guest') {
                 // No need to load user data for guest
                 setIsLoading(false);
@@ -103,12 +123,32 @@ export default function ProfileScreen() {
                 email: userEmail || completeUserData.email || '',
                 profile_photo_path: userProfilePhoto || completeUserData.profile_photo_path,
             });
+
+            // Load investment data for logged-in users
+            await loadInvestmentData();
         } catch (error) {
             console.error('Error loading user data:', error);
             Alert.alert('Error', 'Failed to load profile data');
         } finally {
             setIsLoading(false);
             setRefreshing(false);
+        }
+    };
+
+    // Function to load investment data
+    const loadInvestmentData = async (): Promise<void> => {
+        try {
+            setLoadingInvestments(true);
+            const response = await investmentService.getUserInvestmentSummary();
+
+            if (response.success) {
+                setInvestmentSummary(response.data);
+            }
+        } catch (error) {
+            console.error('Error loading investment data:', error);
+            // Don't show alert for investment errors, just log them
+        } finally {
+            setLoadingInvestments(false);
         }
     };
 
@@ -196,6 +236,22 @@ export default function ProfileScreen() {
         setDeleteModalVisible(true);
     };
 
+    // Navigate to Investment Screen
+    const handleInvestmentPress = (): void => {
+        if (isGuest) {
+            Alert.alert(
+                'Login Required',
+                'Please login to view your investments',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Login', onPress: () => router.push('/(auth)/LoginScreen') }
+                ]
+            );
+            return;
+        }
+        router.push('/(investment)');
+    };
+
     // Perform account deletion
     const performDeleteAccount = async (): Promise<void> => {
         // Validate password
@@ -266,44 +322,72 @@ export default function ProfileScreen() {
         }
     };
 
-    // Menu sections
+    // Menu sections - Updated with Investment option
     const menuItems: MenuSection[] = [
+        {
+            title: 'Investment',
+            items: [
+                {
+                    icon: <MaterialIcons name="trending-up" size={24} color="#9A563A" />,
+                    label: 'My Investments',
+                    color: "#9A563A",
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc" />,
+                    onPress: handleInvestmentPress,
+                    visibleForGuest: true
+                },
+                {
+                    icon: <MaterialIcons name="pie-chart" size={24} color="#ccc" />,
+                    label: 'Investment Analytics',
+                    color: "#ccc",
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc" />,
+                    visibleForGuest: false
+                },
+                {
+                    icon: <MaterialIcons name="history" size={24} color="#ccc" />,
+                    label: 'Transaction History',
+                    color: "#ccc",
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc" />,
+                    visibleForGuest: false
+                },
+            ],
+            visibleForGuest: true
+        },
         {
             title: 'Activity',
             items: [
                 {
-                    icon: <Feather name="bookmark" size={24} color="#ccc"/>,
+                    icon: <Feather name="bookmark" size={24} color="#ccc" />,
                     label: 'Archive Goals',
                     color: "#ccc",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc" />,
                     visibleForGuest: false
                 },
                 {
-                    icon: <Feather name="repeat" size={24} color="#ccc"/>,
+                    icon: <Feather name="repeat" size={24} color="#ccc" />,
                     label: 'Link Bank Account',
                     color: "#ccc",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc" />,
                     visibleForGuest: false
                 },
                 {
-                    icon: <FontAwesome name="circle-o" size={24} color="#ccc"/>,
+                    icon: <FontAwesome name="circle-o" size={24} color="#ccc" />,
                     label: 'Billing & Subscriptions',
                     color: "#ccc",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc" />,
                     visibleForGuest: false
                 },
                 {
-                    icon: <FontAwesome name="credit-card" size={24} color="#ccc"/>,
+                    icon: <FontAwesome name="credit-card" size={24} color="#ccc" />,
                     label: 'Payment Methods',
                     color: "#ccc",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc" />,
                     visibleForGuest: false
                 },
                 {
-                    icon: <Feather name="shield" size={24} color="black"/>,
+                    icon: <Feather name="shield" size={24} color="black" />,
                     label: 'Account & Security',
                     color: "black",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc" />,
                     onPress: () => router.push('/SecurityScreen'),
                     visibleForGuest: false
                 },
@@ -314,31 +398,31 @@ export default function ProfileScreen() {
             title: 'General',
             items: [
                 {
-                    icon: <Ionicons name="settings-outline" size={24} color="#ccc"/>,
+                    icon: <Ionicons name="settings-outline" size={24} color="#ccc" />,
                     label: 'Preferences',
                     color: "#ccc",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc" />,
                     visibleForGuest: true
                 },
                 {
-                    icon: <Ionicons name="eye-outline" size={24} color="#ccc"/>,
+                    icon: <Ionicons name="eye-outline" size={24} color="#ccc" />,
                     label: 'App Appearance',
                     color: "#ccc",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc" />,
                     visibleForGuest: true
                 },
                 {
-                    icon: <Feather name="help-circle" size={24} color="#ccc"/>,
+                    icon: <Feather name="help-circle" size={24} color="#ccc" />,
                     label: 'Help & Support',
                     color: "#ccc",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc" />,
                     visibleForGuest: true
                 },
                 {
-                    icon: <AntDesign name="like2" size={24} color="#ccc"/>,
+                    icon: <AntDesign name="like2" size={24} color="#ccc" />,
                     label: 'Rate Us',
                     color: "#ccc",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc"/>,
+                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc" />,
                     visibleForGuest: true
                 },
             ],
@@ -373,7 +457,7 @@ export default function ProfileScreen() {
                 {/* Profile Header - Different for guests and logged in users */}
                 {isGuest ? (
                     // Guest profile header
-                    <GuestProfileHeader 
+                    <GuestProfileHeader
                         onLogin={handleGuestToLogin}
                         onRegister={handleGuestToRegister}
                     />
@@ -388,7 +472,7 @@ export default function ProfileScreen() {
                                 />
                             ) : (
                                 <View className="w-20 h-20 rounded-full bg-gray-200 justify-center items-center">
-                                    <Feather name="user" size={40} color="black"/>
+                                    <Feather name="user" size={40} color="black" />
                                 </View>
                             )}
                         </View>
@@ -396,7 +480,7 @@ export default function ProfileScreen() {
                         {/* PRO Badge */}
                         <View className="mb-2.5">
                             <View className="flex-row items-center bg-gray-500 px-3 py-1.5 rounded-full">
-                                <Feather name="award" size={18} color="white"/>
+                                <Feather name="award" size={18} color="white" />
                                 <Text className="text-white ml-1.5 font-bold">Regular</Text>
                             </View>
                         </View>
@@ -404,7 +488,7 @@ export default function ProfileScreen() {
                         <Text className="text-2xl font-bold mb-1.5">{userData.name || 'User'}</Text>
                         <Text className="text-base text-gray-600 mb-4">{userData.email || 'email@example.com'}</Text>
 
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             className="border border-gray-300 rounded-full py-2 px-6 mt-2.5"
                             onPress={() => router.push('/EditProfileScreen')}
                         >
@@ -412,6 +496,23 @@ export default function ProfileScreen() {
                         </TouchableOpacity>
                     </View>
                 )}
+
+                {/* Investment Progress Section - Show for both guest and logged-in users */}
+                <TouchableOpacity onPress={handleInvestmentPress} className="mt-4">
+                    {loadingInvestments ? (
+                        <View className="bg-white rounded-xl p-5 mb-4 items-center">
+                            <ActivityIndicator size="small" color="#9A563A" />
+                            <Text className="mt-2 text-gray-500">Loading investments...</Text>
+                        </View>
+                    ) : (
+                        <InvestmentProgress
+                            totalInvested={investmentSummary?.total_invested || 0}
+                            totalInvestments={investmentSummary?.total_investments || 0}
+                            investmentsByLocation={investmentSummary?.investments_by_location || []}
+                            isGuest={isGuest}
+                        />
+                    )}
+                </TouchableOpacity>
 
                 {/* Menu Sections - Filter based on user type */}
                 {menuItems
@@ -432,9 +533,9 @@ export default function ProfileScreen() {
                                         >
                                             <View className="flex-row items-center">
                                                 {item.icon}
-                                                <Text 
+                                                <Text
                                                     className={`text-base ml-4 ${item.isBold ? 'font-bold' : ''}`}
-                                                    style={item.color ? {color: item.color} : {}}
+                                                    style={item.color ? { color: item.color } : {}}
                                                 >
                                                     {item.label}
                                                 </Text>
@@ -455,7 +556,7 @@ export default function ProfileScreen() {
                             onPress={handleLogout}
                         >
                             <Text className="text-primary text-base font-bold mr-2">Logout</Text>
-                            <Feather name="log-out" size={20} color="#9A563A"/>
+                            <Feather name="log-out" size={20} color="#9A563A" />
                         </TouchableOpacity>
 
                         {/* Delete Account Button */}
@@ -464,7 +565,7 @@ export default function ProfileScreen() {
                             onPress={handleDeleteAccount}
                         >
                             <Text className="text-red-500 text-base font-bold mr-2">Delete Account</Text>
-                            <Feather name="trash-2" size={20} color="#FF3B30"/>
+                            <Feather name="trash-2" size={20} color="#FF3B30" />
                         </TouchableOpacity>
                     </View>
                 )}
@@ -477,7 +578,7 @@ export default function ProfileScreen() {
                             onPress={handleLogout}
                         >
                             <Text className="text-primary text-base font-bold mr-2">Exit Guest Mode</Text>
-                            <Feather name="log-out" size={20} color="#9A563A"/>
+                            <Feather name="log-out" size={20} color="#9A563A" />
                         </TouchableOpacity>
                     </View>
                 )}

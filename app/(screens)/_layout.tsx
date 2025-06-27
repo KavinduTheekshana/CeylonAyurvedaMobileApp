@@ -1,4 +1,4 @@
-// app/(screens)/_layout.tsx - Updated with MessageAdminScreen
+// app/(screens)/_layout.tsx - Updated with Investment screens
 
 import { View, Text, StatusBar } from "react-native";
 import React from "react";
@@ -19,6 +19,22 @@ const Layout = () => {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="MessageHistoryScreen"
+          options={{ headerShown: false }}
+        />
+        
+        {/* Investment Screens */}
+        <Stack.Screen
+          name="InvestmentScreen"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="InvestmentDetailsScreen"
+          options={{ headerShown: false }}
+        />
+        
+        {/* Booking Screens */}
+        <Stack.Screen
           name="BookingTherapistScreen"
           options={{ headerShown: true }}
         />
@@ -37,10 +53,6 @@ const Layout = () => {
         <Stack.Screen
           name="BookingCheckoutScreen"
           options={{ headerShown: true }}
-        />
-         <Stack.Screen
-          name="MessageHistoryScreen"
-          options={{ headerShown: false }}
         />
         <Stack.Screen
           name="BookingConfirmationScreen"

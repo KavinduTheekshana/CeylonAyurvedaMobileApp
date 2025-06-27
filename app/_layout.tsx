@@ -6,9 +6,11 @@ import * as SplashScreen from 'expo-splash-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useSegments } from "expo-router";
 import { LocationProvider } from './contexts/LocationContext';
+import { StripeProvider } from '@stripe/stripe-react-native';
 
 // Keep splash visible while loading
 SplashScreen.preventAutoHideAsync();
+const STRIPE_PUBLISHABLE_KEY = 'pk_test_your_actual_stripe_key_here';
 
 export default function RootLayout() {
   const router = useRouter();
@@ -68,7 +70,7 @@ export default function RootLayout() {
         console.error("Error during initialization:", error);
         await SplashScreen.hideAsync();
         setIsReady(true);
-        
+
         setTimeout(() => {
           router.replace('/(auth)');
         }, 100);
@@ -87,13 +89,15 @@ export default function RootLayout() {
   }
 
   return (
-    <LocationProvider>
-      <StatusBar barStyle="dark-content" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(screens)" />
-      </Stack>
-    </LocationProvider>
+    <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
+      <LocationProvider>
+        <StatusBar barStyle="dark-content" />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(screens)" />
+        </Stack>
+      </LocationProvider>
+    </StripeProvider>
   );
 }
