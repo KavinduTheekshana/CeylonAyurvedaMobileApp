@@ -1,4 +1,4 @@
-// app/(investment)/index.tsx - FIXED VERSION
+// app/(investment)/index.tsx - Updated to load from location_investments table
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -11,29 +11,26 @@ import {
   Alert,
   StyleSheet,
   Image,
+  FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// FIXED: Correct import path from (investment) directory
-import investmentService from '../services/investmentService';
 import { API_BASE_URL } from '@/config/api';
 
-interface InvestmentOpportunity {
+interface LocationInvestment {
   id: number;
   name: string;
   city: string;
   address: string;
   image: string | null;
   description: string | null;
-  investment_stats: {
-    total_invested: number;
-    investment_limit: number;
-    remaining_amount: number;
-    progress_percentage: number;
-    total_investors: number;
-    is_open_for_investment: boolean;
-  };
+  total_invested: number;
+  investment_limit: number;
+  total_investors: number;
+  is_open_for_investment: boolean;
+  remaining_amount: number;
+  progress_percentage: number;
 }
 
 interface UserInvestmentSummary {
@@ -53,7 +50,7 @@ interface UserInvestmentSummary {
 
 const InvestmentScreen = () => {
   const router = useRouter();
-  const [opportunities, setOpportunities] = useState<InvestmentOpportunity[]>([]);
+  const [locations, setLocations] = useState<LocationInvestment[]>([]);
   const [userSummary, setUserSummary] = useState<UserInvestmentSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -69,10 +66,12 @@ const InvestmentScreen = () => {
       const guestMode = userMode === 'guest';
       setIsGuest(guestMode);
 
+      // Load investment opportunities for everyone
+      await loadInvestmentLocations();
+
+      // Load user investment summary only for logged-in users
       if (!guestMode) {
-        await loadInvestmentData();
-      } else {
-        await loadOpportunities();
+        await loadUserSummary();
       }
     } catch (error) {
       console.error('Error loading investment data:', error);
@@ -82,50 +81,64 @@ const InvestmentScreen = () => {
     }
   };
 
-  const loadInvestmentData = async () => {
+  const loadInvestmentLocations = async () => {
     try {
-      const [summaryResponse, opportunitiesResponse] = await Promise.all([
-        investmentService.getUserInvestmentSummary(),
-        investmentService.getInvestmentOpportunities(),
-      ]);
+      console.log('Fetching investment locations from:', `${API_BASE_URL}/api/investments/opportunities`);
 
-      if (summaryResponse.success) {
-        setUserSummary(summaryResponse.data);
-      }
+      const response = await fetch(`${API_BASE_URL}/api/investments/opportunities`);
+      const data = await response.json();
 
-      if (opportunitiesResponse.success) {
-        // FIXED: Process image URLs properly
-        const processedOpportunities = opportunitiesResponse.data.map((opportunity: InvestmentOpportunity) => ({
-          ...opportunity,
-          image: opportunity.image 
-            ? (opportunity.image.startsWith('http') ? opportunity.image : `${API_BASE_URL}/storage/${opportunity.image}`)
-            : null
+      console.log('Investment locations response:', data);
+
+      if (data.success && Array.isArray(data.data)) {
+        const processedLocations = data.data.map((location: any) => ({
+          id: location.id,
+          name: location.name,
+          city: location.city,
+          address: location.address,
+          image: location.image ?
+            (location.image.startsWith('http') ? location.image : `${API_BASE_URL}/storage/${location.image}`)
+            : null,
+          description: location.description,
+          total_invested: parseFloat(location.total_invested || 0),
+          investment_limit: parseFloat(location.investment_limit || 10000),
+          total_investors: parseInt(location.total_investors || 0),
+          is_open_for_investment: location.is_open_for_investment !== false,
+          remaining_amount: parseFloat(location.remaining_amount || location.investment_limit || 10000),
+          progress_percentage: parseFloat(location.progress_percentage || 0),
         }));
-        setOpportunities(processedOpportunities);
-        console.log('Processed opportunities:', processedOpportunities); // Debug log
+
+        setLocations(processedLocations);
+        console.log('Processed investment locations:', processedLocations.length);
+      } else {
+        console.error('Invalid response format:', data);
       }
     } catch (error) {
-      console.error('Error loading investment data:', error);
-      Alert.alert('Error', 'Failed to load investment data');
+      console.error('Error loading investment locations:', error);
+      Alert.alert('Error', 'Failed to load investment opportunities');
     }
   };
 
-  const loadOpportunities = async () => {
+  const loadUserSummary = async () => {
     try {
-      const response = await investmentService.getInvestmentOpportunities();
-      if (response.success) {
-        // FIXED: Process image URLs for guest users too
-        const processedOpportunities = response.data.map((opportunity: InvestmentOpportunity) => ({
-          ...opportunity,
-          image: opportunity.image 
-            ? (opportunity.image.startsWith('http') ? opportunity.image : `${API_BASE_URL}/storage/${opportunity.image}`)
-            : null
-        }));
-        setOpportunities(processedOpportunities);
-        console.log('Guest opportunities:', processedOpportunities); // Debug log
+      const token = await AsyncStorage.getItem('access_token');
+      console.log('Loading user summary with token:', token);
+      if (!token) return;
+
+      const response = await fetch(`${API_BASE_URL}/api/investments/summary`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setUserSummary(data.data);
       }
     } catch (error) {
-      console.error('Error loading opportunities:', error);
+      console.error('Error loading user summary:', error);
     }
   };
 
@@ -134,7 +147,7 @@ const InvestmentScreen = () => {
     checkUserStatusAndLoadData();
   };
 
-  const handleInvestmentPress = (opportunity: InvestmentOpportunity) => {
+  const handleInvestmentPress = (location: LocationInvestment) => {
     if (isGuest) {
       Alert.alert(
         'Login Required',
@@ -147,61 +160,57 @@ const InvestmentScreen = () => {
       return;
     }
 
-    // Navigate using the new structure
-    router.push(`/(investment)/${opportunity.id}?locationName=${encodeURIComponent(opportunity.name)}`);
+    console.log('Navigating to investment details for location:', location.id, location.name);
+    // Navigate to investment details screen
+    router.push({
+      pathname: `/(investment)/[locationId]`,
+      params: {
+        locationId: location.id.toString(),
+        locationName: location.name
+      }
+    });
   };
 
-  const renderOpportunityCard = (opportunity: InvestmentOpportunity) => {
-    const { investment_stats } = opportunity;
-    
-    // FIXED: Debug image URL
-    console.log('Rendering opportunity:', opportunity.name, 'Image URL:', opportunity.image);
-    
+  const renderLocationCard = ({ item }: { item: LocationInvestment }) => {
     return (
       <TouchableOpacity
-        key={opportunity.id}
-        style={styles.opportunityCard}
-        onPress={() => handleInvestmentPress(opportunity)}
+        style={styles.locationCard}
+        onPress={() => handleInvestmentPress(item)}
+        activeOpacity={0.7}
       >
+        {/* Status Badge */}
+        <View style={[
+          styles.statusBadge,
+          { backgroundColor: item.is_open_for_investment ? '#10B981' : '#EF4444' }
+        ]}>
+          <Text style={styles.statusText}>
+            {item.is_open_for_investment ? 'Open' : 'Closed'}
+          </Text>
+        </View>
+
         {/* Location Image */}
         <View style={styles.imageContainer}>
-          {opportunity.image ? (
+          {item.image ? (
             <Image
-              source={{ uri: opportunity.image }}
+              source={{ uri: item.image }}
               style={styles.locationImage}
               resizeMode="cover"
-              onError={(error) => {
-                console.log('Image load error for:', opportunity.name, error.nativeEvent.error);
-              }}
-              onLoad={() => {
-                console.log('Image loaded successfully for:', opportunity.name);
-              }}
             />
           ) : (
             <View style={styles.placeholderImage}>
               <Feather name="map-pin" size={40} color="#9A563A" />
             </View>
           )}
-          
-          {/* Investment Status Badge */}
-          <View style={[
-            styles.statusBadge,
-            { backgroundColor: investment_stats.is_open_for_investment ? '#10B981' : '#EF4444' }
-          ]}>
-            <Text style={styles.statusText}>
-              {investment_stats.is_open_for_investment ? 'Open' : 'Closed'}
-            </Text>
-          </View>
         </View>
 
         {/* Location Info */}
         <View style={styles.cardContent}>
           <Text style={styles.locationName} numberOfLines={1}>
-            {opportunity.name}
+            {item.name}
           </Text>
           <View style={styles.locationDetails}>
             <Feather name="map-pin" size={14} color="#6B7280" />
-            <Text style={styles.locationCity}>{opportunity.city}</Text>
+            <Text style={styles.locationCity}>{item.city}</Text>
           </View>
 
           {/* Investment Progress */}
@@ -209,37 +218,37 @@ const InvestmentScreen = () => {
             <View style={styles.progressHeader}>
               <Text style={styles.progressLabel}>Investment Progress</Text>
               <Text style={styles.progressPercentage}>
-                {investment_stats.progress_percentage.toFixed(0)}%
+                {item.progress_percentage.toFixed(0)}%
               </Text>
             </View>
-            
+
             <View style={styles.progressBar}>
-              <View 
+              <View
                 style={[
-                  styles.progressFill, 
-                  { width: `${Math.min(investment_stats.progress_percentage, 100)}%` }
-                ]} 
+                  styles.progressFill,
+                  { width: `${Math.min(item.progress_percentage, 100)}%` }
+                ]}
               />
             </View>
-            
+
             <View style={styles.investmentStats}>
               <Text style={styles.investmentText}>
-                £{investment_stats.total_invested.toLocaleString()} raised
+                £{item.total_invested.toLocaleString()} raised
               </Text>
               <Text style={styles.investmentText}>
-                {investment_stats.total_investors} investors
+                {item.total_investors} investors
               </Text>
             </View>
-            
+
             <Text style={styles.remainingText}>
-              £{investment_stats.remaining_amount.toLocaleString()} remaining
+              £{item.remaining_amount.toLocaleString()} remaining of £{item.investment_limit.toLocaleString()}
             </Text>
           </View>
 
           {/* Description */}
-          {opportunity.description && (
+          {item.description && (
             <Text style={styles.description} numberOfLines={2}>
-              {opportunity.description}
+              {item.description}
             </Text>
           )}
         </View>
@@ -332,8 +341,8 @@ const InvestmentScreen = () => {
           <Text style={styles.sectionTitle}>
             {isGuest ? 'Investment Opportunities' : 'Available Opportunities'}
           </Text>
-          
-          {opportunities.length === 0 ? (
+
+          {locations.length === 0 ? (
             <View style={styles.emptyState}>
               <MaterialIcons name="trending-up" size={64} color="#D1D5DB" />
               <Text style={styles.emptyTitle}>No Opportunities Available</Text>
@@ -342,9 +351,14 @@ const InvestmentScreen = () => {
               </Text>
             </View>
           ) : (
-            <View style={styles.opportunitiesList}>
-              {opportunities.map(renderOpportunityCard)}
-            </View>
+            <FlatList
+              data={locations}
+              renderItem={renderLocationCard}
+              keyExtractor={(item) => item.id.toString()}
+              scrollEnabled={false}
+              showsVerticalScrollIndicator={false}
+              ItemSeparatorComponent={() => <View style={styles.separator} />}
+            />
           )}
         </View>
       </ScrollView>
@@ -458,22 +472,35 @@ const styles = StyleSheet.create({
   opportunitiesSection: {
     marginBottom: 24,
   },
-  opportunitiesList: {
-    gap: 16,
+  separator: {
+    height: 16,
   },
-  opportunityCard: {
+  locationCard: {
     backgroundColor: '#fff',
     borderRadius: 12,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    boxShadow: '0 2px 2px rgba(0, 0, 0, 0.01)',
+    position: 'relative',
+  },
+  statusBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    zIndex: 10,
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   imageContainer: {
-    position: 'relative',
     height: 160,
   },
   locationImage: {
@@ -486,19 +513,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  statusBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
   },
   cardContent: {
     padding: 16,

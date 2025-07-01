@@ -498,7 +498,7 @@ export default function ProfileScreen() {
                 )}
 
                 {/* Investment Progress Section - Show for both guest and logged-in users */}
-                <TouchableOpacity onPress={handleInvestmentPress} className="mt-4">
+                {/* <TouchableOpacity onPress={handleInvestmentPress} className="mt-4">
                     {loadingInvestments ? (
                         <View className="bg-white rounded-xl p-5 mb-4 items-center">
                             <ActivityIndicator size="small" color="#9A563A" />
@@ -512,7 +512,7 @@ export default function ProfileScreen() {
                             isGuest={isGuest}
                         />
                     )}
-                </TouchableOpacity>
+                </TouchableOpacity> */}
 
                 {/* Menu Sections - Filter based on user type */}
                 {menuItems
