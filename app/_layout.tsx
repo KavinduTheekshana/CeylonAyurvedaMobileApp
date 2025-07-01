@@ -10,7 +10,7 @@ import { StripeProvider } from '@stripe/stripe-react-native';
 
 // Keep splash visible while loading
 SplashScreen.preventAutoHideAsync();
-const STRIPE_PUBLISHABLE_KEY = 'pk_test_your_actual_stripe_key_here';
+const STRIPE_PUBLISHABLE_KEY = 'pk_test_51QAsolDy2cvEu4lhZ9cyTY3lCgpQQRboHfg6UihVxtbQLcXzPcOQjFZMFuQVQDRXA1R3lXLUaHTD3BZcDXvPJMwh00h2lAe1EY';
 
 export default function RootLayout() {
   const router = useRouter();
