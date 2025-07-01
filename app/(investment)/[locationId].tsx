@@ -8,21 +8,23 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  StyleSheet,
   Image,
   TextInput,
   Modal,
+  FlatList,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { useStripe } from '@stripe/stripe-react-native';
-import investmentService from '../services/investmentService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '@/config/api';
 
 interface LocationDetails {
   id: number;
   name: string;
   city: string;
   address: string;
+  postcode: string;
   image: string | null;
   description: string | null;
   investment_stats: {
@@ -34,9 +36,12 @@ interface LocationDetails {
     is_open_for_investment: boolean;
   };
   recent_investments: Array<{
+    id: number;
     amount: number;
     investor_name: string;
     invested_at: string;
+    status: string;
+    reference: string;
   }>;
 }
 
@@ -55,6 +60,9 @@ const InvestmentDetailsScreen = () => {
   const [investmentNotes, setInvestmentNotes] = useState('');
   const [investing, setInvesting] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [investorsModalVisible, setInvestorsModalVisible] = useState(false);
+  const [allInvestors, setAllInvestors] = useState<any[]>([]);
+  const [loadingInvestors, setLoadingInvestors] = useState(false);
 
   useEffect(() => {
     loadLocationDetails();
@@ -63,20 +71,150 @@ const InvestmentDetailsScreen = () => {
   const loadLocationDetails = async () => {
     try {
       setLoading(true);
-      const response = await investmentService.getLocationInvestmentDetails(locationId);
+      console.log(`Fetching location details for ID: ${locationId}`);
       
-      if (response.success) {
-        setLocationDetails(response.data);
-      } else {
-        Alert.alert('Error', 'Failed to load investment details');
+      // Get auth token
+      const token = await AsyncStorage.getItem('access_token');
+      
+      if (!token) {
+        Alert.alert('Error', 'You must be logged in to view investment details');
         router.back();
+        return;
+      }
+
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+
+      // Try the investment API endpoint first
+      let response = await fetch(`${API_BASE_URL}/api/investments/locations/${locationId}`, {
+        method: 'GET',
+        headers,
+      });
+
+      let data = await response.json();
+
+      // If that doesn't work, try the alternative endpoint
+      if (!response.ok || !data.success) {
+        console.log('Primary endpoint failed, trying alternative...');
+        response = await fetch(`${API_BASE_URL}/api/locations/${locationId}/investments`, {
+          method: 'GET',
+          headers,
+        });
+        data = await response.json();
+      }
+
+      // If still no success, try a basic location endpoint and construct the data
+      if (!response.ok || !data.success) {
+        console.log('Investment endpoints failed, trying basic location endpoint...');
+        response = await fetch(`${API_BASE_URL}/api/locations/${locationId}`, {
+          method: 'GET',
+          headers,
+        });
+        data = await response.json();
+
+        if (response.ok && data.success) {
+          // Construct investment data from basic location data
+          const location = data.data;
+          const constructedDetails: LocationDetails = {
+            id: location.id,
+            name: location.name,
+            city: location.city,
+            address: location.address,
+            postcode: location.postcode || '',
+            image: location.image ? 
+              (location.image.startsWith('http') ? location.image : `${API_BASE_URL}/storage/${location.image}`) 
+              : null,
+            description: location.description,
+            investment_stats: {
+              total_invested: 0,
+              investment_limit: 10000,
+              remaining_amount: 10000,
+              progress_percentage: 0,
+              total_investors: 0,
+              is_open_for_investment: true,
+            },
+            recent_investments: [],
+          };
+          setLocationDetails(constructedDetails);
+        } else {
+          throw new Error('Failed to load location details from any endpoint');
+        }
+      } else {
+        // Process the successful investment data
+        if (data.data) {
+          const processedDetails: LocationDetails = {
+            id: data.data.id,
+            name: data.data.name,
+            city: data.data.city,
+            address: data.data.address,
+            postcode: data.data.postcode || '',
+            image: data.data.image ? 
+              (data.data.image.startsWith('http') ? data.data.image : `${API_BASE_URL}/storage/${data.data.image}`) 
+              : null,
+            description: data.data.description,
+            investment_stats: {
+              total_invested: parseFloat(data.data.investment_stats?.total_invested || '0'),
+              investment_limit: parseFloat(data.data.investment_stats?.investment_limit || '10000'),
+              remaining_amount: parseFloat(data.data.investment_stats?.remaining_amount || '10000'),
+              progress_percentage: parseFloat(data.data.investment_stats?.progress_percentage || '0'),
+              total_investors: parseInt(data.data.investment_stats?.total_investors || '0'),
+              is_open_for_investment: data.data.investment_stats?.is_open_for_investment !== false,
+            },
+            recent_investments: data.data.recent_investments || [],
+          };
+          setLocationDetails(processedDetails);
+        } else {
+          throw new Error('Invalid data structure received from API');
+        }
       }
     } catch (error) {
       console.error('Error loading location details:', error);
-      Alert.alert('Error', 'Failed to load investment details');
+      Alert.alert('Error', 'Failed to load investment details. Please try again.');
       router.back();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAllInvestors = async () => {
+    try {
+      setLoadingInvestors(true);
+      const token = await AsyncStorage.getItem('access_token');
+      
+      if (!token) {
+        Alert.alert('Error', 'You must be logged in to view investors');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/investments/locations/${locationId}/investors`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setAllInvestors(data.data || []);
+        setInvestorsModalVisible(true);
+      } else {
+        // Fallback: use recent investments data
+        setAllInvestors(locationDetails?.recent_investments || []);
+        setInvestorsModalVisible(true);
+      }
+    } catch (error) {
+      console.error('Error loading investors:', error);
+      // Fallback: use recent investments data
+      setAllInvestors(locationDetails?.recent_investments || []);
+      setInvestorsModalVisible(true);
+    } finally {
+      setLoadingInvestors(false);
     }
   };
 
@@ -122,19 +260,34 @@ const InvestmentDetailsScreen = () => {
     
     try {
       const amount = parseFloat(investmentAmount);
+      const token = await AsyncStorage.getItem('access_token');
       
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
       // Create investment
-      const investmentResponse = await investmentService.createInvestment(
-        locationId,
-        amount,
-        investmentNotes
-      );
+      const investmentResponse = await fetch(`${API_BASE_URL}/api/investments`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          location_id: locationId,
+          amount: amount,
+          notes: investmentNotes,
+        }),
+      });
       
-      if (!investmentResponse.success) {
-        throw new Error(investmentResponse.message || 'Failed to create investment');
+      const investmentData = await investmentResponse.json();
+      
+      if (!investmentData.success) {
+        throw new Error(investmentData.message || 'Failed to create investment');
       }
       
-      const { investment, payment_intent } = investmentResponse.data;
+      const { investment, payment_intent } = investmentData.data;
       
       // Initialize payment sheet
       const { error: initError } = await initPaymentSheet({
@@ -160,11 +313,21 @@ const InvestmentDetailsScreen = () => {
       }
       
       // Confirm payment with backend
-      const confirmResponse = await investmentService.confirmPayment(
-        payment_intent.payment_intent_id
-      );
+      const confirmResponse = await fetch(`${API_BASE_URL}/api/investments/confirm-payment`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          payment_intent_id: payment_intent.payment_intent_id,
+        }),
+      });
       
-      if (confirmResponse.success) {
+      const confirmData = await confirmResponse.json();
+      
+      if (confirmData.success) {
         Alert.alert(
           'Investment Successful!',
           `Your investment of £${amount} has been processed successfully.`,
@@ -180,6 +343,8 @@ const InvestmentDetailsScreen = () => {
             },
           ]
         );
+      } else {
+        throw new Error(confirmData.message || 'Failed to confirm payment');
       }
       
     } catch (error: any) {
@@ -195,15 +360,33 @@ const InvestmentDetailsScreen = () => {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     });
   };
 
+  const renderInvestorItem = ({ item }: { item: any }) => (
+    <View className="flex-row justify-between items-center px-5 py-4 border-b border-gray-100">
+      <View className="flex-1 mr-4">
+        <Text className="text-base font-semibold text-gray-800 mb-1">{item.investor_name}</Text>
+        <Text className="text-sm text-gray-500 mb-1">{formatDate(item.invested_at)}</Text>
+        <Text className="text-xs text-gray-400">Ref: {item.reference}</Text>
+      </View>
+      <View className="items-end">
+        <Text className="text-base font-bold text-amber-700 mb-1.5">£{item.amount.toLocaleString()}</Text>
+        <View className={`px-2 py-1 rounded ${item.status === 'completed' ? 'bg-green-500' : 'bg-yellow-500'}`}>
+          <Text className="text-white text-xs font-medium">{item.status}</Text>
+        </View>
+      </View>
+    </View>
+  );
+
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
+      <SafeAreaView className="flex-1 bg-gray-50">
+        <View className="flex-1 justify-center items-center px-8">
           <ActivityIndicator size="large" color="#9A563A" />
-          <Text style={styles.loadingText}>Loading investment details...</Text>
+          <Text className="mt-4 text-base text-gray-500">Loading investment details...</Text>
         </View>
       </SafeAreaView>
     );
@@ -211,13 +394,16 @@ const InvestmentDetailsScreen = () => {
 
   if (!locationDetails) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
+      <SafeAreaView className="flex-1 bg-gray-50">
+        <View className="flex-1 justify-center items-center px-8">
           <MaterialIcons name="error-outline" size={64} color="#DC2626" />
-          <Text style={styles.errorTitle}>Failed to Load Details</Text>
-          <Text style={styles.errorSubtitle}>Please try again later</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={loadLocationDetails}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+          <Text className="text-xl font-bold text-red-600 mt-4 mb-2">Failed to Load Details</Text>
+          <Text className="text-base text-gray-500 text-center mb-6">Please try again later</Text>
+          <TouchableOpacity 
+            className="bg-amber-700 px-6 py-3 rounded-lg"
+            onPress={loadLocationDetails}
+          >
+            <Text className="text-white text-base font-semibold">Retry</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -225,44 +411,37 @@ const InvestmentDetailsScreen = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+      <View className="flex-row items-center justify-between px-4 py-4 bg-white border-b border-gray-200">
+        <TouchableOpacity className="p-2" onPress={() => router.back()}>
           <Feather name="arrow-left" size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
+        <Text className="text-lg font-bold text-gray-800 flex-1 text-center mx-4" numberOfLines={1}>
           {locationDetails.name}
         </Text>
-        <View style={styles.placeholder} />
+        <View className="w-10" />
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Location Image */}
-        <View style={styles.imageContainer}>
+        <View className="relative h-48">
           {locationDetails.image ? (
             <Image
               source={{ uri: locationDetails.image }}
-              style={styles.locationImage}
+              className="w-full h-full"
               resizeMode="cover"
             />
           ) : (
-            <View style={styles.placeholderImage}>
+            <View className="w-full h-full bg-gray-200 justify-center items-center">
               <Feather name="map-pin" size={48} color="#9A563A" />
             </View>
           )}
           
           {/* Investment Status Overlay */}
-          <View style={styles.statusOverlay}>
-            <View style={[
-              styles.statusBadge,
-              { 
-                backgroundColor: locationDetails.investment_stats.is_open_for_investment 
-                  ? '#10B981' 
-                  : '#EF4444' 
-              }
-            ]}>
-              <Text style={styles.statusText}>
+          <View className="absolute top-4 right-4">
+            <View className={`px-3 py-1.5 rounded-lg ${locationDetails.investment_stats.is_open_for_investment ? 'bg-green-500' : 'bg-red-500'}`}>
+              <Text className="text-white text-xs font-semibold">
                 {locationDetails.investment_stats.is_open_for_investment ? 'Open for Investment' : 'Investment Closed'}
               </Text>
             </View>
@@ -270,54 +449,52 @@ const InvestmentDetailsScreen = () => {
         </View>
 
         {/* Location Info */}
-        <View style={styles.infoSection}>
-          <Text style={styles.locationName}>{locationDetails.name}</Text>
-          <View style={styles.locationDetails}>
+        <View className="bg-white p-5 border-b border-gray-200">
+          <Text className="text-2xl font-bold text-gray-800 mb-2">{locationDetails.name}</Text>
+          <View className="flex-row items-center mb-1">
             <Feather name="map-pin" size={16} color="#6B7280" />
-            <Text style={styles.locationAddress}>{locationDetails.address}</Text>
+            <Text className="text-sm text-gray-500 ml-1.5 flex-1">{locationDetails.address}</Text>
           </View>
-          <Text style={styles.locationCity}>{locationDetails.city}</Text>
+          <Text className="text-base text-gray-500 mb-3">{locationDetails.city} {locationDetails.postcode}</Text>
           
           {locationDetails.description && (
-            <Text style={styles.description}>{locationDetails.description}</Text>
+            <Text className="text-sm text-gray-600 leading-5">{locationDetails.description}</Text>
           )}
         </View>
 
         {/* Investment Progress */}
-        <View style={styles.progressSection}>
-          <Text style={styles.sectionTitle}>Investment Progress</Text>
+        <View className="bg-white p-5 border-b border-gray-200">
+          <Text className="text-lg font-bold text-gray-800 mb-4">Investment Progress</Text>
           
-          <View style={styles.progressStats}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>
+          <View className="flex-row justify-around mb-5">
+            <View className="items-center">
+              <Text className="text-xl font-bold text-amber-700 mb-1">
                 £{locationDetails.investment_stats.total_invested.toLocaleString()}
               </Text>
-              <Text style={styles.statLabel}>Raised</Text>
+              <Text className="text-xs text-gray-500">Raised</Text>
             </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>
+            <View className="items-center">
+              <Text className="text-xl font-bold text-amber-700 mb-1">
                 {locationDetails.investment_stats.total_investors}
               </Text>
-              <Text style={styles.statLabel}>Investors</Text>
+              <Text className="text-xs text-gray-500">Investors</Text>
             </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>
+            <View className="items-center">
+              <Text className="text-xl font-bold text-amber-700 mb-1">
                 {locationDetails.investment_stats.progress_percentage.toFixed(0)}%
               </Text>
-              <Text style={styles.statLabel}>Complete</Text>
+              <Text className="text-xs text-gray-500">Complete</Text>
             </View>
           </View>
 
-          <View style={styles.progressBarContainer}>
-            <View style={styles.progressBar}>
+          <View className="mb-4">
+            <View className="h-2 bg-gray-200 rounded-full mb-2">
               <View 
-                style={[
-                  styles.progressFill, 
-                  { width: `${Math.min(locationDetails.investment_stats.progress_percentage, 100)}%` }
-                ]} 
+                className="h-full bg-amber-700 rounded-full"
+                style={{ width: `${Math.min(locationDetails.investment_stats.progress_percentage, 100)}%` }}
               />
             </View>
-            <Text style={styles.progressText}>
+            <Text className="text-xs text-gray-500 text-center">
               £{locationDetails.investment_stats.remaining_amount.toLocaleString()} remaining of £{locationDetails.investment_stats.investment_limit.toLocaleString()} goal
             </Text>
           </View>
@@ -325,15 +502,35 @@ const InvestmentDetailsScreen = () => {
 
         {/* Recent Investments */}
         {locationDetails.recent_investments.length > 0 && (
-          <View style={styles.recentSection}>
-            <Text style={styles.sectionTitle}>Recent Investments</Text>
-            {locationDetails.recent_investments.map((investment, index) => (
-              <View key={index} style={styles.recentItem}>
-                <View style={styles.recentInfo}>
-                  <Text style={styles.recentInvestor}>{investment.investor_name}</Text>
-                  <Text style={styles.recentDate}>{formatDate(investment.invested_at)}</Text>
+          <View className="bg-white p-5 border-b border-gray-200">
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="text-lg font-bold text-gray-800">Recent Investments</Text>
+              <TouchableOpacity 
+                className="px-3 py-1.5 bg-gray-100 rounded"
+                onPress={loadAllInvestors}
+                disabled={loadingInvestors}
+              >
+                {loadingInvestors ? (
+                  <ActivityIndicator size="small" color="#9A563A" />
+                ) : (
+                  <Text className="text-sm text-amber-700 font-medium">View All</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            
+            {locationDetails.recent_investments.slice(0, 5).map((investment, index) => (
+              <View key={index} className="flex-row justify-between items-center py-3 border-b border-gray-100">
+                <View className="flex-1">
+                  <Text className="text-sm font-medium text-gray-800 mb-0.5">{investment.investor_name}</Text>
+                  <Text className="text-xs text-gray-500 mb-0.5">{formatDate(investment.invested_at)}</Text>
+                  <Text className="text-xs text-gray-400">Ref: {investment.reference}</Text>
                 </View>
-                <Text style={styles.recentAmount}>£{investment.amount.toLocaleString()}</Text>
+                <View className="items-end">
+                  <Text className="text-sm font-bold text-amber-700 mb-1">£{investment.amount.toLocaleString()}</Text>
+                  <View className={`px-1.5 py-0.5 rounded ${investment.status === 'completed' ? 'bg-green-500' : 'bg-yellow-500'}`}>
+                    <Text className="text-white text-xs font-medium">{investment.status}</Text>
+                  </View>
+                </View>
               </View>
             ))}
           </View>
@@ -341,49 +538,47 @@ const InvestmentDetailsScreen = () => {
 
         {/* Investment Form */}
         {locationDetails.investment_stats.is_open_for_investment && (
-          <View style={styles.investmentSection}>
-            <Text style={styles.sectionTitle}>Make an Investment</Text>
+          <View className="bg-white p-5">
+            <Text className="text-lg font-bold text-gray-800 mb-4">Make an Investment</Text>
             
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Investment Amount (£)</Text>
+            <View className="mb-5">
+              <Text className="text-sm font-medium text-gray-700 mb-2">Investment Amount (£)</Text>
               <TextInput
-                style={styles.amountInput}
+                className="border border-gray-300 rounded-lg px-3 py-3 text-base bg-gray-50"
                 value={investmentAmount}
                 onChangeText={setInvestmentAmount}
                 placeholder="Enter amount (£10 - £10,000)"
                 keyboardType="numeric"
                 editable={!investing}
               />
-              <Text style={styles.inputHint}>
+              <Text className="text-xs text-gray-500 mt-1">
                 Minimum: £10 • Maximum: £10,000 • Available: £{locationDetails.investment_stats.remaining_amount.toLocaleString()}
               </Text>
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Notes (Optional)</Text>
+            <View className="mb-5">
+              <Text className="text-sm font-medium text-gray-700 mb-2">Notes (Optional)</Text>
               <TextInput
-                style={styles.notesInput}
+                className="border border-gray-300 rounded-lg px-3 py-3 text-base bg-gray-50 min-h-20 text-top"
                 value={investmentNotes}
                 onChangeText={setInvestmentNotes}
                 placeholder="Any additional notes..."
                 multiline
                 numberOfLines={3}
                 editable={!investing}
+                textAlignVertical="top"
               />
             </View>
 
             <TouchableOpacity
-              style={[
-                styles.investButton,
-                (!investmentAmount || investing) && styles.investButtonDisabled
-              ]}
+              className={`py-4 rounded-lg items-center mt-2 ${(!investmentAmount || investing) ? 'bg-gray-300' : 'bg-amber-700'}`}
               onPress={handleInvestNow}
               disabled={!investmentAmount || investing}
             >
               {investing ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.investButtonText}>
+                <Text className="text-white text-base font-bold">
                   Invest £{investmentAmount || '0'}
                 </Text>
               )}
@@ -391,7 +586,7 @@ const InvestmentDetailsScreen = () => {
           </View>
         )}
 
-        <View style={styles.bottomSpacer} />
+        <View className="h-10" />
       </ScrollView>
 
       {/* Confirmation Modal */}
@@ -401,401 +596,77 @@ const InvestmentDetailsScreen = () => {
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Confirm Investment</Text>
+        <View className="flex-1 bg-black/50 justify-center items-center px-5">
+          <View className="bg-white rounded-xl p-6 w-full max-w-sm">
+            <Text className="text-xl font-bold text-gray-800 mb-4 text-center">Confirm Investment</Text>
             
-            <View style={styles.confirmationDetails}>
-              <Text style={styles.confirmationText}>
-                You are about to invest <Text style={styles.confirmationAmount}>£{investmentAmount}</Text> in <Text style={styles.confirmationLocation}>{locationDetails.name}</Text>
+            <View className="mb-6">
+              <Text className="text-base text-gray-600 leading-6 text-center">
+                You are about to invest <Text className="font-bold text-amber-700">£{investmentAmount}</Text> in <Text className="font-bold text-gray-800">{locationDetails.name}</Text>
               </Text>
               
               {investmentNotes && (
-                <View style={styles.notesContainer}>
-                  <Text style={styles.notesLabel}>Notes:</Text>
-                  <Text style={styles.notesText}>{investmentNotes}</Text>
+                <View className="mt-4 p-3 bg-gray-50 rounded-lg">
+                  <Text className="text-xs font-medium text-gray-500 mb-1">Notes:</Text>
+                  <Text className="text-sm text-gray-700">{investmentNotes}</Text>
                 </View>
               )}
             </View>
 
-            <View style={styles.modalButtons}>
+            <View className="flex-row gap-3">
               <TouchableOpacity
-                style={styles.cancelButton}
+                className="flex-1 py-3 rounded-lg border border-gray-300 items-center"
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Text className="text-base text-gray-600 font-medium">Cancel</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
-                style={styles.confirmButton}
+                className="flex-1 py-3 rounded-lg bg-amber-700 items-center"
                 onPress={confirmInvestment}
               >
-                <Text style={styles.confirmButtonText}>Confirm & Pay</Text>
+                <Text className="text-base text-white font-bold">Confirm & Pay</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* All Investors Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={investorsModalVisible}
+        onRequestClose={() => setInvestorsModalVisible(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center px-5">
+          <View className="bg-white rounded-xl w-full max-h-4/5" style={{ width: '90%' }}>
+            <View className="flex-row justify-between items-center p-5 border-b border-gray-200">
+              <Text className="text-xl font-bold text-gray-800">All Investors</Text>
+              <TouchableOpacity
+                className="p-1"
+                onPress={() => setInvestorsModalVisible(false)}
+              >
+                <Feather name="x" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            <FlatList
+              data={allInvestors}
+              renderItem={renderInvestorItem}
+              keyExtractor={(item, index) => `${item.id}-${index}`}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={() => (
+                <View className="p-10 items-center">
+                  <Text className="text-base text-gray-500 italic">No investors yet</Text>
+                </View>
+              )}
+            />
           </View>
         </View>
       </Modal>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 16,
-  },
-  placeholder: {
-    width: 40,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-  },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#DC2626',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  errorSubtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  retryButton: {
-    backgroundColor: '#9A563A',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  imageContainer: {
-    position: 'relative',
-    height: 200,
-  },
-  locationImage: {
-    width: '100%',
-    height: '100%',
-  },
-  placeholderImage: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statusOverlay: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  infoSection: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  locationName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 8,
-  },
-  locationDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  locationAddress: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginLeft: 6,
-    flex: 1,
-  },
-  locationCity: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginBottom: 12,
-  },
-  description: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-  },
-  progressSection: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 16,
-  },
-  progressStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 20,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#9A563A',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  progressBarContainer: {
-    marginBottom: 16,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 4,
-    marginBottom: 8,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#9A563A',
-    borderRadius: 4,
-  },
-  progressText: {
-    fontSize: 12,
-    color: '#6B7280',
-    textAlign: 'center',
-  },
-  recentSection: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  recentItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  recentInfo: {
-    flex: 1,
-  },
-  recentInvestor: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#1F2937',
-    marginBottom: 2,
-  },
-  recentDate: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  recentAmount: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#9A563A',
-  },
-  investmentSection: {
-    backgroundColor: '#fff',
-    padding: 20,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  amountInput: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: '#F9FAFB',
-  },
-  inputHint: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 4,
-  },
-  notesInput: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: '#F9FAFB',
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  investButton: {
-    backgroundColor: '#9A563A',
-    paddingVertical: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  investButtonDisabled: {
-    backgroundColor: '#D1D5DB',
-  },
-  investButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  bottomSpacer: {
-    height: 40,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  modalContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  confirmationDetails: {
-    marginBottom: 24,
-  },
-  confirmationText: {
-    fontSize: 16,
-    color: '#374151',
-    lineHeight: 24,
-    textAlign: 'center',
-  },
-  confirmationAmount: {
-    fontWeight: 'bold',
-    color: '#9A563A',
-  },
-  confirmationLocation: {
-    fontWeight: 'bold',
-    color: '#1F2937',
-  },
-  notesContainer: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
-  },
-  notesLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  notesText: {
-    fontSize: 14,
-    color: '#374151',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cancelButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    color: '#374151',
-    fontWeight: '500',
-  },
-  confirmButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    backgroundColor: '#9A563A',
-    alignItems: 'center',
-  },
-  confirmButtonText: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-});
 
 export default InvestmentDetailsScreen;
