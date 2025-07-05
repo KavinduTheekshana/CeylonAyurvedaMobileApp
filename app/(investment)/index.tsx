@@ -1,4 +1,4 @@
-// app/(investment)/index.tsx - Updated to load from location_investments table
+// app/(investment)/index.tsx - Fixed version with better error handling
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -33,25 +33,11 @@ interface LocationInvestment {
   progress_percentage: number;
 }
 
-interface UserInvestmentSummary {
-  total_invested: number;
-  total_investments: number;
-  pending_investments: number;
-  investments_by_location: Array<{
-    location: {
-      id: number;
-      name: string;
-      city: string;
-    };
-    total_amount: number;
-    investment_count: number;
-  }>;
-}
+
 
 const InvestmentScreen = () => {
   const router = useRouter();
   const [locations, setLocations] = useState<LocationInvestment[]>([]);
-  const [userSummary, setUserSummary] = useState<UserInvestmentSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
@@ -68,11 +54,6 @@ const InvestmentScreen = () => {
 
       // Load investment opportunities for everyone
       await loadInvestmentLocations();
-
-      // Load user investment summary only for logged-in users
-      if (!guestMode) {
-        await loadUserSummary();
-      }
     } catch (error) {
       console.error('Error loading investment data:', error);
     } finally {
@@ -86,8 +67,23 @@ const InvestmentScreen = () => {
       console.log('Fetching investment locations from:', `${API_BASE_URL}/api/investments/opportunities`);
 
       const response = await fetch(`${API_BASE_URL}/api/investments/opportunities`);
-      const data = await response.json();
+      
+      // Check if response is ok first
+      if (!response.ok) {
+        console.error('Investment locations response not ok:', response.status, response.statusText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
 
+      // Check content type
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Response is not JSON:', contentType);
+        const responseText = await response.text();
+        console.error('Response text:', responseText.substring(0, 200) + '...');
+        throw new Error('Server returned non-JSON response');
+      }
+
+      const data = await response.json();
       console.log('Investment locations response:', data);
 
       if (data.success && Array.isArray(data.data)) {
@@ -112,33 +108,11 @@ const InvestmentScreen = () => {
         console.log('Processed investment locations:', processedLocations.length);
       } else {
         console.error('Invalid response format:', data);
+        throw new Error('Invalid data format received from server');
       }
     } catch (error) {
       console.error('Error loading investment locations:', error);
       Alert.alert('Error', 'Failed to load investment opportunities');
-    }
-  };
-
-  const loadUserSummary = async () => {
-    try {
-      const token = await AsyncStorage.getItem('access_token');
-      console.log('Loading user summary with token:', token);
-      if (!token) return;
-
-      const response = await fetch(`${API_BASE_URL}/api/investments/summary`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setUserSummary(data.data);
-      }
-    } catch (error) {
-      console.error('Error loading user summary:', error);
     }
   };
 
@@ -294,35 +268,6 @@ const InvestmentScreen = () => {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* User Investment Summary - Only for logged in users */}
-        {!isGuest && userSummary && (
-          <View style={styles.summarySection}>
-            <Text style={styles.sectionTitle}>Your Portfolio</Text>
-            <View style={styles.summaryCard}>
-              <View style={styles.summaryStats}>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryValue}>
-                    £{userSummary.total_invested.toFixed(2)}
-                  </Text>
-                  <Text style={styles.summaryLabel}>Total Invested</Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryValue}>
-                    {userSummary.total_investments}
-                  </Text>
-                  <Text style={styles.summaryLabel}>Investments</Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text style={styles.summaryValue}>
-                    {userSummary.pending_investments}
-                  </Text>
-                  <Text style={styles.summaryLabel}>Pending</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        )}
-
         {/* Guest Notice */}
         {isGuest && (
           <View style={styles.guestNotice}>
@@ -338,9 +283,7 @@ const InvestmentScreen = () => {
 
         {/* Investment Opportunities */}
         <View style={styles.opportunitiesSection}>
-          <Text style={styles.sectionTitle}>
-            {isGuest ? 'Investment Opportunities' : 'Available Opportunities'}
-          </Text>
+          <Text style={styles.sectionTitle}>Investment Opportunities</Text>
 
           {locations.length === 0 ? (
             <View style={styles.emptyState}>
@@ -377,7 +320,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: '#fff',
+    // backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
@@ -409,42 +352,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
   },
-  summarySection: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 16,
-  },
-  summaryCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  summaryStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  summaryItem: {
-    alignItems: 'center',
-  },
-  summaryValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#9A563A',
-    marginBottom: 4,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
   guestNotice: {
     flexDirection: 'row',
     backgroundColor: '#FEF3C7',
@@ -471,6 +378,12 @@ const styles = StyleSheet.create({
   },
   opportunitiesSection: {
     marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 16,
   },
   separator: {
     height: 16,

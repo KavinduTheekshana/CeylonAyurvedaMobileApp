@@ -413,7 +413,7 @@ const InvestmentDetailsScreen = () => {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-4 bg-white border-b border-gray-200">
+      <View className="flex-row items-center justify-between px-4 py-4 border-b border-gray-200">
         <TouchableOpacity className="p-2" onPress={() => router.back()}>
           <Feather name="arrow-left" size={24} color="#000" />
         </TouchableOpacity>
