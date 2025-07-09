@@ -68,6 +68,14 @@ const InvestmentDetailsScreen = () => {
     loadLocationDetails();
   }, [locationId]);
 
+  // Function to mask investor names
+  const maskInvestorName = (name: string) => {
+    if (!name || name.length <= 3) return name;
+    const firstThree = name.substring(0, 3);
+    const asterisks = '*'.repeat(name.length - 3);
+    return firstThree + asterisks;
+  };
+
   const loadLocationDetails = async () => {
     try {
       setLoading(true);
@@ -368,7 +376,7 @@ const InvestmentDetailsScreen = () => {
   const renderInvestorItem = ({ item }: { item: any }) => (
     <View className="flex-row justify-between items-center px-5 py-4 border-b border-gray-100">
       <View className="flex-1 mr-4">
-        <Text className="text-base font-semibold text-gray-800 mb-1">{item.investor_name}</Text>
+        <Text className="text-base font-semibold text-gray-800 mb-1">{maskInvestorName(item.investor_name)}</Text>
         <Text className="text-sm text-gray-500 mb-1">{formatDate(item.invested_at)}</Text>
         <Text className="text-xs text-gray-400">Ref: {item.reference}</Text>
       </View>
@@ -521,7 +529,7 @@ const InvestmentDetailsScreen = () => {
             {locationDetails.recent_investments.slice(0, 5).map((investment, index) => (
               <View key={index} className="flex-row justify-between items-center py-3 border-b border-gray-100">
                 <View className="flex-1">
-                  <Text className="text-sm font-medium text-gray-800 mb-0.5">{investment.investor_name}</Text>
+                  <Text className="text-sm font-medium text-gray-800 mb-0.5">{maskInvestorName(investment.investor_name)}</Text>
                   <Text className="text-xs text-gray-500 mb-0.5">{formatDate(investment.invested_at)}</Text>
                   <Text className="text-xs text-gray-400">Ref: {investment.reference}</Text>
                 </View>

@@ -1,4 +1,4 @@
-// BookingCheckoutScreen.tsx - Updated with location validation and confirm button control
+// BookingCheckoutScreen.tsx - Updated with discount price support
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -24,12 +24,13 @@ import { API_BASE_URL } from "@/config/api";
 import { useLocation } from '../contexts/LocationContext';
 import { Feather } from '@expo/vector-icons';
 
-// Define your Service type
+// Define your Service type - UPDATED with discount_price
 type Service = {
     id: number;
     title: string;
     subtitle: string;
     price: number;
+    discount_price?: number; // Added discount_price field
     duration: number;
     benefits: string;
     image: string | null;
@@ -243,6 +244,35 @@ const BookingCheckoutScreen = () => {
     const [notes, setNotes] = useState<string>('');
     const [saveAddress, setSaveAddress] = useState<boolean>(true);
 
+    // HELPER FUNCTIONS FOR PRICING
+    const getEffectivePrice = (): number => {
+        if (!serviceDetails) return 0;
+        
+        // If discount_price exists and is greater than 0, use it
+        if (serviceDetails.discount_price && serviceDetails.discount_price > 0) {
+            return serviceDetails.discount_price;
+        }
+        
+        // Otherwise use regular price
+        return serviceDetails.price;
+    };
+
+    const hasDiscount = (): boolean => {
+        if (!serviceDetails) return false;
+        return !!(serviceDetails.discount_price && serviceDetails.discount_price > 0 && serviceDetails.discount_price < serviceDetails.price);
+    };
+
+    const getDiscountAmount = (): number => {
+        if (!hasDiscount() || !serviceDetails) return 0;
+        return serviceDetails.price - (serviceDetails.discount_price || 0);
+    };
+
+    const getDiscountPercentage = (): number => {
+        if (!hasDiscount() || !serviceDetails) return 0;
+        const discountAmount = getDiscountAmount();
+        return Math.round((discountAmount / serviceDetails.price) * 100);
+    };
+
     useEffect(() => {
         // Check if user is authenticated
         checkAuthentication();
@@ -324,7 +354,15 @@ const BookingCheckoutScreen = () => {
             console.log('Service data response:', data);
 
             if (data.success && data.data) {
-                setServiceDetails(data.data);
+                // UPDATED: Parse discount_price from API response
+                const serviceData = {
+                    ...data.data,
+                    price: parseFloat(data.data.price) || 0,
+                    discount_price: data.data.discount_price ? parseFloat(data.data.discount_price) : undefined
+                };
+                
+                console.log('Parsed service data:', serviceData);
+                setServiceDetails(serviceData);
             } else {
                 console.error('API error response:', data);
                 setError('Could not retrieve service details. Please try again.');
@@ -681,7 +719,7 @@ const BookingCheckoutScreen = () => {
                         </View>
                     )}
 
-                    {/* Service Details */}
+                    {/* Service Details - UPDATED with discount display */}
                     <View style={styles.card}>
                         <Text style={styles.sectionTitle}>Service Details</Text>
                         <View style={styles.detailRow}>
@@ -692,11 +730,34 @@ const BookingCheckoutScreen = () => {
                             <Text style={styles.detailLabel}>Duration:</Text>
                             <Text style={styles.detailValue}>{serviceDetails.duration} min</Text>
                         </View>
+                        
+                        {/* Price Display with Discount Support */}
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Price:</Text>
-                            <Text style={styles.detailValue}>£{serviceDetails.price}</Text>
+                            <View style={styles.priceContainer}>
+                                {hasDiscount() ? (
+                                    <View style={styles.discountPriceContainer}>
+                                        <Text style={styles.originalPrice}>£{serviceDetails.price.toFixed(2)}</Text>
+                                        <Text style={styles.discountedPrice}>£{getEffectivePrice().toFixed(2)}</Text>
+                                        {/* <View style={styles.discountBadge}>
+                                            <Text style={styles.discountBadgeText}>-{getDiscountPercentage()}%</Text>
+                                        </View> */}
+                                    </View>
+                                ) : (
+                                    <Text style={styles.detailValue}>£{serviceDetails.price.toFixed(2)}</Text>
+                                )}
+                            </View>
                         </View>
-                        {/* NEW: Display therapist information */}
+                        
+                        {/* Show discount amount if there's a discount */}
+                        {hasDiscount() && (
+                            <View style={styles.savingsRow}>
+                                <Text style={styles.savingsLabel}>You save:</Text>
+                                <Text style={styles.savingsAmount}>£{getDiscountAmount().toFixed(2)}</Text>
+                            </View>
+                        )}
+                        
+                        {/* Therapist information */}
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Therapist:</Text>
                             <Text style={styles.detailValue}>{therapistName}</Text>
@@ -926,13 +987,36 @@ const BookingCheckoutScreen = () => {
                         />
                     </View>
 
-                    {/* Total */}
+                    {/* Total - UPDATED with discount display */}
                     <View style={styles.card}>
-                        <Text style={styles.sectionTitle}>Total</Text>
+                        <Text style={styles.sectionTitle}>Payment Summary</Text>
+                        
+                        {hasDiscount() && (
+                            <>
+                                <View style={styles.totalRow}>
+                                    <Text style={styles.totalLabel}>Original Price:</Text>
+                                    <Text style={styles.originalTotalPrice}>£{serviceDetails.price.toFixed(2)}</Text>
+                                </View>
+                                <View style={styles.totalRow}>
+                                    <Text style={styles.discountLabel}>Discount ({getDiscountPercentage()}% off):</Text>
+                                    <Text style={styles.discountAmount}>-£{getDiscountAmount().toFixed(2)}</Text>
+                                </View>
+                                <View style={styles.divider} />
+                            </>
+                        )}
+                        
                         <View style={styles.totalRow}>
                             <Text style={styles.totalLabel}>Total Amount:</Text>
-                            <Text style={styles.totalValue}>£{serviceDetails.price}</Text>
+                            <Text style={styles.totalValue}>£{getEffectivePrice().toFixed(2)}</Text>
                         </View>
+                        
+                        {hasDiscount() && (
+                            <View style={styles.savingsSummary}>
+                                <Text style={styles.savingsSummaryText}>
+                                    🎉 You're saving £{getDiscountAmount().toFixed(2)} on this booking!
+                                </Text>
+                            </View>
+                        )}
                     </View>
 
                     <View style={{ height: Platform.OS === 'android' ? 100 : 20 }} />
@@ -1086,20 +1170,107 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         textAlign: 'right',
     },
+    // NEW STYLES FOR DISCOUNT PRICING
+    priceContainer: {
+        alignItems: 'flex-end',
+        flex: 2,
+    },
+    discountPriceContainer: {
+        alignItems: 'flex-end',
+        position: 'relative',
+    },
+    originalPrice: {
+        fontSize: 14,
+        color: '#888',
+        textDecorationLine: 'line-through',
+        marginBottom: 2,
+    },
+    discountedPrice: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#E53E3E',
+    },
+    discountBadge: {
+        position: 'absolute',
+        top: -8,
+        right: -8,
+        backgroundColor: '#E53E3E',
+        borderRadius: 10,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+    },
+    discountBadgeText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: 'bold',
+    },
+    savingsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingVertical: 4,
+        backgroundColor: '#F0FFF4',
+        paddingHorizontal: 8,
+        borderRadius: 4,
+        marginTop: 4,
+    },
+    savingsLabel: {
+        fontSize: 14,
+        color: '#2D5A3D',
+        fontWeight: '500',
+    },
+    savingsAmount: {
+        fontSize: 14,
+        color: '#2D5A3D',
+        fontWeight: '600',
+    },
     totalRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingVertical: 12,
+        paddingVertical: 8,
     },
     totalLabel: {
-        fontSize: 18,
-        fontWeight: '600',
+        fontSize: 16,
+        fontWeight: '500',
         color: '#333',
+    },
+    originalTotalPrice: {
+        fontSize: 16,
+        color: '#888',
+        textDecorationLine: 'line-through',
+    },
+    discountLabel: {
+        fontSize: 16,
+        fontWeight: '500',
+        color: '#E53E3E',
+    },
+    discountAmount: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#E53E3E',
+    },
+    divider: {
+        height: 1,
+        backgroundColor: '#e0e0e0',
+        marginVertical: 8,
     },
     totalValue: {
         fontSize: 18,
         fontWeight: 'bold',
         color: '#9A563A',
+    },
+    savingsSummary: {
+        backgroundColor: '#FFF5F5',
+        padding: 12,
+        borderRadius: 6,
+        marginTop: 12,
+        borderWidth: 1,
+        borderColor: '#FEB2B2',
+    },
+    savingsSummaryText: {
+        fontSize: 14,
+        color: '#C53030',
+        fontWeight: '500',
+        textAlign: 'center',
     },
     inputGroup: {
         marginBottom: 16,

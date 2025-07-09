@@ -348,7 +348,7 @@ const BookingDateScreen = () => {
                         {loading
                             ? "Loading availability..."
                             : therapistData?.available_dates_count 
-                                ? `${therapistData.available_dates_count} days available (API count)`
+                                ? `${therapistData.available_dates_count} days available`
                                 : `${availableDates.length} days available in the next 3 months`
                         }
                     </Text>
