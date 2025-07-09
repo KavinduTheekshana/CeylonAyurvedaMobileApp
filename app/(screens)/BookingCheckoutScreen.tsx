@@ -97,36 +97,36 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
     const R = 3959; // Earth's radius in miles
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-        Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
 }
 
 /**
  * Get coordinates for a UK postcode using postcodes.io API
  */
-async function getPostcodeCoordinates(postcode: string): Promise<{lat: number, lng: number} | null> {
+async function getPostcodeCoordinates(postcode: string): Promise<{ lat: number, lng: number } | null> {
     try {
         const cleanPostcode = postcode.replace(/\s+/g, '').toUpperCase();
         const response = await fetch(`https://api.postcodes.io/postcodes/${cleanPostcode}`);
-        
+
         if (!response.ok) {
             console.log('Postcode API response not OK:', response.status);
             return null;
         }
-        
+
         const data = await response.json();
-        
+
         if (data.status === 200 && data.result) {
             return {
                 lat: data.result.latitude,
                 lng: data.result.longitude
             };
         }
-        
+
         return null;
     } catch (error) {
         console.error('Error geocoding postcode:', error);
@@ -160,7 +160,7 @@ async function validateAddressLocation(postcode: string, selectedLocation: any):
 
         // Get coordinates for the input postcode
         const coordinates = await getPostcodeCoordinates(postcode);
-        
+
         if (!coordinates) {
             console.log('Could not get coordinates for postcode, allowing address');
             return { isValid: true }; // Be permissive if we can't validate
@@ -178,7 +178,7 @@ async function validateAddressLocation(postcode: string, selectedLocation: any):
         );
 
         const serviceRadius = selectedLocation.service_radius_miles || 10; // Default to 10 miles if not set
-        
+
         console.log(`Calculated Distance: ${distance.toFixed(2)} miles`);
         console.log(`Service Radius: ${serviceRadius} miles`);
         console.log(`Is Valid: ${distance <= serviceRadius}`);
@@ -207,14 +207,14 @@ const BookingCheckoutScreen = () => {
     const route = useRoute<BookingCheckoutScreenRouteProp>();
     const navigation = useNavigation<BookingCheckoutScreenNavigationProp>();
     const { selectedLocation } = useLocation(); // Get selected location from context
-    const { 
-        serviceId, 
-        serviceName, 
-        selectedDate, 
-        selectedTime, 
-        duration, 
-        therapistId, 
-        therapistName 
+    const {
+        serviceId,
+        serviceName,
+        selectedDate,
+        selectedTime,
+        duration,
+        therapistId,
+        therapistName
     } = route.params;
 
     // States
@@ -247,12 +247,12 @@ const BookingCheckoutScreen = () => {
     // HELPER FUNCTIONS FOR PRICING
     const getEffectivePrice = (): number => {
         if (!serviceDetails) return 0;
-        
+
         // If discount_price exists and is greater than 0, use it
         if (serviceDetails.discount_price && serviceDetails.discount_price > 0) {
             return serviceDetails.discount_price;
         }
-        
+
         // Otherwise use regular price
         return serviceDetails.price;
     };
@@ -317,11 +317,11 @@ const BookingCheckoutScreen = () => {
         setValidatingLocation(true);
         try {
             const validationResult = await validateAddressLocation(postcode, selectedLocation);
-            
+
             setIsAddressValid(validationResult.isValid);
             setAddressValidationMessage(validationResult.errorMessage || '');
             setAddressValidationDistance(validationResult.distance || null);
-            
+
             if (validationResult.isValid && validationResult.distance) {
                 setAddressValidationMessage(`✓ Address is within service area (${validationResult.distance} miles from ${selectedLocation.name})`);
             }
@@ -360,7 +360,7 @@ const BookingCheckoutScreen = () => {
                     price: parseFloat(data.data.price) || 0,
                     discount_price: data.data.discount_price ? parseFloat(data.data.discount_price) : undefined
                 };
-                
+
                 console.log('Parsed service data:', serviceData);
                 setServiceDetails(serviceData);
             } else {
@@ -574,7 +574,8 @@ const BookingCheckoutScreen = () => {
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 30000);
-
+            console.log('-------------------------------------------------');
+            console.log(bookingData);
             const response = await fetch(BOOKING_API_URL, {
                 method: 'POST',
                 headers,
@@ -655,9 +656,9 @@ const BookingCheckoutScreen = () => {
     // Determine if the confirm button should be disabled
     const isConfirmButtonDisabled = () => {
         return (
-            submitting || 
-            validatingLocation || 
-            !isAddressValid || 
+            submitting ||
+            validatingLocation ||
+            !isAddressValid ||
             !selectedLocation ||
             !serviceDetails ||
             (showAddressForm && !postcode.trim())
@@ -730,7 +731,7 @@ const BookingCheckoutScreen = () => {
                             <Text style={styles.detailLabel}>Duration:</Text>
                             <Text style={styles.detailValue}>{serviceDetails.duration} min</Text>
                         </View>
-                        
+
                         {/* Price Display with Discount Support */}
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Price:</Text>
@@ -748,7 +749,7 @@ const BookingCheckoutScreen = () => {
                                 )}
                             </View>
                         </View>
-                        
+
                         {/* Show discount amount if there's a discount */}
                         {hasDiscount() && (
                             <View style={styles.savingsRow}>
@@ -756,7 +757,7 @@ const BookingCheckoutScreen = () => {
                                 <Text style={styles.savingsAmount}>£{getDiscountAmount().toFixed(2)}</Text>
                             </View>
                         )}
-                        
+
                         {/* Therapist information */}
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Therapist:</Text>
@@ -882,7 +883,7 @@ const BookingCheckoutScreen = () => {
                     {(showAddressForm || savedAddresses.length === 0) && (
                         <View style={styles.card}>
                             <Text style={styles.sectionTitle}>Address Details</Text>
-                            
+
                             <View style={styles.inputGroup}>
                                 <Text style={styles.inputLabel}>Address Line 1 *</Text>
                                 <TextInput
@@ -929,7 +930,7 @@ const BookingCheckoutScreen = () => {
                                     autoCapitalize="characters"
                                     returnKeyType="done"
                                 />
-                                
+
                                 {/* Address Validation Indicator */}
                                 {validatingLocation && (
                                     <View style={styles.validationIndicator}>
@@ -937,17 +938,17 @@ const BookingCheckoutScreen = () => {
                                         <Text style={styles.validationText}>Validating address...</Text>
                                     </View>
                                 )}
-                                
+
                                 {/* Address Validation Message */}
                                 {addressValidationMessage && !validatingLocation && (
                                     <View style={[
                                         styles.validationMessage,
                                         isAddressValid ? styles.validationSuccess : styles.validationError
                                     ]}>
-                                        <Feather 
-                                            name={isAddressValid ? "check-circle" : "x-circle"} 
-                                            size={16} 
-                                            color={isAddressValid ? "#10B981" : "#EF4444"} 
+                                        <Feather
+                                            name={isAddressValid ? "check-circle" : "x-circle"}
+                                            size={16}
+                                            color={isAddressValid ? "#10B981" : "#EF4444"}
                                         />
                                         <Text style={[
                                             styles.validationMessageText,
@@ -990,7 +991,7 @@ const BookingCheckoutScreen = () => {
                     {/* Total - UPDATED with discount display */}
                     <View style={styles.card}>
                         <Text style={styles.sectionTitle}>Payment Summary</Text>
-                        
+
                         {hasDiscount() && (
                             <>
                                 <View style={styles.totalRow}>
@@ -1004,12 +1005,12 @@ const BookingCheckoutScreen = () => {
                                 <View style={styles.divider} />
                             </>
                         )}
-                        
+
                         <View style={styles.totalRow}>
                             <Text style={styles.totalLabel}>Total Amount:</Text>
                             <Text style={styles.totalValue}>£{getEffectivePrice().toFixed(2)}</Text>
                         </View>
-                        
+
                         {hasDiscount() && (
                             <View style={styles.savingsSummary}>
                                 <Text style={styles.savingsSummaryText}>
@@ -1044,7 +1045,7 @@ const BookingCheckoutScreen = () => {
                             </Text>
                         )}
                     </TouchableOpacity>
-                    
+
                     {/* Additional validation info */}
                     {!isAddressValid && addressValidationMessage && (
                         <Text style={styles.footerValidationText}>

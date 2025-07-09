@@ -19,6 +19,7 @@ import { API_BASE_URL } from "@/config/api";
 type Booking = {
     id: number;
     service_id: number;
+    service_name: string;  // Changed from service_id to service_name
     user_id: number | null;
     date: string;
     time: string;
@@ -37,7 +38,7 @@ type Booking = {
     therapist_name?: string;
     service?: {
         id: number;
-        title: string;
+        service_name: string;
         subtitle: string;
         price: number;
         duration: number;
@@ -193,7 +194,7 @@ const BookingConfirmationScreen = () => {
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Service:</Text>
                             <Text style={styles.detailValue} numberOfLines={2} ellipsizeMode="tail">
-                                {booking.service?.title || 'N/A'}
+                                {booking.service_name || 'N/A'}
                             </Text>
                         </View>
                         {/* NEW: Display therapist information if available */}

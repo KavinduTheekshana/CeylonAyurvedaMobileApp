@@ -329,7 +329,7 @@ export default function ProfileScreen() {
             items: [
                 {
                     icon: <MaterialIcons name="trending-up" size={24} color="#9A563A" />,
-                    label: 'My Investments',
+                    label: 'Make an investment',
                     color: "#9A563A",
                     rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc" />,
                     onPress: handleInvestmentPress,
