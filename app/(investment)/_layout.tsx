@@ -37,6 +37,13 @@ export default function InvestmentLayout() {
             headerShown: false, // We'll handle header in the component
           }}
         />
+        <Stack.Screen
+          name="details"
+          options={{
+            title: "Location Details",
+            headerShown: false, // We'll handle header in the component
+          }}
+        />
       </Stack>
     </>
   );

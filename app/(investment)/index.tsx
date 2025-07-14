@@ -1,4 +1,4 @@
-// app/(investment)/index.tsx - Fixed version with better error handling
+// app/(investment)/index.tsx - Updated with View More button only
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -18,6 +18,17 @@ import { Feather, MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@/config/api';
 
+interface Therapist {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  image: string | null;
+  bio: string;
+  work_start_date: string;
+  status: boolean;
+}
+
 interface LocationInvestment {
   id: number;
   name: string;
@@ -25,15 +36,19 @@ interface LocationInvestment {
   address: string;
   image: string | null;
   description: string | null;
+  owner_name: string | null;
+  owner_email: string | null;
+  manager_name: string | null;
+  manager_email: string | null;
+  branch_phone: string | null;
   total_invested: number;
   investment_limit: number;
   total_investors: number;
   is_open_for_investment: boolean;
   remaining_amount: number;
   progress_percentage: number;
+  therapists: Therapist[];
 }
-
-
 
 const InvestmentScreen = () => {
   const router = useRouter();
@@ -96,12 +111,29 @@ const InvestmentScreen = () => {
             (location.image.startsWith('http') ? location.image : `${API_BASE_URL}/storage/${location.image}`)
             : null,
           description: location.description,
+          owner_name: location.owner_name,
+          owner_email: location.owner_email,
+          manager_name: location.manager_name,
+          manager_email: location.manager_email,
+          branch_phone: location.branch_phone,
           total_invested: parseFloat(location.total_invested || 0),
           investment_limit: parseFloat(location.investment_limit || 10000),
           total_investors: parseInt(location.total_investors || 0),
           is_open_for_investment: location.is_open_for_investment !== false,
           remaining_amount: parseFloat(location.remaining_amount || location.investment_limit || 10000),
           progress_percentage: parseFloat(location.progress_percentage || 0),
+          therapists: location.therapists?.map((therapist: any) => ({
+            id: therapist.id,
+            name: therapist.name,
+            email: therapist.email,
+            phone: therapist.phone,
+            image: therapist.image ? 
+              (therapist.image.startsWith('http') ? therapist.image : `${API_BASE_URL}/storage/${therapist.image}`)
+              : null,
+            bio: therapist.bio,
+            work_start_date: therapist.work_start_date,
+            status: therapist.status,
+          })) || [],
         }));
 
         setLocations(processedLocations);
@@ -141,6 +173,16 @@ const InvestmentScreen = () => {
       params: {
         locationId: location.id.toString(),
         locationName: location.name
+      }
+    });
+  };
+
+  const handleViewMore = (location: LocationInvestment) => {
+    // Navigate to a new details screen - you'll need to create this screen
+    router.push({
+      pathname: '/(investment)/details',
+      params: {
+        locationData: JSON.stringify(location)
       }
     });
   };
@@ -225,6 +267,28 @@ const InvestmentScreen = () => {
               {item.description}
             </Text>
           )}
+
+          {/* Therapists count */}
+          {item.therapists.length > 0 && (
+            <View style={styles.therapistCount}>
+              <MaterialIcons name="people" size={16} color="#6B7280" />
+              <Text style={styles.therapistCountText}>
+                {item.therapists.length} therapist{item.therapists.length !== 1 ? 's' : ''} available
+              </Text>
+            </View>
+          )}
+
+          {/* View More Button */}
+          <TouchableOpacity
+            style={styles.viewMoreButton}
+            onPress={(e) => {
+              e.stopPropagation(); // Prevent parent onPress
+              handleViewMore(item);
+            }}
+          >
+            <Text style={styles.viewMoreText}>View More Details</Text>
+            <Feather name="chevron-right" size={16} color="#9A563A" />
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
@@ -320,7 +384,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    // backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
@@ -495,6 +558,32 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     lineHeight: 20,
     marginTop: 8,
+  },
+  therapistCount: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  therapistCountText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginLeft: 6,
+  },
+  viewMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  viewMoreText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9A563A',
+    marginRight: 4,
   },
   emptyState: {
     alignItems: 'center',
