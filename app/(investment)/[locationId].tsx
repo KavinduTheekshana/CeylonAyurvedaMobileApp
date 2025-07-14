@@ -42,14 +42,18 @@ interface LocationDetails {
     invested_at: string;
     status: string;
     reference: string;
+    payment_method?: string; // Add this to show payment method in recent investments
   }>;
 }
+
+// Payment Method Types
+type PaymentMethod = 'card' | 'bank_transfer';
 
 const InvestmentDetailsScreen = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
-  
+
   // Get locationId from dynamic route and locationName from query params
   const locationId = parseInt(params.locationId as string);
   const locationName = params.locationName as string;
@@ -63,6 +67,9 @@ const InvestmentDetailsScreen = () => {
   const [investorsModalVisible, setInvestorsModalVisible] = useState(false);
   const [allInvestors, setAllInvestors] = useState<any[]>([]);
   const [loadingInvestors, setLoadingInvestors] = useState(false);
+
+  // New states for payment method selection
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
 
   useEffect(() => {
     loadLocationDetails();
@@ -80,10 +87,10 @@ const InvestmentDetailsScreen = () => {
     try {
       setLoading(true);
       console.log(`Fetching location details for ID: ${locationId}`);
-      
+
       // Get auth token
       const token = await AsyncStorage.getItem('access_token');
-      
+
       if (!token) {
         Alert.alert('Error', 'You must be logged in to view investment details');
         router.back();
@@ -132,8 +139,8 @@ const InvestmentDetailsScreen = () => {
             city: location.city,
             address: location.address,
             postcode: location.postcode || '',
-            image: location.image ? 
-              (location.image.startsWith('http') ? location.image : `${API_BASE_URL}/storage/${location.image}`) 
+            image: location.image ?
+              (location.image.startsWith('http') ? location.image : `${API_BASE_URL}/storage/${location.image}`)
               : null,
             description: location.description,
             investment_stats: {
@@ -159,8 +166,8 @@ const InvestmentDetailsScreen = () => {
             city: data.data.city,
             address: data.data.address,
             postcode: data.data.postcode || '',
-            image: data.data.image ? 
-              (data.data.image.startsWith('http') ? data.data.image : `${API_BASE_URL}/storage/${data.data.image}`) 
+            image: data.data.image ?
+              (data.data.image.startsWith('http') ? data.data.image : `${API_BASE_URL}/storage/${data.data.image}`)
               : null,
             description: data.data.description,
             investment_stats: {
@@ -191,7 +198,7 @@ const InvestmentDetailsScreen = () => {
     try {
       setLoadingInvestors(true);
       const token = await AsyncStorage.getItem('access_token');
-      
+
       if (!token) {
         Alert.alert('Error', 'You must be logged in to view investors');
         return;
@@ -228,30 +235,30 @@ const InvestmentDetailsScreen = () => {
 
   const validateInvestmentAmount = () => {
     const amount = parseFloat(investmentAmount);
-    
+
     if (!investmentAmount || isNaN(amount)) {
       Alert.alert('Invalid Amount', 'Please enter a valid investment amount');
       return false;
     }
-    
+
     if (amount < 10) {
       Alert.alert('Minimum Investment', 'Minimum investment amount is £10');
       return false;
     }
-    
+
     if (amount > 10000) {
       Alert.alert('Maximum Investment', 'Maximum investment amount is £10,000');
       return false;
     }
-    
+
     if (locationDetails && amount > locationDetails.investment_stats.remaining_amount) {
       Alert.alert(
-        'Amount Exceeds Limit', 
+        'Amount Exceeds Limit',
         `This amount exceeds the remaining investment limit of £${locationDetails.investment_stats.remaining_amount.toLocaleString()}`
       );
       return false;
     }
-    
+
     return true;
   };
 
@@ -260,22 +267,23 @@ const InvestmentDetailsScreen = () => {
     setModalVisible(true);
   };
 
-  const confirmInvestment = async () => {
+  // Function to handle bank transfer investment
+  const handleBankTransferInvestment = async () => {
     if (!validateInvestmentAmount()) return;
-    
+
     setInvesting(true);
     setModalVisible(false);
-    
+
     try {
       const amount = parseFloat(investmentAmount);
       const token = await AsyncStorage.getItem('access_token');
-      
+console.log(token, 'token in bank transfer investment');
       if (!token) {
         throw new Error('Authentication required');
       }
 
-      // Create investment
-      const investmentResponse = await fetch(`${API_BASE_URL}/api/investments`, {
+      // Use the createInvestment endpoint instead of the generic investments endpoint
+      const investmentResponse = await fetch(`${API_BASE_URL}/api/investments/create`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -286,17 +294,86 @@ const InvestmentDetailsScreen = () => {
           location_id: locationId,
           amount: amount,
           notes: investmentNotes,
+          payment_method: 'bank_transfer', // Explicitly set payment method
         }),
       });
-      
+
       const investmentData = await investmentResponse.json();
-      
+
+      if (investmentData.success) {
+        Alert.alert(
+          'Investment Request Submitted!',
+          `Your investment request for £${amount} has been submitted successfully. Our admin team will contact you within 24 hours with bank transfer details.\n\nReference: ${investmentData.data.investment?.reference || 'N/A'}\n\nOnce the transfer is completed, your investment will be confirmed.`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                setInvestmentAmount('');
+                setInvestmentNotes('');
+                setPaymentMethod('card'); // Reset to default
+                loadLocationDetails(); // Refresh the data
+                router.back();
+              },
+            },
+          ]
+        );
+      } else {
+        throw new Error(investmentData.message || 'Failed to submit investment request');
+      }
+
+    } catch (error: any) {
+      console.error('Bank transfer investment error:', error);
+      Alert.alert('Investment Failed', error.message || 'Something went wrong. Please try again.');
+    } finally {
+      setInvesting(false);
+    }
+  };
+
+  // Updated confirm investment function to handle both payment methods
+  const confirmInvestment = async () => {
+    if (paymentMethod === 'bank_transfer') {
+      await handleBankTransferInvestment();
+      return;
+    }
+
+    // Original card payment logic
+    if (!validateInvestmentAmount()) return;
+
+    setInvesting(true);
+    setModalVisible(false);
+
+    try {
+      const amount = parseFloat(investmentAmount);
+      const token = await AsyncStorage.getItem('access_token');
+
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      // Use the createInvestment endpoint for card payments too
+      const investmentResponse = await fetch(`${API_BASE_URL}/api/investments/create`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          location_id: locationId,
+          amount: amount,
+          notes: investmentNotes,
+          payment_method: 'card', // Explicitly set payment method
+        }),
+      });
+
+      const investmentData = await investmentResponse.json();
+
       if (!investmentData.success) {
         throw new Error(investmentData.message || 'Failed to create investment');
       }
-      
+
       const { investment, payment_intent } = investmentData.data;
-      
+
       // Initialize payment sheet
       const { error: initError } = await initPaymentSheet({
         merchantDisplayName: 'Ceylon Ayurveda Health',
@@ -305,21 +382,21 @@ const InvestmentDetailsScreen = () => {
           // Pre-fill with user data if available
         },
       });
-      
+
       if (initError) {
         throw new Error(initError.message);
       }
-      
+
       // Present payment sheet
       const { error: paymentError } = await presentPaymentSheet();
-      
+
       if (paymentError) {
         if (paymentError.code !== 'Canceled') {
           throw new Error(paymentError.message);
         }
         return;
       }
-      
+
       // Confirm payment with backend
       const confirmResponse = await fetch(`${API_BASE_URL}/api/investments/confirm-payment`, {
         method: 'POST',
@@ -332,19 +409,20 @@ const InvestmentDetailsScreen = () => {
           payment_intent_id: payment_intent.payment_intent_id,
         }),
       });
-      
+
       const confirmData = await confirmResponse.json();
-      
+
       if (confirmData.success) {
         Alert.alert(
           'Investment Successful!',
-          `Your investment of £${amount} has been processed successfully.`,
+          `Your investment of £${amount} has been processed successfully.\n\nReference: ${investment?.reference || 'N/A'}`,
           [
             {
               text: 'OK',
               onPress: () => {
                 setInvestmentAmount('');
                 setInvestmentNotes('');
+                setPaymentMethod('card'); // Reset to default
                 loadLocationDetails(); // Refresh the data
                 router.back();
               },
@@ -354,7 +432,7 @@ const InvestmentDetailsScreen = () => {
       } else {
         throw new Error(confirmData.message || 'Failed to confirm payment');
       }
-      
+
     } catch (error: any) {
       console.error('Investment error:', error);
       Alert.alert('Investment Failed', error.message || 'Something went wrong. Please try again.');
@@ -373,19 +451,120 @@ const InvestmentDetailsScreen = () => {
     });
   };
 
-  const renderInvestorItem = ({ item }: { item: any }) => (
-    <View className="flex-row justify-between items-center px-5 py-4 border-b border-gray-100">
-      <View className="flex-1 mr-4">
-        <Text className="text-base font-semibold text-gray-800 mb-1">{maskInvestorName(item.investor_name)}</Text>
-        <Text className="text-sm text-gray-500 mb-1">{formatDate(item.invested_at)}</Text>
-        <Text className="text-xs text-gray-400">Ref: {item.reference}</Text>
-      </View>
-      <View className="items-end">
-        <Text className="text-base font-bold text-amber-700 mb-1.5">£{item.amount.toLocaleString()}</Text>
-        <View className={`px-2 py-1 rounded ${item.status === 'completed' ? 'bg-green-500' : 'bg-yellow-500'}`}>
-          <Text className="text-white text-xs font-medium">{item.status}</Text>
+  // Helper function to get payment method icon and text
+  const getPaymentMethodDisplay = (method: string) => {
+    switch (method) {
+      case 'bank_transfer':
+        return {
+          icon: 'account-balance',
+          text: 'Bank Transfer',
+          color: '#3B82F6'
+        };
+      case 'card':
+      default:
+        return {
+          icon: 'credit-card',
+          text: 'Card Payment',
+          color: '#9A563A'
+        };
+    }
+  };
+
+  const renderInvestorItem = ({ item }: { item: any }) => {
+    const paymentDisplay = getPaymentMethodDisplay(item.payment_method || 'card');
+    
+    return (
+      <View className="flex-row justify-between items-center px-5 py-4 border-b border-gray-100">
+        <View className="flex-1 mr-4">
+          <Text className="text-base font-semibold text-gray-800 mb-1">{maskInvestorName(item.investor_name)}</Text>
+          <Text className="text-sm text-gray-500 mb-1">{formatDate(item.invested_at)}</Text>
+          <View className="flex-row items-center mb-1">
+            <MaterialIcons name={paymentDisplay.icon as any} size={12} color={paymentDisplay.color} />
+            <Text className="text-xs text-gray-400 ml-1">{paymentDisplay.text}</Text>
+          </View>
+          <Text className="text-xs text-gray-400">Ref: {item.reference}</Text>
+        </View>
+        <View className="items-end">
+          <Text className="text-base font-bold text-amber-700 mb-1.5">£{item.amount.toLocaleString()}</Text>
+          <View className={`px-2 py-1 rounded ${
+            item.status === 'completed' ? 'bg-green-500' : 
+            item.status === 'pending' ? 'bg-yellow-500' : 'bg-red-500'
+          }`}>
+            <Text className="text-white text-xs font-medium">{item.status}</Text>
+          </View>
         </View>
       </View>
+    );
+  };
+
+  // Payment Method Selection Component
+  const PaymentMethodSelector = () => (
+    <View className="mb-5">
+      <Text className="text-sm font-medium text-gray-700 mb-3">Payment Method</Text>
+
+      {/* Card Payment Option */}
+      <TouchableOpacity
+        className={`flex-row items-center p-4 mb-3 border-2 rounded-lg ${paymentMethod === 'card' ? 'border-amber-700 bg-orange-50' : 'border-gray-200 bg-white'
+          }`}
+        onPress={() => setPaymentMethod('card')}
+      >
+        <View className={`w-5 h-5 rounded-full border-2 mr-3 ${paymentMethod === 'card' ? 'border-amber-700 bg-amber-700' : 'border-gray-400'
+          }`}>
+          {paymentMethod === 'card' && (
+            <View className="w-full h-full flex items-center justify-center">
+              <View className="w-2 h-2 bg-white rounded-full" />
+            </View>
+          )}
+        </View>
+        <View className="flex-1">
+          <View className="flex-row items-center mb-1">
+            <MaterialIcons name="credit-card" size={20} color="#9A563A" />
+            <Text className="text-base font-semibold text-gray-800 ml-2">Card Payment</Text>
+          </View>
+          <Text className="text-sm text-gray-500">Pay instantly with credit/debit card</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Bank Transfer Option */}
+      <TouchableOpacity
+        className={`flex-row items-center p-4 border-2 rounded-lg ${paymentMethod === 'bank_transfer' ? 'border-amber-700 bg-orange-50' : 'border-gray-200 bg-white'
+          }`}
+        onPress={() => setPaymentMethod('bank_transfer')}
+      >
+        <View className={`w-5 h-5 rounded-full border-2 mr-3 ${paymentMethod === 'bank_transfer' ? 'border-amber-700 bg-amber-700' : 'border-gray-400'
+          }`}>
+          {paymentMethod === 'bank_transfer' && (
+            <View className="w-full h-full flex items-center justify-center">
+              <View className="w-2 h-2 bg-white rounded-full" />
+            </View>
+          )}
+        </View>
+        <View className="flex-1">
+          <View className="flex-row items-center mb-1">
+            <MaterialIcons name="account-balance" size={20} color="#3B82F6" />
+            <Text className="text-base font-semibold text-gray-800 ml-2">Bank Transfer</Text>
+          </View>
+          <Text className="text-sm text-gray-500">Our team will contact you with transfer details</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Bank Transfer Notice */}
+      {paymentMethod === 'bank_transfer' && (
+        <View className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <View className="flex-row items-start">
+            <MaterialIcons name="info" size={16} color="#3B82F6" />
+            <View className="flex-1 ml-2">
+              <Text className="text-sm text-blue-800 font-medium mb-1">Bank Transfer Process:</Text>
+              <Text className="text-xs text-blue-700">
+                1. Submit your investment request{'\n'}
+                2. Our team will contact you within 24 hours{'\n'}
+                3. Complete bank transfer using provided details{'\n'}
+                4. Investment confirmed after transfer verification
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 
@@ -407,7 +586,7 @@ const InvestmentDetailsScreen = () => {
           <MaterialIcons name="error-outline" size={64} color="#DC2626" />
           <Text className="text-xl font-bold text-red-600 mt-4 mb-2">Failed to Load Details</Text>
           <Text className="text-base text-gray-500 text-center mb-6">Please try again later</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             className="bg-amber-700 px-6 py-3 rounded-lg"
             onPress={loadLocationDetails}
           >
@@ -445,7 +624,7 @@ const InvestmentDetailsScreen = () => {
               <Feather name="map-pin" size={48} color="#9A563A" />
             </View>
           )}
-          
+
           {/* Investment Status Overlay */}
           <View className="absolute top-4 right-4">
             <View className={`px-3 py-1.5 rounded-lg ${locationDetails.investment_stats.is_open_for_investment ? 'bg-green-500' : 'bg-red-500'}`}>
@@ -464,7 +643,7 @@ const InvestmentDetailsScreen = () => {
             <Text className="text-sm text-gray-500 ml-1.5 flex-1">{locationDetails.address}</Text>
           </View>
           <Text className="text-base text-gray-500 mb-3">{locationDetails.city} {locationDetails.postcode}</Text>
-          
+
           {locationDetails.description && (
             <Text className="text-sm text-gray-600 leading-5">{locationDetails.description}</Text>
           )}
@@ -473,7 +652,7 @@ const InvestmentDetailsScreen = () => {
         {/* Investment Progress */}
         <View className="bg-white p-5 border-b border-gray-200">
           <Text className="text-lg font-bold text-gray-800 mb-4">Investment Progress</Text>
-          
+
           <View className="flex-row justify-around mb-5">
             <View className="items-center">
               <Text className="text-xl font-bold text-amber-700 mb-1">
@@ -497,7 +676,7 @@ const InvestmentDetailsScreen = () => {
 
           <View className="mb-4">
             <View className="h-2 bg-gray-200 rounded-full mb-2">
-              <View 
+              <View
                 className="h-full bg-amber-700 rounded-full"
                 style={{ width: `${Math.min(locationDetails.investment_stats.progress_percentage, 100)}%` }}
               />
@@ -513,7 +692,7 @@ const InvestmentDetailsScreen = () => {
           <View className="bg-white p-5 border-b border-gray-200">
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-lg font-bold text-gray-800">Recent Investments</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 className="px-3 py-1.5 bg-gray-100 rounded"
                 onPress={loadAllInvestors}
                 disabled={loadingInvestors}
@@ -525,22 +704,33 @@ const InvestmentDetailsScreen = () => {
                 )}
               </TouchableOpacity>
             </View>
-            
-            {locationDetails.recent_investments.slice(0, 5).map((investment, index) => (
-              <View key={index} className="flex-row justify-between items-center py-3 border-b border-gray-100">
-                <View className="flex-1">
-                  <Text className="text-sm font-medium text-gray-800 mb-0.5">{maskInvestorName(investment.investor_name)}</Text>
-                  <Text className="text-xs text-gray-500 mb-0.5">{formatDate(investment.invested_at)}</Text>
-                  <Text className="text-xs text-gray-400">Ref: {investment.reference}</Text>
-                </View>
-                <View className="items-end">
-                  <Text className="text-sm font-bold text-amber-700 mb-1">£{investment.amount.toLocaleString()}</Text>
-                  <View className={`px-1.5 py-0.5 rounded ${investment.status === 'completed' ? 'bg-green-500' : 'bg-yellow-500'}`}>
-                    <Text className="text-white text-xs font-medium">{investment.status}</Text>
+
+            {locationDetails.recent_investments.slice(0, 5).map((investment, index) => {
+              const paymentDisplay = getPaymentMethodDisplay(investment.payment_method || 'card');
+              
+              return (
+                <View key={index} className="flex-row justify-between items-center py-3 border-b border-gray-100">
+                  <View className="flex-1">
+                    <Text className="text-sm font-medium text-gray-800 mb-0.5">{maskInvestorName(investment.investor_name)}</Text>
+                    <Text className="text-xs text-gray-500 mb-0.5">{formatDate(investment.invested_at)}</Text>
+                    <View className="flex-row items-center mb-0.5">
+                      <MaterialIcons name={paymentDisplay.icon as any} size={10} color={paymentDisplay.color} />
+                      <Text className="text-xs text-gray-400 ml-1">{paymentDisplay.text}</Text>
+                    </View>
+                    <Text className="text-xs text-gray-400">Ref: {investment.reference}</Text>
+                  </View>
+                  <View className="items-end">
+                    <Text className="text-sm font-bold text-amber-700 mb-1">£{investment.amount.toLocaleString()}</Text>
+                    <View className={`px-1.5 py-0.5 rounded ${
+                      investment.status === 'completed' ? 'bg-green-500' : 
+                      investment.status === 'pending' ? 'bg-yellow-500' : 'bg-red-500'
+                    }`}>
+                      <Text className="text-white text-xs font-medium">{investment.status}</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
 
@@ -548,7 +738,7 @@ const InvestmentDetailsScreen = () => {
         {locationDetails.investment_stats.is_open_for_investment && (
           <View className="bg-white p-5">
             <Text className="text-lg font-bold text-gray-800 mb-4">Make an Investment</Text>
-            
+
             <View className="mb-5">
               <Text className="text-sm font-medium text-gray-700 mb-2">Investment Amount (£)</Text>
               <TextInput
@@ -563,6 +753,9 @@ const InvestmentDetailsScreen = () => {
                 Minimum: £10 • Maximum: £10,000 • Available: £{locationDetails.investment_stats.remaining_amount.toLocaleString()}
               </Text>
             </View>
+
+            {/* Payment Method Selector */}
+            <PaymentMethodSelector />
 
             <View className="mb-5">
               <Text className="text-sm font-medium text-gray-700 mb-2">Notes (Optional)</Text>
@@ -587,7 +780,7 @@ const InvestmentDetailsScreen = () => {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text className="text-white text-base font-bold">
-                  Invest £{investmentAmount || '0'}
+                  {paymentMethod === 'bank_transfer' ? 'Submit Investment Request' : `Invest £${investmentAmount || '0'}`}
                 </Text>
               )}
             </TouchableOpacity>
@@ -606,13 +799,34 @@ const InvestmentDetailsScreen = () => {
       >
         <View className="flex-1 bg-black/50 justify-center items-center px-5">
           <View className="bg-white rounded-xl p-6 w-full max-w-sm">
-            <Text className="text-xl font-bold text-gray-800 mb-4 text-center">Confirm Investment</Text>
-            
+            <Text className="text-xl font-bold text-gray-800 mb-4 text-center">
+              {paymentMethod === 'bank_transfer' ? 'Confirm Investment Request' : 'Confirm Investment'}
+            </Text>
+
             <View className="mb-6">
               <Text className="text-base text-gray-600 leading-6 text-center">
-                You are about to invest <Text className="font-bold text-amber-700">£{investmentAmount}</Text> in <Text className="font-bold text-gray-800">{locationDetails.name}</Text>
+                You are about to {paymentMethod === 'bank_transfer' ? 'submit an investment request for' : 'invest'} <Text className="font-bold text-amber-700">£{investmentAmount}</Text> in <Text className="font-bold text-gray-800">{locationDetails.name}</Text>
               </Text>
-              
+
+              {/* Payment Method Display */}
+              <View className="mt-4 p-3 bg-gray-50 rounded-lg">
+                <View className="flex-row items-center">
+                  <MaterialIcons
+                    name={paymentMethod === 'bank_transfer' ? 'account-balance' : 'credit-card'}
+                    size={16}
+                    color={paymentMethod === 'bank_transfer' ? '#3B82F6' : '#9A563A'}
+                  />
+                  <Text className="text-sm font-medium text-gray-700 ml-2">
+                    Payment Method: {paymentMethod === 'bank_transfer' ? 'Bank Transfer' : 'Card Payment'}
+                  </Text>
+                </View>
+                {paymentMethod === 'bank_transfer' && (
+                  <Text className="text-xs text-gray-500 mt-1">
+                    Our team will contact you with transfer details within 24 hours.
+                  </Text>
+                )}
+              </View>
+
               {investmentNotes && (
                 <View className="mt-4 p-3 bg-gray-50 rounded-lg">
                   <Text className="text-xs font-medium text-gray-500 mb-1">Notes:</Text>
@@ -628,12 +842,14 @@ const InvestmentDetailsScreen = () => {
               >
                 <Text className="text-base text-gray-600 font-medium">Cancel</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 className="flex-1 py-3 rounded-lg bg-amber-700 items-center"
                 onPress={confirmInvestment}
               >
-                <Text className="text-base text-white font-bold">Confirm & Pay</Text>
+                <Text className="text-base text-white font-bold">
+                  {paymentMethod === 'bank_transfer' ? 'Submit Request' : 'Confirm & Pay'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -658,7 +874,7 @@ const InvestmentDetailsScreen = () => {
                 <Feather name="x" size={24} color="#333" />
               </TouchableOpacity>
             </View>
-            
+
             <FlatList
               data={allInvestors}
               renderItem={renderInvestorItem}
