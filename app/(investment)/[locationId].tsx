@@ -1,4 +1,4 @@
-// app/(investment)/[locationId].tsx
+// app/(investment)/[locationId].tsx - Updated with View More Details button
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -233,6 +233,44 @@ const InvestmentDetailsScreen = () => {
     }
   };
 
+  // Function to handle "View More Details" button
+  const handleViewMoreDetails = async () => {
+    try {
+      const token = await AsyncStorage.getItem('access_token');
+
+      if (!token) {
+        Alert.alert('Error', 'You must be logged in to view detailed information');
+        return;
+      }
+      console.log('Investment created:', token);
+      const response = await fetch(`${API_BASE_URL}/api/locations/${locationId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Navigate to details screen with the detailed data
+        router.push({
+          pathname: '/(investment)/details',
+          params: {
+            locationData: JSON.stringify(data.data)
+          }
+        });
+      } else {
+        Alert.alert('Error', 'Failed to load detailed information');
+      }
+    } catch (error) {
+      console.error('Error loading detailed information:', error);
+      Alert.alert('Error', 'Failed to load detailed information');
+    }
+  };
+
   const validateInvestmentAmount = () => {
     const amount = parseFloat(investmentAmount);
 
@@ -277,7 +315,7 @@ const InvestmentDetailsScreen = () => {
     try {
       const amount = parseFloat(investmentAmount);
       const token = await AsyncStorage.getItem('access_token');
-console.log(token, 'token in bank transfer investment');
+      console.log(token, 'token in bank transfer investment');
       if (!token) {
         throw new Error('Authentication required');
       }
@@ -397,6 +435,8 @@ console.log(token, 'token in bank transfer investment');
         return;
       }
 
+
+
       // Confirm payment with backend
       const confirmResponse = await fetch(`${API_BASE_URL}/api/investments/confirm-payment`, {
         method: 'POST',
@@ -472,7 +512,7 @@ console.log(token, 'token in bank transfer investment');
 
   const renderInvestorItem = ({ item }: { item: any }) => {
     const paymentDisplay = getPaymentMethodDisplay(item.payment_method || 'card');
-    
+
     return (
       <View className="flex-row justify-between items-center px-5 py-4 border-b border-gray-100">
         <View className="flex-1 mr-4">
@@ -486,10 +526,9 @@ console.log(token, 'token in bank transfer investment');
         </View>
         <View className="items-end">
           <Text className="text-base font-bold text-amber-700 mb-1.5">£{item.amount.toLocaleString()}</Text>
-          <View className={`px-2 py-1 rounded ${
-            item.status === 'completed' ? 'bg-green-500' : 
-            item.status === 'pending' ? 'bg-yellow-500' : 'bg-red-500'
-          }`}>
+          <View className={`px-2 py-1 rounded ${item.status === 'completed' ? 'bg-green-500' :
+              item.status === 'pending' ? 'bg-yellow-500' : 'bg-red-500'
+            }`}>
             <Text className="text-white text-xs font-medium">{item.status}</Text>
           </View>
         </View>
@@ -637,7 +676,18 @@ console.log(token, 'token in bank transfer investment');
 
         {/* Location Info */}
         <View className="bg-white p-5 border-b border-gray-200">
+          {/* View More Details Button - Compact and Centered */}
+          <View className="flex-row justify-center mb-4 self-start">
+            <TouchableOpacity
+              className="border border-amber-700 rounded-lg px-4 py-2 flex-row items-center bg-white "
+              onPress={handleViewMoreDetails}
+            >
+              <MaterialIcons name="info" size={16} color="#9A563A" />
+              <Text className="text-amber-700 text-sm font-medium ml-2">View More Details</Text>
+            </TouchableOpacity>
+          </View>
           <Text className="text-2xl font-bold text-gray-800 mb-2">{locationDetails.name}</Text>
+
           <View className="flex-row items-center mb-1">
             <Feather name="map-pin" size={16} color="#6B7280" />
             <Text className="text-sm text-gray-500 ml-1.5 flex-1">{locationDetails.address}</Text>
@@ -707,7 +757,7 @@ console.log(token, 'token in bank transfer investment');
 
             {locationDetails.recent_investments.slice(0, 5).map((investment, index) => {
               const paymentDisplay = getPaymentMethodDisplay(investment.payment_method || 'card');
-              
+
               return (
                 <View key={index} className="flex-row justify-between items-center py-3 border-b border-gray-100">
                   <View className="flex-1">
@@ -721,10 +771,9 @@ console.log(token, 'token in bank transfer investment');
                   </View>
                   <View className="items-end">
                     <Text className="text-sm font-bold text-amber-700 mb-1">£{investment.amount.toLocaleString()}</Text>
-                    <View className={`px-1.5 py-0.5 rounded ${
-                      investment.status === 'completed' ? 'bg-green-500' : 
-                      investment.status === 'pending' ? 'bg-yellow-500' : 'bg-red-500'
-                    }`}>
+                    <View className={`px-1.5 py-0.5 rounded ${investment.status === 'completed' ? 'bg-green-500' :
+                        investment.status === 'pending' ? 'bg-yellow-500' : 'bg-red-500'
+                      }`}>
                       <Text className="text-white text-xs font-medium">{investment.status}</Text>
                     </View>
                   </View>

@@ -216,13 +216,13 @@ const LocationDetailsScreen = () => {
           <View style={styles.investmentGrid}>
             <View style={styles.investmentItem}>
               <Text style={styles.investmentValue}>
-                £{locationData.total_invested.toLocaleString()}
+                {/* £{locationData.total_invested.toLocaleString()} */}
               </Text>
               <Text style={styles.investmentLabel}>Total Invested</Text>
             </View>
             <View style={styles.investmentItem}>
               <Text style={styles.investmentValue}>
-                £{locationData.investment_limit.toLocaleString()}
+                {/* £{locationData.investment_limit.toLocaleString()} */}
               </Text>
               <Text style={styles.investmentLabel}>Investment Limit</Text>
             </View>
@@ -234,7 +234,7 @@ const LocationDetailsScreen = () => {
             </View>
             <View style={styles.investmentItem}>
               <Text style={styles.investmentValue}>
-                {locationData.progress_percentage.toFixed(1)}%
+                {/* {locationData.progress_percentage.toFixed(1)}% */}
               </Text>
               <Text style={styles.investmentLabel}>Progress</Text>
             </View>
@@ -251,7 +251,7 @@ const LocationDetailsScreen = () => {
               />
             </View>
             <Text style={styles.remainingText}>
-              £{locationData.remaining_amount.toLocaleString()} remaining
+              {/* £{locationData.remaining_amount.toLocaleString()} remaining */}
             </Text>
           </View>
         </View>
@@ -267,7 +267,7 @@ const LocationDetailsScreen = () => {
         )}
 
         {/* Therapists */}
-        {locationData.therapists.length > 0 && (
+        {/* {locationData.therapists.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
               Therapists ({locationData.therapists.length})
@@ -280,7 +280,7 @@ const LocationDetailsScreen = () => {
               ItemSeparatorComponent={() => <View style={styles.therapistSeparator} />}
             />
           </View>
-        )}
+        )} */}
 
         {/* Invest Button */}
         {locationData.is_open_for_investment && (

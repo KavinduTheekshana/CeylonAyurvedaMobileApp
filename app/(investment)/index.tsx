@@ -1,4 +1,4 @@
-// app/(investment)/index.tsx - Updated with View More button only
+// app/(investment)/index.tsx - Updated without View More button
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -97,9 +97,7 @@ const InvestmentScreen = () => {
         console.error('Response text:', responseText.substring(0, 200) + '...');
         throw new Error('Server returned non-JSON response');
       }
-
       const data = await response.json();
-      console.log('Investment locations response:', data);
 
       if (data.success && Array.isArray(data.data)) {
         const processedLocations = data.data.map((location: any) => ({
@@ -173,16 +171,6 @@ const InvestmentScreen = () => {
       params: {
         locationId: location.id.toString(),
         locationName: location.name
-      }
-    });
-  };
-
-  const handleViewMore = (location: LocationInvestment) => {
-    // Navigate to a new details screen - you'll need to create this screen
-    router.push({
-      pathname: '/(investment)/details',
-      params: {
-        locationData: JSON.stringify(location)
       }
     });
   };
@@ -277,18 +265,6 @@ const InvestmentScreen = () => {
               </Text>
             </View>
           )}
-
-          {/* View More Button */}
-          <TouchableOpacity
-            style={styles.viewMoreButton}
-            onPress={(e) => {
-              e.stopPropagation(); // Prevent parent onPress
-              handleViewMore(item);
-            }}
-          >
-            <Text style={styles.viewMoreText}>View More Details</Text>
-            <Feather name="chevron-right" size={16} color="#9A563A" />
-          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
@@ -563,27 +539,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 12,
-    marginBottom: 8,
   },
   therapistCountText: {
     fontSize: 12,
     color: '#6B7280',
     marginLeft: 6,
-  },
-  viewMoreButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    marginTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  viewMoreText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#9A563A',
-    marginRight: 4,
   },
   emptyState: {
     alignItems: 'center',
