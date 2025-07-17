@@ -1,5 +1,5 @@
-// app/(investment)/details.tsx
-import React from 'react';
+// app/(investment)/details.tsx - Updated with API integration
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,13 @@ import {
   Image,
   StyleSheet,
   FlatList,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '@/config/api';
 
 interface Therapist {
   id: number;
@@ -48,9 +52,116 @@ interface LocationData {
 const LocationDetailsScreen = () => {
   const router = useRouter();
   const params = useLocalSearchParams();
-  
-  // Parse the location data from params
-  const locationData: LocationData = JSON.parse(params.locationData as string);
+
+  // States for API data
+  const [locationData, setLocationData] = useState<LocationData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Get locationId from params (can come from different sources)
+  const locationId = params.locationId || params.id;
+
+  useEffect(() => {
+    if (locationId) {
+      loadLocationDetails();
+    } else {
+      // Try to parse from locationData param as fallback
+      try {
+        const parsedData = JSON.parse(params.locationData as string);
+        setLocationData(parsedData);
+        setLoading(false);
+      } catch (error) {
+        setError('No location ID provided');
+        setLoading(false);
+      }
+    }
+  }, [locationId, params.locationData]);
+
+  const loadLocationDetails = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      console.log(`Fetching location details for ID: ${locationId}`);
+
+      // Get auth token
+      const token = await AsyncStorage.getItem('access_token');
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+
+      // Add auth header if token exists
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      console.log("LOCATIONID", locationId);
+      // Call the opportunities API endpoint
+      const response = await fetch(`${API_BASE_URL}/api/opportunities/${locationId}`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        // Process the API response data
+        const processedData: LocationData = {
+          id: data.data.id,
+          name: data.data.name,
+          city: data.data.city,
+          address: data.data.address,
+          image: data.data.image && data.data.image.startsWith('http')
+            ? data.data.image
+            : data.data.image
+              ? `${API_BASE_URL}/storage/${data.data.image}`
+              : null,
+          description: data.data.description,
+          owner_name: data.data.owner_name,
+          owner_email: data.data.owner_email,
+          manager_name: data.data.manager_name,
+          manager_email: data.data.manager_email,
+          branch_phone: data.data.branch_phone,
+          total_invested: parseFloat(data.data.total_invested || '0'),
+          investment_limit: parseFloat(data.data.investment_limit || '10000'),
+          total_investors: parseInt(data.data.total_investors || '0'),
+          is_open_for_investment: data.data.is_open_for_investment !== false,
+          remaining_amount: parseFloat(data.data.remaining_amount || '0'),
+          progress_percentage: parseFloat(data.data.progress_percentage || '0'),
+          therapists: data.data.therapists?.map((therapist: any) => ({
+            id: therapist.id,
+            name: therapist.name,
+            email: therapist.email,
+            phone: therapist.phone,
+            image: therapist.image
+              ? (therapist.image.startsWith('http')
+                ? therapist.image
+                : `${API_BASE_URL}/storage/${therapist.image}`)
+              : null,
+            bio: therapist.bio,
+            work_start_date: therapist.work_start_date,
+            status: therapist.status,
+          })) || [],
+        };
+
+        setLocationData(processedData);
+      } else {
+        throw new Error(data.message || 'Failed to load location details');
+      }
+
+    } catch (error: any) {
+      console.error('Error loading location details:', error);
+      setError(error.message || 'Failed to load location details');
+      Alert.alert('Error', 'Failed to load location details. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB', {
@@ -61,6 +172,8 @@ const LocationDetailsScreen = () => {
   };
 
   const handleInvestNow = () => {
+    if (!locationData) return;
+
     // Navigate to investment screen
     router.push({
       pathname: `/(investment)/[locationId]`,
@@ -114,6 +227,57 @@ const LocationDetailsScreen = () => {
       </View>
     </View>
   );
+
+  // Loading state
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Feather name="arrow-left" size={24} color="#000" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Loading...</Text>
+          <View style={styles.placeholder} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#9A563A" />
+          <Text style={styles.loadingText}>Loading location details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Error state
+  if (error || !locationData) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Feather name="arrow-left" size={24} color="#000" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Error</Text>
+          <View style={styles.placeholder} />
+        </View>
+        <View style={styles.errorContainer}>
+          <MaterialIcons name="error-outline" size={64} color="#DC2626" />
+          <Text style={styles.errorTitle}>Failed to Load Details</Text>
+          <Text style={styles.errorText}>{error || 'Unknown error occurred'}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={loadLocationDetails}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -216,13 +380,13 @@ const LocationDetailsScreen = () => {
           <View style={styles.investmentGrid}>
             <View style={styles.investmentItem}>
               <Text style={styles.investmentValue}>
-                {/* £{locationData.total_invested.toLocaleString()} */}
+                £{locationData.total_invested.toLocaleString()}
               </Text>
               <Text style={styles.investmentLabel}>Total Invested</Text>
             </View>
             <View style={styles.investmentItem}>
               <Text style={styles.investmentValue}>
-                {/* £{locationData.investment_limit.toLocaleString()} */}
+                £{locationData.investment_limit.toLocaleString()}
               </Text>
               <Text style={styles.investmentLabel}>Investment Limit</Text>
             </View>
@@ -234,7 +398,7 @@ const LocationDetailsScreen = () => {
             </View>
             <View style={styles.investmentItem}>
               <Text style={styles.investmentValue}>
-                {/* {locationData.progress_percentage.toFixed(1)}% */}
+                {locationData.progress_percentage.toFixed(1)}%
               </Text>
               <Text style={styles.investmentLabel}>Progress</Text>
             </View>
@@ -251,7 +415,7 @@ const LocationDetailsScreen = () => {
               />
             </View>
             <Text style={styles.remainingText}>
-              {/* £{locationData.remaining_amount.toLocaleString()} remaining */}
+              £{locationData.remaining_amount.toLocaleString()} remaining
             </Text>
           </View>
         </View>
@@ -267,7 +431,7 @@ const LocationDetailsScreen = () => {
         )}
 
         {/* Therapists */}
-        {/* {locationData.therapists.length > 0 && (
+        {locationData.therapists.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
               Therapists ({locationData.therapists.length})
@@ -280,7 +444,7 @@ const LocationDetailsScreen = () => {
               ItemSeparatorComponent={() => <View style={styles.therapistSeparator} />}
             />
           </View>
-        )} */}
+        )}
 
         {/* Invest Button */}
         {locationData.is_open_for_investment && (
@@ -313,7 +477,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    // backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
@@ -330,6 +493,48 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     width: 40,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#DC2626',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#9A563A',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,

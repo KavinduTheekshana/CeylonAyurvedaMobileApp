@@ -1,4 +1,4 @@
-// app/(investment)/[locationId].tsx - Updated with View More Details button
+// app/(investment)/[locationId].tsx - Updated with API integration for View More Details
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -42,7 +42,7 @@ interface LocationDetails {
     invested_at: string;
     status: string;
     reference: string;
-    payment_method?: string; // Add this to show payment method in recent investments
+    payment_method?: string;
   }>;
 }
 
@@ -233,7 +233,7 @@ const InvestmentDetailsScreen = () => {
     }
   };
 
-  // Function to handle "View More Details" button
+  // Function to handle "View More Details" button - Updated to use the opportunities API
   const handleViewMoreDetails = async () => {
     try {
       const token = await AsyncStorage.getItem('access_token');
@@ -242,32 +242,21 @@ const InvestmentDetailsScreen = () => {
         Alert.alert('Error', 'You must be logged in to view detailed information');
         return;
       }
-      console.log('Investment created:', token);
-      const response = await fetch(`${API_BASE_URL}/api/locations/${locationId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+
+      console.log('Navigating to detailed view for location:', locationId);
+      
+      // Navigate to details screen with just the locationId
+      // The details screen will call the opportunities API
+      router.push({
+        pathname: '/(investment)/details',
+        params: {
+          locationId: locationId.toString()
+        }
       });
 
-      const data = await response.json();
-
-      if (data.success) {
-        // Navigate to details screen with the detailed data
-        router.push({
-          pathname: '/(investment)/details',
-          params: {
-            locationData: JSON.stringify(data.data)
-          }
-        });
-      } else {
-        Alert.alert('Error', 'Failed to load detailed information');
-      }
     } catch (error) {
-      console.error('Error loading detailed information:', error);
-      Alert.alert('Error', 'Failed to load detailed information');
+      console.error('Error navigating to detailed information:', error);
+      Alert.alert('Error', 'Failed to navigate to detailed information');
     }
   };
 
@@ -434,8 +423,6 @@ const InvestmentDetailsScreen = () => {
         }
         return;
       }
-
-
 
       // Confirm payment with backend
       const confirmResponse = await fetch(`${API_BASE_URL}/api/investments/confirm-payment`, {
@@ -765,15 +752,6 @@ const InvestmentDetailsScreen = () => {
                     <Text className="text-xs text-gray-500 mb-0.5">{formatDate(investment.invested_at)}</Text>
                     <View className="flex-row items-center mb-0.5">
                       <MaterialIcons name={paymentDisplay.icon as any} size={10} color={paymentDisplay.color} />
-                      <Text className="text-xs text-gray-400 ml-1">{paymentDisplay.text}</Text>
-                    </View>
-                    <Text className="text-xs text-gray-400">Ref: {investment.reference}</Text>
-                  </View>
-                  <View className="items-end">
-                    <Text className="text-sm font-bold text-amber-700 mb-1">£{investment.amount.toLocaleString()}</Text>
-                    <View className={`px-1.5 py-0.5 rounded ${investment.status === 'completed' ? 'bg-green-500' :
-                        investment.status === 'pending' ? 'bg-yellow-500' : 'bg-red-500'
-                      }`}>
                       <Text className="text-white text-xs font-medium">{investment.status}</Text>
                     </View>
                   </View>
@@ -942,4 +920,4 @@ const InvestmentDetailsScreen = () => {
   );
 };
 
-export default InvestmentDetailsScreen;
+export default InvestmentDetailsScreen; 
