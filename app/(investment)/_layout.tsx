@@ -1,4 +1,4 @@
-// app/(investment)/_layout.tsx
+// app/(investment)/_layout.tsx - Updated to include investors route
 import { Stack } from 'expo-router';
 import { StatusBar } from 'react-native';
 
@@ -41,6 +41,13 @@ export default function InvestmentLayout() {
           name="details"
           options={{
             title: "Location Details",
+            headerShown: false, // We'll handle header in the component
+          }}
+        />
+        <Stack.Screen
+          name="investors"
+          options={{
+            title: "All Investors",
             headerShown: false, // We'll handle header in the component
           }}
         />

@@ -345,7 +345,7 @@ const LocationDetailsScreen = () => {
 
         {/* Management Information */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Management</Text>
+          <Text style={styles.sectionTitle}>Franchisee</Text>
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Owner:</Text>

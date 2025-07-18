@@ -1,4 +1,4 @@
-// app/(investment)/[locationId].tsx - Updated with API integration for View More Details
+// app/(investment)/[locationId].tsx - Updated with navigation to new screen for "View All"
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -11,7 +11,6 @@ import {
   Image,
   TextInput,
   Modal,
-  FlatList,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
@@ -64,9 +63,6 @@ const InvestmentDetailsScreen = () => {
   const [investmentNotes, setInvestmentNotes] = useState('');
   const [investing, setInvesting] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [investorsModalVisible, setInvestorsModalVisible] = useState(false);
-  const [allInvestors, setAllInvestors] = useState<any[]>([]);
-  const [loadingInvestors, setLoadingInvestors] = useState(false);
 
   // New states for payment method selection
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
@@ -119,6 +115,7 @@ const InvestmentDetailsScreen = () => {
           headers,
         });
         data = await response.json();
+        console.log('Alternative endpoint response:', data);
       }
 
       // If still no success, try a basic location endpoint and construct the data
@@ -129,10 +126,11 @@ const InvestmentDetailsScreen = () => {
           headers,
         });
         data = await response.json();
-
+console.log('Basic location endpoint response:', data);
         if (response.ok && data.success) {
           // Construct investment data from basic location data
           const location = data.data;
+          console.log('Constructing investment data from basic location endpoint', location);
           const constructedDetails: LocationDetails = {
             id: location.id,
             name: location.name,
@@ -194,43 +192,18 @@ const InvestmentDetailsScreen = () => {
     }
   };
 
-  const loadAllInvestors = async () => {
-    try {
-      setLoadingInvestors(true);
-      const token = await AsyncStorage.getItem('access_token');
+  // Updated function to navigate to new screen instead of showing modal
+  const handleViewAllInvestors = () => {
+    console.log('Navigating to all investors screen for location:', locationId);
 
-      if (!token) {
-        Alert.alert('Error', 'You must be logged in to view investors');
-        return;
+    // Navigate to all investors screen
+    router.push({
+      pathname: '/(investment)/investors',
+      params: {
+        locationId: locationId.toString(),
+        locationName: locationDetails?.name || 'Location'
       }
-
-      const response = await fetch(`${API_BASE_URL}/api/investments/locations/${locationId}/investors`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setAllInvestors(data.data || []);
-        setInvestorsModalVisible(true);
-      } else {
-        // Fallback: use recent investments data
-        setAllInvestors(locationDetails?.recent_investments || []);
-        setInvestorsModalVisible(true);
-      }
-    } catch (error) {
-      console.error('Error loading investors:', error);
-      // Fallback: use recent investments data
-      setAllInvestors(locationDetails?.recent_investments || []);
-      setInvestorsModalVisible(true);
-    } finally {
-      setLoadingInvestors(false);
-    }
+    });
   };
 
   // Function to handle "View More Details" button - Updated to use the opportunities API
@@ -244,7 +217,7 @@ const InvestmentDetailsScreen = () => {
       }
 
       console.log('Navigating to detailed view for location:', locationId);
-      
+
       // Navigate to details screen with just the locationId
       // The details screen will call the opportunities API
       router.push({
@@ -497,32 +470,6 @@ const InvestmentDetailsScreen = () => {
     }
   };
 
-  const renderInvestorItem = ({ item }: { item: any }) => {
-    const paymentDisplay = getPaymentMethodDisplay(item.payment_method || 'card');
-
-    return (
-      <View className="flex-row justify-between items-center px-5 py-4 border-b border-gray-100">
-        <View className="flex-1 mr-4">
-          <Text className="text-base font-semibold text-gray-800 mb-1">{maskInvestorName(item.investor_name)}</Text>
-          <Text className="text-sm text-gray-500 mb-1">{formatDate(item.invested_at)}</Text>
-          <View className="flex-row items-center mb-1">
-            <MaterialIcons name={paymentDisplay.icon as any} size={12} color={paymentDisplay.color} />
-            <Text className="text-xs text-gray-400 ml-1">{paymentDisplay.text}</Text>
-          </View>
-          <Text className="text-xs text-gray-400">Ref: {item.reference}</Text>
-        </View>
-        <View className="items-end">
-          <Text className="text-base font-bold text-amber-700 mb-1.5">£{item.amount.toLocaleString()}</Text>
-          <View className={`px-2 py-1 rounded ${item.status === 'completed' ? 'bg-green-500' :
-              item.status === 'pending' ? 'bg-yellow-500' : 'bg-red-500'
-            }`}>
-            <Text className="text-white text-xs font-medium">{item.status}</Text>
-          </View>
-        </View>
-      </View>
-    );
-  };
-
   // Payment Method Selection Component
   const PaymentMethodSelector = () => (
     <View className="mb-5">
@@ -731,20 +678,14 @@ const InvestmentDetailsScreen = () => {
               <Text className="text-lg font-bold text-gray-800">Recent Investments</Text>
               <TouchableOpacity
                 className="px-3 py-1.5 bg-gray-100 rounded"
-                onPress={loadAllInvestors}
-                disabled={loadingInvestors}
+                onPress={handleViewAllInvestors}
               >
-                {loadingInvestors ? (
-                  <ActivityIndicator size="small" color="#9A563A" />
-                ) : (
-                  <Text className="text-sm text-amber-700 font-medium">View All</Text>
-                )}
+                <Text className="text-sm text-amber-700 font-medium">View All</Text>
               </TouchableOpacity>
             </View>
 
             {locationDetails.recent_investments.slice(0, 5).map((investment, index) => {
               const paymentDisplay = getPaymentMethodDisplay(investment.payment_method || 'card');
-
               return (
                 <View key={index} className="flex-row justify-between items-center py-3 border-b border-gray-100">
                   <View className="flex-1">
@@ -752,6 +693,15 @@ const InvestmentDetailsScreen = () => {
                     <Text className="text-xs text-gray-500 mb-0.5">{formatDate(investment.invested_at)}</Text>
                     <View className="flex-row items-center mb-0.5">
                       <MaterialIcons name={paymentDisplay.icon as any} size={10} color={paymentDisplay.color} />
+                      <Text className="text-xs text-gray-400 ml-1">{paymentDisplay.text}</Text>
+                    </View>
+                    <Text className="text-xs text-gray-400">Ref: {investment.reference}</Text>
+                  </View>
+                  <View className="items-end">
+                    <Text className="text-base font-bold text-amber-700 mb-1.5">£{investment.amount.toLocaleString()}</Text>
+                    <View className={`px-2 py-1 rounded ${investment.status === 'completed' ? 'bg-green-500' :
+                      investment.status === 'pending' ? 'bg-yellow-500' : 'bg-red-500'
+                      }`}>
                       <Text className="text-white text-xs font-medium">{investment.status}</Text>
                     </View>
                   </View>
@@ -882,42 +832,8 @@ const InvestmentDetailsScreen = () => {
           </View>
         </View>
       </Modal>
-
-      {/* All Investors Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={investorsModalVisible}
-        onRequestClose={() => setInvestorsModalVisible(false)}
-      >
-        <View className="flex-1 bg-black/50 justify-center items-center px-5">
-          <View className="bg-white rounded-xl w-full max-h-4/5" style={{ width: '90%' }}>
-            <View className="flex-row justify-between items-center p-5 border-b border-gray-200">
-              <Text className="text-xl font-bold text-gray-800">All Investors</Text>
-              <TouchableOpacity
-                className="p-1"
-                onPress={() => setInvestorsModalVisible(false)}
-              >
-                <Feather name="x" size={24} color="#333" />
-              </TouchableOpacity>
-            </View>
-
-            <FlatList
-              data={allInvestors}
-              renderItem={renderInvestorItem}
-              keyExtractor={(item, index) => `${item.id}-${index}`}
-              showsVerticalScrollIndicator={false}
-              ListEmptyComponent={() => (
-                <View className="p-10 items-center">
-                  <Text className="text-base text-gray-500 italic">No investors yet</Text>
-                </View>
-              )}
-            />
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };
 
-export default InvestmentDetailsScreen; 
+export default InvestmentDetailsScreen;
