@@ -458,7 +458,7 @@ console.log('Basic location endpoint response:', data);
         return {
           icon: 'account-balance',
           text: 'Bank Transfer',
-          color: '#3B82F6'
+          color: '#9A563A'
         };
       case 'card':
       default:
@@ -514,7 +514,7 @@ console.log('Basic location endpoint response:', data);
         </View>
         <View className="flex-1">
           <View className="flex-row items-center mb-1">
-            <MaterialIcons name="account-balance" size={20} color="#3B82F6" />
+            <MaterialIcons name="account-balance" size={20} color="#9A563A" />
             <Text className="text-base font-semibold text-gray-800 ml-2">Bank Transfer</Text>
           </View>
           <Text className="text-sm text-gray-500">Our team will contact you with transfer details</Text>
@@ -523,12 +523,12 @@ console.log('Basic location endpoint response:', data);
 
       {/* Bank Transfer Notice */}
       {paymentMethod === 'bank_transfer' && (
-        <View className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <View className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
           <View className="flex-row items-start">
-            <MaterialIcons name="info" size={16} color="#3B82F6" />
+            <MaterialIcons name="info" size={16} color="#9A563A" />
             <View className="flex-1 ml-2">
-              <Text className="text-sm text-blue-800 font-medium mb-1">Bank Transfer Process:</Text>
-              <Text className="text-xs text-blue-700">
+              <Text className="text-sm text-amber-800 font-medium mb-1">Bank Transfer Process:</Text>
+              <Text className="text-xs text-amber-700">
                 1. Submit your investment request{'\n'}
                 2. Our team will contact you within 24 hours{'\n'}
                 3. Complete bank transfer using provided details{'\n'}

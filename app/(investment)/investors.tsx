@@ -106,7 +106,7 @@ const AllInvestorsScreen = () => {
         return {
           icon: 'account-balance',
           text: 'Bank Transfer',
-          color: '#3B82F6'
+          color: '#9A563A'
         };
       case 'card':
       default:
@@ -170,7 +170,7 @@ const AllInvestorsScreen = () => {
 
     return (
       <View className="bg-white mx-4 mb-4 rounded-lg shadow-sm border border-gray-100 p-5">
-        <Text className="text-lg font-bold text-gray-800 mb-4">Investment Summary</Text>
+        <Text className="text-lg font-bold text-gray-800 mb-4">Investment Summary ({locationName})</Text>
         
         <View className="flex-row justify-between mb-4">
           <View className="items-center flex-1">
@@ -193,14 +193,14 @@ const AllInvestorsScreen = () => {
           </View>
         </View>
 
-        <View className="border-t border-gray-200 pt-4">
+        {/* <View className="border-t border-gray-200 pt-4">
           <Text className="text-center text-sm text-gray-600">
             Total Investment Amount
           </Text>
           <Text className="text-center text-2xl font-bold text-amber-700 mt-1">
             £{totalInvestment.toLocaleString()}
           </Text>
-        </View>
+        </View> */}
       </View>
     );
   };
@@ -219,7 +219,7 @@ const AllInvestorsScreen = () => {
     return (
       <SafeAreaView className="flex-1 bg-gray-50">
         {/* Header */}
-        <View className="flex-row items-center justify-between px-4 py-4 border-b border-gray-200 bg-white">
+        <View className="flex-row items-center justify-between px-4 py-4 border-b border-gray-200">
           <TouchableOpacity className="p-2" onPress={() => router.back()}>
             <Feather name="arrow-left" size={24} color="#000" />
           </TouchableOpacity>
@@ -240,7 +240,7 @@ const AllInvestorsScreen = () => {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-4 border-b border-gray-200 bg-white">
+      <View className="flex-row items-center justify-between px-4 py-4 border-b border-gray-200">
         <TouchableOpacity className="p-2" onPress={() => router.back()}>
           <Feather name="arrow-left" size={24} color="#000" />
         </TouchableOpacity>
@@ -252,12 +252,7 @@ const AllInvestorsScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Location Name Subtitle */}
-      <View className="bg-white px-4 pb-3 border-b border-gray-100">
-        <Text className="text-sm text-gray-600 text-center" numberOfLines={1}>
-          {locationName}
-        </Text>
-      </View>
+
 
       <FlatList
         data={investors}
