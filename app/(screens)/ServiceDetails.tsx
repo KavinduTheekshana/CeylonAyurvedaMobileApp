@@ -1,3 +1,5 @@
+// app/(screens)/ServiceDetails.tsx - Updated with offer support
+
 import React, { useEffect, useState } from 'react';
 import {
     View,
@@ -19,13 +21,14 @@ import { API_BASE_URL } from "@/config/api";
 import BookingProgressBar from '../components/BookingProgressBar';
 import { fetchBookingCountData } from '../utils/booking';
 
-// Define your Service type with booking_count and discount_price added
+// Define your Service type with offer field added
 type Service = {
     id: number;
     title: string;
     subtitle: string;
     price: number;
     discount_price?: number | null;
+    offer: number; // Added offer field (0 or 1)
     duration: number;
     benefits: string;
     image: string | null;
@@ -66,6 +69,11 @@ const ServiceDetailsScreen = () => {
             service.discount_price !== undefined &&
             parseFloat(String(service.discount_price)) === 0
         );
+    };
+
+    // Helper function to check if service has an offer
+    const hasOffer = (service: Service): boolean => {
+        return service.offer === 1;
     };
 
     // Check if user is a guest
@@ -125,10 +133,11 @@ const ServiceDetailsScreen = () => {
             console.log('No service data found in params:', params);
             throw new Error('No service data provided');
         }
-        
+
         if (typeof params.service === 'string') {
             try {
                 service = JSON.parse(params.service);
+                console.log('Successfully parsed service JSON:', service);
             } catch (parseError) {
                 console.error('Failed to parse service JSON:', parseError, params.service);
                 throw new Error('Invalid service data format');
@@ -143,6 +152,7 @@ const ServiceDetailsScreen = () => {
             throw new Error('Incomplete service data');
         }
 
+        // Set the header title to the service title
         useEffect(() => {
             navigation.setOptions({
                 title: service.title,
@@ -177,9 +187,14 @@ const ServiceDetailsScreen = () => {
         );
     }
 
-    // Fetch booking count data
+    // Fetch booking count data - only if service has an offer
     useEffect(() => {
         const loadBookingData = async () => {
+            // Only fetch booking data if the service has an offer
+            if (!hasOffer(service)) {
+                return;
+            }
+
             setLoading(true);
             try {
                 const bookingData = await fetchBookingCountData(service.id, API_BASE_URL);
@@ -194,8 +209,8 @@ const ServiceDetailsScreen = () => {
         loadBookingData();
     }, [service.id]);
 
-    // Determine if Book Now button should be disabled - only for free services
-    const shouldDisableBookButton = isServiceFree(service) && hasBookedThisService;
+    // Determine if Book Now button should be disabled - only for free services with offers
+    const shouldDisableBookButton = hasOffer(service) && isServiceFree(service) && hasBookedThisService;
 
     const handleBookNow = () => {
         // If guest, show auth modal
@@ -204,8 +219,8 @@ const ServiceDetailsScreen = () => {
             return;
         }
 
-        // If free service and already booked, show message but don't proceed
-        if (isServiceFree(service) && hasBookedThisService) {
+        // If free service with offer and already booked, show message but don't proceed
+        if (hasOffer(service) && isServiceFree(service) && hasBookedThisService) {
             Alert.alert(
                 "Booking Limit Reached",
                 "You've already booked this free service. Each user can book a free service only once.",
@@ -214,7 +229,7 @@ const ServiceDetailsScreen = () => {
             return;
         }
 
-        // Navigate to therapist selection screen (this is the key change)
+        // Navigate to therapist selection screen
         router.push({
             pathname: "/(screens)/BookingTherapistScreen",
             params: {
@@ -252,11 +267,11 @@ const ServiceDetailsScreen = () => {
                                 <>
                                     <View style={[
                                         styles.infoBox,
-                                        isFreeService && styles.freeServiceInfoBox
+                                        isFreeService && hasOffer(service) && styles.freeServiceInfoBox
                                     ]}>
                                         <Text style={styles.infoLabel}>Price</Text>
                                         {service.discount_price !== null && service.discount_price !== undefined ? (
-                                            isFreeService ? (
+                                            isFreeService && hasOffer(service) ? (
                                                 <Text style={styles.freePrice}>FREE</Text>
                                             ) : (
                                                 <View style={styles.priceContainer}>
@@ -278,41 +293,45 @@ const ServiceDetailsScreen = () => {
                         })()}
                     </View>
 
-                    {/* Booking Progress Bar - Only shown when discount price is 0 (FREE) */}
-                    {service.discount_price !== null &&
-                        service.discount_price !== undefined &&
-                        parseFloat(String(service.discount_price)) === 0 && (
-                            <View style={styles.bookingProgressContainer}>
-                                {loading ? (
-                                    <ActivityIndicator size="small" color="#9A563A" style={{ marginVertical: 20 }} />
-                                ) : (
-                                    <BookingProgressBar
-                                        current={bookingData.count}
-                                        max={bookingData.max}
-                                        label="Booking Popularity"
-                                    />
-                                )}
-                                <Text style={styles.infoLabel}>Once you've completed 80 bookings, one of our team members will get in touch with you. At that point, you'll also have the option to reschedule your booking if needed. For now, just choose a date and time to create your pre booking.</Text>
+                    {/* Booking Progress Bar - ONLY shown when service has offer enabled */}
+                    {hasOffer(service) && (
+                        <View style={styles.bookingProgressContainer}>
+                            {loading ? (
+                                <ActivityIndicator size="small" color="#9A563A" style={{ marginVertical: 20 }} />
+                            ) : (
+                                <BookingProgressBar
+                                    current={bookingData.count}
+                                    max={bookingData.max}
+                                    label="Booking Popularity"
+                                />
+                            )}
+                            <Text style={styles.infoLabel}>
+                                Once you've completed 80 bookings, one of our team members will get in touch with you. 
+                                At that point, you'll also have the option to reschedule your booking if needed. 
+                                For now, just choose a date and time to create your pre booking.
+                            </Text>
 
-                                {isServiceFree(service) && (
-                                    hasBookedThisService ? (
-                                        <View style={styles.alreadyBookedContainer}>
-                                            <Feather name="check-circle" size={16} color="#F44336" style={{ marginRight: 5 }} />
-                                            <Text style={styles.alreadyBookedText}>
-                                                You have already booked this free service.
-                                            </Text>
-                                        </View>
-                                    ) : (
-                                        <View style={styles.freeServiceLimitBox}>
-                                            <Feather name="info" size={16} color="#9A563A" style={{ marginRight: 8 }} />
-                                            <Text style={styles.freeServiceLimitText}>
-                                                Note: Free services are limited to one booking per user.
-                                            </Text>
-                                        </View>
-                                    )
-                                )}
-                            </View>
-                        )}
+                            {isServiceFree(service) && (
+                                hasBookedThisService ? (
+                                    <View style={styles.alreadyBookedContainer}>
+                                        <Feather name="check-circle" size={16} color="#F44336" style={{ marginRight: 5 }} />
+                                        <Text style={styles.alreadyBookedText}>
+                                            You have already booked this free service.
+                                        </Text>
+                                    </View>
+                                ) : (
+                                    <View style={styles.freeServiceLimitBox}>
+                                        <Feather name="info" size={16} color="#9A563A" style={{ marginRight: 8 }} />
+                                        <Text style={styles.freeServiceLimitText}>
+                                            Note: Free services are limited to one booking per user.
+                                        </Text>
+                                    </View>
+                                )
+                            )}
+                        </View>
+                    )}
+
+             
 
                     {service.benefits && (
                         <View style={styles.descriptionContainer}>
@@ -456,6 +475,29 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 2,
         elevation: 1,
+    },
+    offerBadgeContainer: {
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    offerBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FF4081',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    offerBadgeText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '600',
+        marginLeft: 6,
     },
     descriptionContainer: {
         backgroundColor: '#fff',

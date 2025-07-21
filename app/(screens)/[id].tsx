@@ -1,3 +1,5 @@
+// app/(screens)/[id].tsx - Updated with offer field
+
 import React, { useEffect, useState } from 'react';
 import {
     View,
@@ -22,15 +24,16 @@ const API_URL = `${API_BASE_URL}/api/services/`;
 const { width } = Dimensions.get('window');
 const itemWidth = (width - 45) / 2; // 45 accounts for container padding and space between items
 
-// Define Service type outside the component
+// Define Service type with offer field
 type Service = {
     id: number;
     title: string;
     subtitle: string;
     price: number;
     discount_price?: number | null;
-    benefits: string;
+    offer: number; // Added offer field (0 or 1)
     duration: number;
+    benefits: string;
     image: string | null;
     description?: string;
 };
@@ -80,11 +83,14 @@ const ServicesScreen = () => {
             .then(response => response.json())
             .then(data => {
                 if (data.success && Array.isArray(data.data)) {
-                    const updatedData = data.data.map((item: { image: any; }) => ({
+                    const updatedData = data.data.map((item: any) => ({
                         ...item,
-                        image: item.image ? `${API_BASE_URL}/storage/${item.image}` : null
+                        image: item.image ? `${API_BASE_URL}/storage/${item.image}` : null,
+                        // Ensure offer field is included
+                        offer: item.offer || 0
                     }));
                     setServices(updatedData);
+                    console.log('Services loaded with offer field:', updatedData);
                 }
             })
             .catch(error => console.error('Error fetching services:', error))
@@ -92,6 +98,8 @@ const ServicesScreen = () => {
     }, [treatmentId, treatmentName, navigation]);
 
     const handleServicePress = (service: Service) => {
+        console.log('Navigating to service details with offer:', service.offer);
+        
         // Use ONLY router.push (removing the navigation.navigate call entirely)
         router.push({
             pathname: "/(screens)/ServiceDetails",
@@ -102,6 +110,7 @@ const ServicesScreen = () => {
                     subtitle: service.subtitle || '',
                     price: service.price || 0,
                     discount_price: service.discount_price || null,
+                    offer: service.offer || 0, // Include offer field
                     duration: service.duration || 0,
                     benefits: service.benefits || '',
                     image: service.image ?
@@ -122,17 +131,22 @@ const ServicesScreen = () => {
         const isFreeSevice = item.discount_price !== null && 
                             item.discount_price !== undefined && 
                             parseFloat(String(item.discount_price)) === 0;
+        
+        // Check if service has an offer
+        const hasOffer = item.offer === 1;
                             
         return (
         <TouchableOpacity
             className={`bg-white rounded-[14px] overflow-hidden mb-4 w-[48%] shadow-sm m-1 ${
-                isFreeSevice ? 'bg-green-50 border border-green-200' : ''
+                isFreeSevice && hasOffer ? 'bg-green-50 border border-green-200' : ''
             }`}
             onPress={() => handleServicePress(item)}
         >
             {item.image && <Image source={{ uri: item.image }}   className="w-full h-[120px]" />}
 
             <View className="p-3">
+         
+
                 <Text className="text-base font-semibold text-black mb-1" numberOfLines={1}>{item.title}</Text>
                 {item.subtitle && (
                     <Text className="text-sm text-gray-600 mb-2" numberOfLines={1}>{item.subtitle}</Text>
@@ -141,7 +155,7 @@ const ServicesScreen = () => {
                     {/* Price display with discount handling */}
                     <View className="flex-row items-center">
                         {item.discount_price !== null && item.discount_price !== undefined ? (
-                            isFreeSevice ? (
+                            isFreeSevice && hasOffer ? (
                                 <Text className="text-base font-bold text-green-600">FREE</Text>
                             ) : (
                                 <>
