@@ -1,4 +1,4 @@
-// BookingCheckoutScreen.tsx - Updated with discount price support
+// BookingCheckoutScreen.tsx - Updated with coupon code support
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -30,7 +30,8 @@ type Service = {
     title: string;
     subtitle: string;
     price: number;
-    discount_price?: number; // Added discount_price field
+    discount_price?: number;
+    offer: number;
     duration: number;
     benefits: string;
     image: string | null;
@@ -48,6 +49,15 @@ type Address = {
     city: string;
     postcode: string;
     is_default: boolean;
+};
+
+// Add Coupon type
+type Coupon = {
+    id: number;
+    code: string;
+    type: 'percentage' | 'fixed';
+    value: number;
+    description?: string;
 };
 
 // Define your navigation param list for all screens
@@ -85,10 +95,11 @@ type BookingCheckoutScreenRouteProp = RouteProp<RootStackParamList, 'BookingChec
 // Type for the navigation
 type BookingCheckoutScreenNavigationProp = StackNavigationProp<RootStackParamList>;
 
-// API URLs - Fixed URL paths
+// API URLs
 const SERVICE_API_URL = `${API_BASE_URL}/api/services`;
 const ADDRESS_API_URL = `${API_BASE_URL}/api/addresses`;
 const BOOKING_API_URL = `${API_BASE_URL}/api/bookings`;
+const COUPON_API_URL = `${API_BASE_URL}/api/coupons`;
 
 /**
  * Calculate distance between two points using Haversine formula (in miles)
@@ -206,7 +217,7 @@ async function validateAddressLocation(postcode: string, selectedLocation: any):
 const BookingCheckoutScreen = () => {
     const route = useRoute<BookingCheckoutScreenRouteProp>();
     const navigation = useNavigation<BookingCheckoutScreenNavigationProp>();
-    const { selectedLocation } = useLocation(); // Get selected location from context
+    const { selectedLocation } = useLocation();
     const {
         serviceId,
         serviceName,
@@ -244,34 +255,77 @@ const BookingCheckoutScreen = () => {
     const [notes, setNotes] = useState<string>('');
     const [saveAddress, setSaveAddress] = useState<boolean>(true);
 
-    // HELPER FUNCTIONS FOR PRICING
-    const getEffectivePrice = (): number => {
+    // COUPON STATES
+    const [couponCode, setCouponCode] = useState<string>('');
+    const [validatingCoupon, setValidatingCoupon] = useState<boolean>(false);
+    const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+    const [couponError, setCouponError] = useState<string>('');
+    const [couponDiscount, setCouponDiscount] = useState<number>(0);
+    const [finalPrice, setFinalPrice] = useState<number>(0);
+
+    // HELPER FUNCTIONS FOR PRICING WITH COUPON
+    // const getBasePrice = (): number => {
+    //     if (!serviceDetails) return 0;
+    //     console.log('Service detailsXXXXXX:', serviceDetails.discount_price);
+    //     // If discount_price exists and is greater than 0, use it
+    //     if (serviceDetails.discount_price && serviceDetails.discount_price > 0) {
+
+    //         return serviceDetails.discount_price;
+
+    //     }
+
+    //     // Otherwise use regular price
+    //     return serviceDetails.price;
+    // };
+
+    const getBasePrice = (): number => {
         if (!serviceDetails) return 0;
 
-        // If discount_price exists and is greater than 0, use it
-        if (serviceDetails.discount_price && serviceDetails.discount_price > 0) {
+        // Check if discount_price is a number and >= 0
+        if (typeof serviceDetails.discount_price === 'number' && serviceDetails.discount_price >= 0) {
             return serviceDetails.discount_price;
         }
 
         // Otherwise use regular price
         return serviceDetails.price;
     };
+    console.log('Base priceXXXXX:', getBasePrice());
 
-    const hasDiscount = (): boolean => {
-        if (!serviceDetails) return false;
-        return !!(serviceDetails.discount_price && serviceDetails.discount_price > 0 && serviceDetails.discount_price < serviceDetails.price);
+    const calculateFinalPrice = (): number => {
+        const basePrice = getBasePrice();
+        return Math.max(0, basePrice - couponDiscount);
     };
 
-    const getDiscountAmount = (): number => {
-        if (!hasDiscount() || !serviceDetails) return 0;
+    // const hasServiceDiscount = (): boolean => {
+    //     if (!serviceDetails) return false;
+    //     return !!(serviceDetails.discount_price && serviceDetails.discount_price > 0 && serviceDetails.discount_price < serviceDetails.price);
+    // };
+
+    const hasServiceDiscount = (): boolean => {
+        if (!serviceDetails) return false;
+        return typeof serviceDetails.discount_price === 'number' && serviceDetails.discount_price >= 0;
+    };
+
+
+    const getServiceDiscountAmount = (): number => {
+        if (!hasServiceDiscount() || !serviceDetails) return 0;
         return serviceDetails.price - (serviceDetails.discount_price || 0);
     };
 
-    const getDiscountPercentage = (): number => {
-        if (!hasDiscount() || !serviceDetails) return 0;
-        const discountAmount = getDiscountAmount();
+    const getServiceDiscountPercentage = (): number => {
+        if (!hasServiceDiscount() || !serviceDetails) return 0;
+        const discountAmount = getServiceDiscountAmount();
         return Math.round((discountAmount / serviceDetails.price) * 100);
     };
+
+    const getTotalSavings = (): number => {
+        return getServiceDiscountAmount() + couponDiscount;
+    };
+
+    // Update final price whenever base price or coupon discount changes
+    useEffect(() => {
+        setFinalPrice(calculateFinalPrice());
+    }, [serviceDetails, couponDiscount]);
 
     useEffect(() => {
         // Check if user is authenticated
@@ -354,12 +408,13 @@ const BookingCheckoutScreen = () => {
             console.log('Service data response:', data);
 
             if (data.success && data.data) {
-                // UPDATED: Parse discount_price from API response
                 const serviceData = {
                     ...data.data,
                     price: parseFloat(data.data.price) || 0,
                     discount_price: data.data.discount_price ? parseFloat(data.data.discount_price) : undefined
+
                 };
+                console.log('Service data with price:', data.data.price, 'and discount price:', data.data.discount_price);
 
                 console.log('Parsed service data:', serviceData);
                 setServiceDetails(serviceData);
@@ -459,6 +514,69 @@ const BookingCheckoutScreen = () => {
         navigation.navigate('AddAddressScreen');
     };
 
+    // COUPON VALIDATION FUNCTION
+    const validateCoupon = async () => {
+        if (!couponCode.trim()) {
+            setCouponError('Please enter a coupon code');
+            return;
+        }
+
+        setValidatingCoupon(true);
+        setCouponError('');
+
+        try {
+            const token = await AsyncStorage.getItem('access_token');
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const response = await fetch(`${COUPON_API_URL}/validate`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    code: couponCode.toUpperCase(),
+                    service_id: serviceId,
+                    amount: getBasePrice()
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.valid) {
+                setAppliedCoupon(data.coupon);
+                setCouponDiscount(data.discount_amount);
+                setCouponError('');
+                Alert.alert(
+                    'Success!',
+                    `Coupon applied! You saved £${data.discount_amount.toFixed(2)}`
+                );
+            } else {
+                setCouponError(data.message || 'Invalid coupon code');
+                setAppliedCoupon(null);
+                setCouponDiscount(0);
+            }
+        } catch (error) {
+            console.error('Error validating coupon:', error);
+            setCouponError('Failed to validate coupon. Please try again.');
+            setAppliedCoupon(null);
+            setCouponDiscount(0);
+        } finally {
+            setValidatingCoupon(false);
+        }
+    };
+
+    const removeCoupon = () => {
+        setAppliedCoupon(null);
+        setCouponDiscount(0);
+        setCouponCode('');
+        setCouponError('');
+    };
+
     React.useLayoutEffect(() => {
         navigation.setOptions({
             title: 'Complete Booking',
@@ -529,7 +647,6 @@ const BookingCheckoutScreen = () => {
         await submitBookingData();
     };
 
-    // UPDATED: Include therapist information in booking data
     const submitBookingData = async () => {
         setSubmitting(true);
 
@@ -546,11 +663,11 @@ const BookingCheckoutScreen = () => {
             postcode,
             notes,
             save_address: saveAddress,
-            // Include therapist information
             therapist_id: therapistId,
             therapist_name: therapistName,
-            // Include location information for validation
-            location_id: selectedLocation?.id
+            location_id: selectedLocation?.id,
+            // Add coupon code if applied
+            coupon_code: appliedCoupon ? appliedCoupon.code : null
         };
 
         console.log('Booking data being sent:', JSON.stringify(bookingData));
@@ -574,8 +691,7 @@ const BookingCheckoutScreen = () => {
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 30000);
-            console.log('-------------------------------------------------');
-            console.log(bookingData);
+
             const response = await fetch(BOOKING_API_URL, {
                 method: 'POST',
                 headers,
@@ -720,7 +836,7 @@ const BookingCheckoutScreen = () => {
                         </View>
                     )}
 
-                    {/* Service Details - UPDATED with discount display */}
+                    {/* Service Details */}
                     <View style={styles.card}>
                         <Text style={styles.sectionTitle}>Service Details</Text>
                         <View style={styles.detailRow}>
@@ -732,31 +848,20 @@ const BookingCheckoutScreen = () => {
                             <Text style={styles.detailValue}>{serviceDetails.duration} min</Text>
                         </View>
 
-                        {/* Price Display with Discount Support */}
+                        {/* Price Display with Service Discount */}
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Price:</Text>
                             <View style={styles.priceContainer}>
-                                {hasDiscount() ? (
+                                {hasServiceDiscount() ? (
                                     <View style={styles.discountPriceContainer}>
                                         <Text style={styles.originalPrice}>£{serviceDetails.price.toFixed(2)}</Text>
-                                        <Text style={styles.discountedPrice}>£{getEffectivePrice().toFixed(2)}</Text>
-                                        {/* <View style={styles.discountBadge}>
-                                            <Text style={styles.discountBadgeText}>-{getDiscountPercentage()}%</Text>
-                                        </View> */}
+                                        <Text style={styles.discountedPrice}>£{getBasePrice().toFixed(2)}</Text>
                                     </View>
                                 ) : (
                                     <Text style={styles.detailValue}>£{serviceDetails.price.toFixed(2)}</Text>
                                 )}
                             </View>
                         </View>
-
-                        {/* Show discount amount if there's a discount */}
-                        {hasDiscount() && (
-                            <View style={styles.savingsRow}>
-                                <Text style={styles.savingsLabel}>You save:</Text>
-                                <Text style={styles.savingsAmount}>£{getDiscountAmount().toFixed(2)}</Text>
-                            </View>
-                        )}
 
                         {/* Therapist information */}
                         <View style={styles.detailRow}>
@@ -776,6 +881,65 @@ const BookingCheckoutScreen = () => {
                             <Text style={styles.detailLabel}>Time:</Text>
                             <Text style={styles.detailValue}>{selectedTime}</Text>
                         </View>
+                    </View>
+
+                    {/* COUPON CODE SECTION */}
+                    <View style={styles.card}>
+                        <Text style={styles.sectionTitle}>Promo Code</Text>
+
+                        {!appliedCoupon ? (
+                            <View style={styles.couponInputContainer}>
+                                <TextInput
+                                    style={[styles.couponInput, couponError ? styles.inputError : null]}
+                                    value={couponCode}
+                                    onChangeText={(text) => {
+                                        setCouponCode(text);
+                                        setCouponError('');
+                                    }}
+                                    placeholder="Enter coupon code"
+                                    autoCapitalize="characters"
+                                    returnKeyType="done"
+                                />
+                                <TouchableOpacity
+                                    style={[
+                                        styles.applyCouponButton,
+                                        (!couponCode.trim() || validatingCoupon) && styles.applyCouponButtonDisabled
+                                    ]}
+                                    onPress={validateCoupon}
+                                    disabled={!couponCode.trim() || validatingCoupon}
+                                >
+                                    {validatingCoupon ? (
+                                        <ActivityIndicator size="small" color="#fff" />
+                                    ) : (
+                                        <Text style={styles.applyCouponButtonText}>Apply</Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <View style={styles.appliedCouponContainer}>
+                                <View style={styles.appliedCouponInfo}>
+                                    <Feather name="check-circle" size={20} color="#10B981" />
+                                    <View style={styles.appliedCouponDetails}>
+                                        <Text style={styles.appliedCouponCode}>{appliedCoupon.code}</Text>
+                                        <Text style={styles.appliedCouponDescription}>
+                                            {appliedCoupon.type === 'percentage'
+                                                ? `${appliedCoupon.value}% off`
+                                                : `£${appliedCoupon.value} off`}
+                                        </Text>
+                                    </View>
+                                </View>
+                                <TouchableOpacity
+                                    style={styles.removeCouponButton}
+                                    onPress={removeCoupon}
+                                >
+                                    <Feather name="x" size={20} color="#EF4444" />
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                        {couponError && (
+                            <Text style={styles.couponErrorText}>{couponError}</Text>
+                        )}
                     </View>
 
                     {/* Add Address Button for Authenticated Users without Addresses */}
@@ -988,33 +1152,55 @@ const BookingCheckoutScreen = () => {
                         />
                     </View>
 
-                    {/* Total - UPDATED with discount display */}
+                    {/* Payment Summary with Coupon */}
                     <View style={styles.card}>
                         <Text style={styles.sectionTitle}>Payment Summary</Text>
 
-                        {hasDiscount() && (
+                        {/* Original Price (if service has discount) */}
+                        {hasServiceDiscount() && (
                             <>
                                 <View style={styles.totalRow}>
                                     <Text style={styles.totalLabel}>Original Price:</Text>
                                     <Text style={styles.originalTotalPrice}>£{serviceDetails.price.toFixed(2)}</Text>
                                 </View>
                                 <View style={styles.totalRow}>
-                                    <Text style={styles.discountLabel}>Discount ({getDiscountPercentage()}% off):</Text>
-                                    <Text style={styles.discountAmount}>-£{getDiscountAmount().toFixed(2)}</Text>
+                                    <Text style={styles.discountLabel}>Service Discount ({getServiceDiscountPercentage()}% off):</Text>
+                                    <Text style={styles.discountAmount}>-£{getServiceDiscountAmount().toFixed(2)}</Text>
                                 </View>
-                                <View style={styles.divider} />
                             </>
                         )}
 
+                        {/* Base Price (after service discount) */}
+                        {(hasServiceDiscount() || appliedCoupon) && (
+                            <View style={styles.totalRow}>
+                                <Text style={styles.totalLabel}>Subtotal:</Text>
+                                <Text style={styles.totalValue}>£{getBasePrice().toFixed(2)}</Text>
+                            </View>
+                        )}
+
+                        {/* Coupon Discount */}
+                        {appliedCoupon && couponDiscount > 0 && (
+                            <View style={styles.totalRow}>
+                                <Text style={styles.discountLabel}>
+                                    Coupon ({appliedCoupon.code}):
+                                </Text>
+                                <Text style={styles.discountAmount}>-£{couponDiscount.toFixed(2)}</Text>
+                            </View>
+                        )}
+
+                        {(hasServiceDiscount() || appliedCoupon) && <View style={styles.divider} />}
+
+                        {/* Final Total */}
                         <View style={styles.totalRow}>
                             <Text style={styles.totalLabel}>Total Amount:</Text>
-                            <Text style={styles.totalValue}>£{getEffectivePrice().toFixed(2)}</Text>
+                            <Text style={styles.totalValue}>£{finalPrice.toFixed(2)}</Text>
                         </View>
 
-                        {hasDiscount() && (
+                        {/* Total Savings */}
+                        {getTotalSavings() > 0 && (
                             <View style={styles.savingsSummary}>
                                 <Text style={styles.savingsSummaryText}>
-                                    🎉 You're saving £{getDiscountAmount().toFixed(2)} on this booking!
+                                    🎉 You're saving £{getTotalSavings().toFixed(2)} on this booking!
                                 </Text>
                             </View>
                         )}
@@ -1041,7 +1227,7 @@ const BookingCheckoutScreen = () => {
                             </View>
                         ) : (
                             <Text style={styles.confirmButtonText}>
-                                {!isAddressValid ? 'Address Outside Service Area' : 'Confirm Booking'}
+                                {!isAddressValid ? 'Address Outside Service Area' : `Confirm Booking - £${finalPrice.toFixed(2)}`}
                             </Text>
                         )}
                     </TouchableOpacity>
@@ -1171,7 +1357,6 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         textAlign: 'right',
     },
-    // NEW STYLES FOR DISCOUNT PRICING
     priceContainer: {
         alignItems: 'flex-end',
         flex: 2,
@@ -1223,6 +1408,76 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#2D5A3D',
         fontWeight: '600',
+    },
+    // COUPON STYLES
+    couponInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    couponInput: {
+        flex: 1,
+        backgroundColor: '#f9f9f9',
+        borderWidth: 1,
+        borderColor: '#ddd',
+        borderRadius: 8,
+        padding: 12,
+        fontSize: 16,
+        marginRight: 8,
+    },
+    applyCouponButton: {
+        backgroundColor: '#9A563A',
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        minWidth: 80,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    applyCouponButtonDisabled: {
+        backgroundColor: '#cccccc',
+    },
+    applyCouponButtonText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+    appliedCouponContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#F0FFF4',
+        padding: 12,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#10B981',
+    },
+    appliedCouponInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    appliedCouponDetails: {
+        marginLeft: 8,
+        flex: 1,
+    },
+    appliedCouponCode: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#065F46',
+    },
+    appliedCouponDescription: {
+        fontSize: 14,
+        color: '#10B981',
+        marginTop: 2,
+    },
+    removeCouponButton: {
+        padding: 8,
+    },
+    couponErrorText: {
+        color: '#EF4444',
+        fontSize: 14,
+        marginTop: 4,
     },
     totalRow: {
         flexDirection: 'row',
