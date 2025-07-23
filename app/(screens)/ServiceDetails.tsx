@@ -118,7 +118,7 @@ const ServiceDetailsScreen = () => {
             );
 
             setHasBookedThisService(serviceBooked);
-            console.log('Has user booked this service?', serviceBooked);
+            // console.log('Has user booked this service?', serviceBooked);
         } catch (error) {
             console.error('Error fetching user bookings:', error);
         } finally {
@@ -137,7 +137,7 @@ const ServiceDetailsScreen = () => {
         if (typeof params.service === 'string') {
             try {
                 service = JSON.parse(params.service);
-                console.log('Successfully parsed service JSON:', service);
+                // console.log('Successfully parsed service JSON:', service);
             } catch (parseError) {
                 console.error('Failed to parse service JSON:', parseError, params.service);
                 throw new Error('Invalid service data format');

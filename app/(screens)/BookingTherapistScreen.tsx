@@ -123,23 +123,23 @@ const BookingTherapistScreen = () => {
         setError(null);
 
         try {
-            console.log(`Fetching therapists for service ${serviceId}`);
+            // console.log(`Fetching therapists for service ${serviceId}`);
             
             // Build API URL with location parameter if location is selected
             let apiUrl = `${API_URL}/${serviceId}/therapists`;
             
             if (selectedLocation) {
                 apiUrl += `?location_id=${selectedLocation.id}`;
-                console.log(`Filtering by location: ${selectedLocation.name} (ID: ${selectedLocation.id})`);
+                // console.log(`Filtering by location: ${selectedLocation.name} (ID: ${selectedLocation.id})`);
             }
             
-            console.log(`API URL: ${apiUrl}`);
+            // console.log(`API URL: ${apiUrl}`);
 
             const response = await fetch(apiUrl);
             const data = await response.json();
 
-            console.log('=== FULL API RESPONSE ===');
-            console.log(JSON.stringify(data, null, 2));
+            // console.log('=== FULL API RESPONSE ===');
+            // console.log(JSON.stringify(data, null, 2));
 
             if (data.success && Array.isArray(data.data)) {
                 // Show all active therapists (location filtering is now done on backend)
@@ -148,7 +148,7 @@ const BookingTherapistScreen = () => {
                 });
 
                 setTherapists(activeTherapists);
-                console.log('Therapists loaded successfully:', activeTherapists.length);
+                // console.log('Therapists loaded successfully:', activeTherapists.length);
                 
                 if (activeTherapists.length === 0 && selectedLocation) {
                     console.log(`No therapists found for location: ${selectedLocation.name}`);

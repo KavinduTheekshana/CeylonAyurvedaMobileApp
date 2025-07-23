@@ -83,7 +83,7 @@ const BookingDateScreen = () => {
     const fetchAvailableDates = async () => {
         setLoading(true);
         try {
-            console.log(`Fetching available dates for therapist ${therapistId}`);
+            // console.log(`Fetching available dates for therapist ${therapistId}`);
 
             // Get therapist schedule from the service endpoint
             const therapistResponse = await fetch(
@@ -92,18 +92,18 @@ const BookingDateScreen = () => {
 
             if (therapistResponse.ok) {
                 const therapistData = await therapistResponse.json();
-                console.log('Therapist data response:', therapistData);
+                // console.log('Therapist data response:', therapistData);
 
                 if (therapistData.success && Array.isArray(therapistData.data)) {
                     // Find the specific therapist
                     const therapist = therapistData.data.find((t: any) => t.id === therapistId);
 
                     if (therapist) {
-                        console.log('Found therapist:', therapist);
+                        // console.log('Found therapist:', therapist);
                         setTherapistData(therapist);
                         
                         if (therapist.schedule) {
-                            console.log('Found therapist schedule:', therapist.schedule);
+                            // console.log('Found therapist schedule:', therapist.schedule);
                             generateAvailableDatesFromSchedule(therapist.schedule, therapist.work_start_date);
                             return;
                         }
@@ -125,8 +125,8 @@ const BookingDateScreen = () => {
 
     // Generate available dates based on therapist's actual schedule and work start date
     const generateAvailableDatesFromSchedule = (schedule?: any[], workStartDate?: string) => {
-        console.log('Generating available dates from schedule:', schedule);
-        console.log('Work start date:', workStartDate);
+        // console.log('Generating available dates from schedule:', schedule);
+        // console.log('Work start date:', workStartDate);
 
         let workingDays: number[] = [];
 
@@ -148,7 +148,7 @@ const BookingDateScreen = () => {
                 .filter((day, index, array) => array.indexOf(day) === index) // Remove duplicates
                 .filter(day => day !== undefined); // Remove invalid days
 
-            console.log('Working days from schedule:', workingDays);
+            // console.log('Working days from schedule:', workingDays);
         } else {
             // Fallback to typical working days if no schedule provided
             console.log('No schedule provided, using fallback working days');
@@ -165,7 +165,7 @@ const BookingDateScreen = () => {
             // If work start date is in the future, use that as the start date
             if (workStart > today) {
                 effectiveStartDate = workStart;
-                console.log('Using work start date as effective start:', workStartDate);
+                // console.log('Using work start date as effective start:', workStartDate);
             }
         }
 
@@ -183,8 +183,8 @@ const BookingDateScreen = () => {
             currentDate.setDate(currentDate.getDate() + 1);
         }
 
-        console.log(`Generated ${dates.length} available dates for working days:`, workingDays);
-        console.log(`Effective start date: ${effectiveStartDate.toISOString().split('T')[0]}`);
+        // console.log(`Generated ${dates.length} available dates for working days:`, workingDays);
+        // console.log(`Effective start date: ${effectiveStartDate.toISOString().split('T')[0]}`);
         
         setAvailableDates(dates);
         updateMarkedDates(dates, effectiveStartDate);

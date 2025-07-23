@@ -19,7 +19,7 @@ import { API_BASE_URL } from "@/config/api";
 type Booking = {
     id: number;
     service_id: number;
-    service_name: string;  // Changed from service_id to service_name
+    service_name: string;
     user_id: number | null;
     date: string;
     time: string;
@@ -32,6 +32,9 @@ type Booking = {
     postcode: string;
     notes: string | null;
     price: number;
+    original_price?: number; // Add this
+    discount_amount?: number; // Add this
+    coupon_code?: string; // Add this
     reference: string;
     status: string;
     therapist_id?: number;
@@ -44,7 +47,6 @@ type Booking = {
         duration: number;
     };
 };
-
 // Define your navigation param list
 type RootStackParamList = {
     Home: undefined;
@@ -197,7 +199,6 @@ const BookingConfirmationScreen = () => {
                                 {booking.service_name || 'N/A'}
                             </Text>
                         </View>
-                        {/* NEW: Display therapist information if available */}
                         {booking.therapist_name && (
                             <View style={styles.detailRow}>
                                 <Text style={styles.detailLabel}>Therapist:</Text>
@@ -212,10 +213,44 @@ const BookingConfirmationScreen = () => {
                             <Text style={styles.detailLabel}>Time:</Text>
                             <Text style={styles.detailValue}>{formatTime12Hour(booking.time)}</Text>
                         </View>
-                        <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>Price:</Text>
-                            <Text style={styles.detailValue}>£{booking.price}</Text>
-                        </View>
+
+                        {/* Price Information with Discount */}
+                        {booking.original_price && booking.discount_amount && booking.discount_amount > 0 ? (
+                            <>
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.detailLabel}>Original Price:</Text>
+                                    <Text style={[styles.detailValue, styles.originalPriceText]}>
+                                        £{booking.original_price.toFixed(2)}
+                                    </Text>
+                                </View>
+                                {booking.coupon_code && (
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.detailLabel}>Coupon Applied:</Text>
+                                        <Text style={[styles.detailValue, styles.couponText]}>
+                                            {booking.coupon_code}
+                                        </Text>
+                                    </View>
+                                )}
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.detailLabel}>Discount:</Text>
+                                    <Text style={[styles.detailValue, styles.discountText]}>
+                                        -£{booking.discount_amount.toFixed(2)}
+                                    </Text>
+                                </View>
+                                <View style={styles.detailRow}>
+                                    <Text style={styles.detailLabel}>Final Price:</Text>
+                                    <Text style={[styles.detailValue, styles.finalPriceText]}>
+                                        £{booking.price.toFixed(2)}
+                                    </Text>
+                                </View>
+                            </>
+                        ) : (
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Price:</Text>
+                                <Text style={styles.detailValue}>£{booking.price}</Text>
+                            </View>
+                        )}
+
                         <View style={styles.detailRow}>
                             <Text style={styles.detailLabel}>Status:</Text>
                             <Text style={[styles.detailValue, styles.statusText]}>
@@ -380,6 +415,23 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
+    },
+    originalPriceText: {
+        textDecorationLine: 'line-through',
+        color: '#888',
+    },
+    couponText: {
+        color: '#10B981',
+        fontWeight: '600',
+    },
+    discountText: {
+        color: '#E53E3E',
+        fontWeight: '600',
+    },
+    finalPriceText: {
+        color: '#9A563A',
+        fontWeight: 'bold',
+        fontSize: 18,
     },
 });
 

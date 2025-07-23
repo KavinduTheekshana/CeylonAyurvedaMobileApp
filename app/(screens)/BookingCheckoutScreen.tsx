@@ -167,7 +167,7 @@ async function validateAddressLocation(postcode: string, selectedLocation: any):
     }
 
     try {
-        console.log(`Validating postcode: ${postcode} against location: ${selectedLocation.name}`);
+        // console.log(`Validating postcode: ${postcode} against location: ${selectedLocation.name}`);
 
         // Get coordinates for the input postcode
         const coordinates = await getPostcodeCoordinates(postcode);
@@ -289,7 +289,6 @@ const BookingCheckoutScreen = () => {
         // Otherwise use regular price
         return serviceDetails.price;
     };
-    console.log('Base priceXXXXX:', getBasePrice());
 
     const calculateFinalPrice = (): number => {
         const basePrice = getBasePrice();
@@ -402,10 +401,10 @@ const BookingCheckoutScreen = () => {
     const fetchServiceDetails = async () => {
         try {
             const response = await fetch(`${SERVICE_API_URL}/detail/${serviceId}`);
-            console.log('Fetching service details from:', `${SERVICE_API_URL}/detail/${serviceId}`);
+            // console.log('Fetching service details from:', `${SERVICE_API_URL}/detail/${serviceId}`);
 
             const data = await response.json();
-            console.log('Service data response:', data);
+            // console.log('Service data response:', data);
 
             if (data.success && data.data) {
                 const serviceData = {
@@ -414,9 +413,9 @@ const BookingCheckoutScreen = () => {
                     discount_price: data.data.discount_price ? parseFloat(data.data.discount_price) : undefined
 
                 };
-                console.log('Service data with price:', data.data.price, 'and discount price:', data.data.discount_price);
+                // console.log('Service data with price:', data.data.price, 'and discount price:', data.data.discount_price);
 
-                console.log('Parsed service data:', serviceData);
+                // console.log('Parsed service data:', serviceData);
                 setServiceDetails(serviceData);
             } else {
                 console.error('API error response:', data);
@@ -468,7 +467,7 @@ const BookingCheckoutScreen = () => {
             });
 
             const data = await response.json();
-            console.log('Address data response:', data.success ? 'Success' : 'Failed');
+            // console.log('Address data response:', data.success ? 'Success' : 'Failed');
 
             if (data.success && Array.isArray(data.data)) {
                 setSavedAddresses(data.data);
@@ -670,7 +669,7 @@ const BookingCheckoutScreen = () => {
             coupon_code: appliedCoupon ? appliedCoupon.code : null
         };
 
-        console.log('Booking data being sent:', JSON.stringify(bookingData));
+        // console.log('Booking data being sent:', JSON.stringify(bookingData));
 
         try {
             const token = await AsyncStorage.getItem('access_token');
@@ -682,12 +681,14 @@ const BookingCheckoutScreen = () => {
 
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
-                console.log('Sending request with auth token');
+                // console.log('Sending request with auth token');
+                console.log('Auth token:', token);
             } else {
                 console.log('No auth token available - addresses will not be saved');
             }
 
-            console.log('Submitting booking to:', BOOKING_API_URL);
+            // console.log('Submitting booking to:', BOOKING_API_URL);
+            // console.log('Booking data :', JSON.stringify(bookingData));
 
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -707,7 +708,7 @@ const BookingCheckoutScreen = () => {
             }
 
             const data = await response.json();
-            console.log('Booking response:', data);
+            // console.log('Booking response:', data);
 
             if (data.success && data.data && data.data.id) {
                 try {

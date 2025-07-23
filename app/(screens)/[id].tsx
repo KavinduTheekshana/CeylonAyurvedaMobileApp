@@ -90,7 +90,7 @@ const ServicesScreen = () => {
                         offer: item.offer || 0
                     }));
                     setServices(updatedData);
-                    console.log('Services loaded with offer field:', updatedData);
+                    // console.log('Services loaded with offer field:', updatedData);
                 }
             })
             .catch(error => console.error('Error fetching services:', error))
