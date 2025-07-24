@@ -12,10 +12,10 @@ import { StripeProvider } from '@stripe/stripe-react-native';
 SplashScreen.preventAutoHideAsync();
 
 // Live 
-const STRIPE_PUBLISHABLE_KEY = 'pk_live_51QAsolDy2cvEu4lhv0ke7wMzzIP09Or21JF3mUHDKeMpUbIeTnIT6N9epe5HqDecDAKF0ffUgMByn89Uy0I7OC2000LrWUnfKK';
+// const STRIPE_PUBLISHABLE_KEY = 'pk_live_51QAsolDy2cvEu4lhv0ke7wMzzIP09Or21JF3mUHDKeMpUbIeTnIT6N9epe5HqDecDAKF0ffUgMByn89Uy0I7OC2000LrWUnfKK';
 
 // Test 
-// const STRIPE_PUBLISHABLE_KEY = 'pk_test_51QAsolDy2cvEu4lhZ9cyTY3lCgpQQRboHfg6UihVxtbQLcXzPcOQjFZMFuQVQDRXA1R3lXLUaHTD3BZcDXvPJMwh00h2lAe1EY';
+const STRIPE_PUBLISHABLE_KEY = 'pk_test_51QAsolDy2cvEu4lhZ9cyTY3lCgpQQRboHfg6UihVxtbQLcXzPcOQjFZMFuQVQDRXA1R3lXLUaHTD3BZcDXvPJMwh00h2lAe1EY';
 
 export default function RootLayout() {
   const router = useRouter();

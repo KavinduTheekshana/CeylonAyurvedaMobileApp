@@ -1,4 +1,4 @@
-// BookingCheckoutScreen.tsx - Updated with coupon code support
+// BookingCheckoutScreen.tsx - Updated with Stripe payment method selection
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -22,7 +22,8 @@ import { HeaderBackButton } from '@react-navigation/elements';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from "@/config/api";
 import { useLocation } from '../contexts/LocationContext';
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialIcons } from '@expo/vector-icons';
+import { useStripe } from '@stripe/stripe-react-native';
 
 // Define your Service type - UPDATED with discount_price
 type Service = {
@@ -59,6 +60,9 @@ type Coupon = {
     value: number;
     description?: string;
 };
+
+// Payment Method Types
+type PaymentMethod = 'card' | 'bank_transfer';
 
 // Define your navigation param list for all screens
 type RootStackParamList = {
@@ -167,8 +171,6 @@ async function validateAddressLocation(postcode: string, selectedLocation: any):
     }
 
     try {
-        // console.log(`Validating postcode: ${postcode} against location: ${selectedLocation.name}`);
-
         // Get coordinates for the input postcode
         const coordinates = await getPostcodeCoordinates(postcode);
 
@@ -218,6 +220,8 @@ const BookingCheckoutScreen = () => {
     const route = useRoute<BookingCheckoutScreenRouteProp>();
     const navigation = useNavigation<BookingCheckoutScreenNavigationProp>();
     const { selectedLocation } = useLocation();
+    const { initPaymentSheet, presentPaymentSheet } = useStripe();
+    
     const {
         serviceId,
         serviceName,
@@ -255,6 +259,9 @@ const BookingCheckoutScreen = () => {
     const [notes, setNotes] = useState<string>('');
     const [saveAddress, setSaveAddress] = useState<boolean>(true);
 
+    // Payment method states
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
+
     // COUPON STATES
     const [couponCode, setCouponCode] = useState<string>('');
     const [validatingCoupon, setValidatingCoupon] = useState<boolean>(false);
@@ -264,20 +271,6 @@ const BookingCheckoutScreen = () => {
     const [finalPrice, setFinalPrice] = useState<number>(0);
 
     // HELPER FUNCTIONS FOR PRICING WITH COUPON
-    // const getBasePrice = (): number => {
-    //     if (!serviceDetails) return 0;
-    //     console.log('Service detailsXXXXXX:', serviceDetails.discount_price);
-    //     // If discount_price exists and is greater than 0, use it
-    //     if (serviceDetails.discount_price && serviceDetails.discount_price > 0) {
-
-    //         return serviceDetails.discount_price;
-
-    //     }
-
-    //     // Otherwise use regular price
-    //     return serviceDetails.price;
-    // };
-
     const getBasePrice = (): number => {
         if (!serviceDetails) return 0;
 
@@ -295,16 +288,10 @@ const BookingCheckoutScreen = () => {
         return Math.max(0, basePrice - couponDiscount);
     };
 
-    // const hasServiceDiscount = (): boolean => {
-    //     if (!serviceDetails) return false;
-    //     return !!(serviceDetails.discount_price && serviceDetails.discount_price > 0 && serviceDetails.discount_price < serviceDetails.price);
-    // };
-
     const hasServiceDiscount = (): boolean => {
         if (!serviceDetails) return false;
         return typeof serviceDetails.discount_price === 'number' && serviceDetails.discount_price >= 0;
     };
-
 
     const getServiceDiscountAmount = (): number => {
         if (!hasServiceDiscount() || !serviceDetails) return 0;
@@ -401,21 +388,15 @@ const BookingCheckoutScreen = () => {
     const fetchServiceDetails = async () => {
         try {
             const response = await fetch(`${SERVICE_API_URL}/detail/${serviceId}`);
-            // console.log('Fetching service details from:', `${SERVICE_API_URL}/detail/${serviceId}`);
-
             const data = await response.json();
-            // console.log('Service data response:', data);
 
             if (data.success && data.data) {
                 const serviceData = {
                     ...data.data,
                     price: parseFloat(data.data.price) || 0,
                     discount_price: data.data.discount_price ? parseFloat(data.data.discount_price) : undefined
-
                 };
-                // console.log('Service data with price:', data.data.price, 'and discount price:', data.data.discount_price);
 
-                // console.log('Parsed service data:', serviceData);
                 setServiceDetails(serviceData);
             } else {
                 console.error('API error response:', data);
@@ -467,7 +448,6 @@ const BookingCheckoutScreen = () => {
             });
 
             const data = await response.json();
-            // console.log('Address data response:', data.success ? 'Success' : 'Failed');
 
             if (data.success && Array.isArray(data.data)) {
                 setSavedAddresses(data.data);
@@ -576,6 +556,96 @@ const BookingCheckoutScreen = () => {
         setCouponError('');
     };
 
+    // Helper function to get payment method icon and text
+    const getPaymentMethodDisplay = (method: string) => {
+        switch (method) {
+            case 'bank_transfer':
+                return {
+                    icon: 'account-balance',
+                    text: 'Bank Transfer',
+                    color: '#9A563A'
+                };
+            case 'card':
+            default:
+                return {
+                    icon: 'credit-card',
+                    text: 'Card Payment',
+                    color: '#9A563A'
+                };
+        }
+    };
+
+    // Payment Method Selection Component
+    const PaymentMethodSelector = () => (
+        <View className="mb-5">
+            <Text className="text-sm font-medium text-gray-700 mb-3">Payment Method</Text>
+
+            {/* Card Payment Option */}
+            <TouchableOpacity
+                className={`flex-row items-center p-4 mb-3 border-2 rounded-lg ${paymentMethod === 'card' ? 'border-amber-700 bg-orange-50' : 'border-gray-200 bg-white'
+                    }`}
+                onPress={() => setPaymentMethod('card')}
+            >
+                <View className={`w-5 h-5 rounded-full border-2 mr-3 ${paymentMethod === 'card' ? 'border-amber-700 bg-amber-700' : 'border-gray-400'
+                    }`}>
+                    {paymentMethod === 'card' && (
+                        <View className="w-full h-full flex items-center justify-center">
+                            <View className="w-2 h-2 bg-white rounded-full" />
+                        </View>
+                    )}
+                </View>
+                <View className="flex-1">
+                    <View className="flex-row items-center mb-1">
+                        <MaterialIcons name="credit-card" size={20} color="#9A563A" />
+                        <Text className="text-base font-semibold text-gray-800 ml-2">Credit/Debit Card</Text>
+                    </View>
+                    <Text className="text-sm text-gray-500">Pay securely with your card</Text>
+                </View>
+            </TouchableOpacity>
+
+            {/* Bank Transfer Option */}
+            <TouchableOpacity
+                className={`flex-row items-center p-4 border-2 rounded-lg ${paymentMethod === 'bank_transfer' ? 'border-amber-700 bg-orange-50' : 'border-gray-200 bg-white'
+                    }`}
+                onPress={() => setPaymentMethod('bank_transfer')}
+            >
+                <View className={`w-5 h-5 rounded-full border-2 mr-3 ${paymentMethod === 'bank_transfer' ? 'border-amber-700 bg-amber-700' : 'border-gray-400'
+                    }`}>
+                    {paymentMethod === 'bank_transfer' && (
+                        <View className="w-full h-full flex items-center justify-center">
+                            <View className="w-2 h-2 bg-white rounded-full" />
+                        </View>
+                    )}
+                </View>
+                <View className="flex-1">
+                    <View className="flex-row items-center mb-1">
+                        <MaterialIcons name="account-balance" size={20} color="#9A563A" />
+                        <Text className="text-base font-semibold text-gray-800 ml-2">Bank Transfer</Text>
+                    </View>
+                    <Text className="text-sm text-gray-500">Our team will contact you with transfer details</Text>
+                </View>
+            </TouchableOpacity>
+
+            {/* Bank Transfer Notice */}
+            {paymentMethod === 'bank_transfer' && (
+                <View className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <View className="flex-row items-start">
+                        <MaterialIcons name="info" size={16} color="#9A563A" />
+                        <View className="flex-1 ml-2">
+                            <Text className="text-sm text-amber-800 font-medium mb-1">Bank Transfer Process:</Text>
+                            <Text className="text-xs text-amber-700">
+                                1. Submit your booking request{'\n'}
+                                2. Our team will contact you within 24 hours{'\n'}
+                                3. Complete bank transfer using provided details{'\n'}
+                                4. Booking confirmed after payment verification
+                            </Text>
+                        </View>
+                    </View>
+                </View>
+            )}
+        </View>
+    );
+
     React.useLayoutEffect(() => {
         navigation.setOptions({
             title: 'Complete Booking',
@@ -628,7 +698,8 @@ const BookingCheckoutScreen = () => {
         return true;
     };
 
-    const handleSubmitBooking = async () => {
+    // Handle bank transfer booking
+    const handleBankTransferBooking = async () => {
         if (!validateForm()) return;
         if (!serviceDetails) return;
 
@@ -642,11 +713,6 @@ const BookingCheckoutScreen = () => {
             return;
         }
 
-        Keyboard.dismiss();
-        await submitBookingData();
-    };
-
-    const submitBookingData = async () => {
         setSubmitting(true);
 
         const bookingData = {
@@ -665,11 +731,9 @@ const BookingCheckoutScreen = () => {
             therapist_id: therapistId,
             therapist_name: therapistName,
             location_id: selectedLocation?.id,
-            // Add coupon code if applied
+            payment_method: 'bank_transfer',
             coupon_code: appliedCoupon ? appliedCoupon.code : null
         };
-
-        // console.log('Booking data being sent:', JSON.stringify(bookingData));
 
         try {
             const token = await AsyncStorage.getItem('access_token');
@@ -681,92 +745,206 @@ const BookingCheckoutScreen = () => {
 
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
-                // console.log('Sending request with auth token');
-                console.log('Auth token:', token);
-            } else {
-                console.log('No auth token available - addresses will not be saved');
             }
-
-            // console.log('Submitting booking to:', BOOKING_API_URL);
-            // console.log('Booking data :', JSON.stringify(bookingData));
-
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000);
 
             const response = await fetch(BOOKING_API_URL, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(bookingData),
-                signal: controller.signal
             });
 
-            clearTimeout(timeoutId);
-
             if (!response.ok) {
-                console.error('Server response not ok:', response.status, response.statusText);
                 throw new Error(`Server responded with status: ${response.status}`);
             }
 
             const data = await response.json();
-            // console.log('Booking response:', data);
 
             if (data.success && data.data && data.data.id) {
-                try {
-                    navigation.navigate('BookingConfirmationScreen', {
-                        bookingId: data.data.id
-                    });
-                } catch (navError) {
-                    console.error('Navigation error:', navError);
-                    Alert.alert(
-                        'Booking Successful',
-                        'Your appointment has been booked successfully. You will receive a confirmation email shortly.',
-                        [
-                            {
-                                text: 'OK',
-                                onPress: () => navigation.navigate('Home')
-                            }
-                        ]
-                    );
-                }
+                Alert.alert(
+                    'Booking Request Submitted!',
+                    `Your booking request for ${serviceName} has been submitted successfully. Our admin team will contact you within 24 hours with bank transfer details.\n\nReference: ${data.data.reference || 'N/A'}\n\nOnce the payment is completed, your booking will be confirmed.`,
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => {
+                                try {
+                                    navigation.navigate('BookingConfirmationScreen', {
+                                        bookingId: data.data.id
+                                    });
+                                } catch (navError) {
+                                    console.error('Navigation error:', navError);
+                                    navigation.navigate('Home');
+                                }
+                            },
+                        },
+                    ]
+                );
             } else {
-                Alert.alert('Error', data.message || 'Failed to create booking. Please try again.');
+                Alert.alert('Error', data.message || 'Failed to submit booking request. Please try again.');
             }
         } catch (error) {
-            console.error('Booking submission error:', error);
-
-            let errorMessage = 'Network error occurred.';
-
-            if (error instanceof TypeError) {
-                errorMessage = 'Network connection issue. Please check your internet connection.';
-            } else if (error instanceof Error) {
-                errorMessage = error.message;
-            }
-
-            Alert.alert(
-                'Error',
-                `There was an error processing your booking: ${errorMessage}. Would you like to see a test confirmation?`,
-                [
-                    {
-                        text: 'Try Again',
-                        style: 'cancel'
-                    },
-                    {
-                        text: 'See Test Confirmation',
-                        onPress: () => {
-                            try {
-                                navigation.navigate('BookingConfirmationScreen', {
-                                    bookingId: 999
-                                });
-                            } catch (navError) {
-                                console.error('Navigation error during test:', navError);
-                                Alert.alert('Navigation Error', 'Could not navigate to confirmation screen.');
-                            }
-                        }
-                    }
-                ]
-            );
+            console.error('Bank transfer booking error:', error);
+            Alert.alert('Error', 'There was an error processing your booking request. Please try again.');
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    // Handle card payment booking
+    const handleCardPaymentBooking = async () => {
+        if (!validateForm()) return;
+        if (!serviceDetails) return;
+
+        // Check if address is valid (within service radius)
+        if (!isAddressValid) {
+            Alert.alert(
+                'Address Outside Service Area',
+                addressValidationMessage || 'This address is outside our service area for the selected location.',
+                [{ text: 'OK' }]
+            );
+            return;
+        }
+
+        setSubmitting(true);
+
+        try {
+            const token = await AsyncStorage.getItem('access_token');
+            const bookingData = {
+                service_id: serviceId,
+                date: selectedDate,
+                time: selectedTime,
+                name,
+                email,
+                phone,
+                address_line1: addressLine1,
+                address_line2: addressLine2,
+                city,
+                postcode,
+                notes,
+                save_address: saveAddress,
+                therapist_id: therapistId,
+                therapist_name: therapistName,
+                location_id: selectedLocation?.id,
+                payment_method: 'card',
+                coupon_code: appliedCoupon ? appliedCoupon.code : null
+            };
+
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            // Create booking and get payment intent
+            const response = await fetch(BOOKING_API_URL, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(bookingData),
+            });
+
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.message || 'Failed to create booking');
+            }
+
+            const { booking, payment_intent } = data.data;
+
+            // Initialize Stripe payment sheet
+            const { error: initError } = await initPaymentSheet({
+                merchantDisplayName: 'Ceylon Ayurveda Health',
+                paymentIntentClientSecret: payment_intent.client_secret,
+                defaultBillingDetails: {
+                    name: name,
+                    email: email,
+                    phone: phone,
+                    address: {
+                        line1: addressLine1,
+                        line2: addressLine2,
+                        city: city,
+                        postalCode: postcode,
+                        country: 'GB',
+                    }
+                },
+                appearance: {
+                    colors: {
+                        primary: '#9A563A',
+                    },
+                },
+            });
+
+            if (initError) {
+                throw new Error(initError.message);
+            }
+
+            // Present payment sheet
+            const { error: paymentError } = await presentPaymentSheet();
+
+            if (paymentError) {
+                if (paymentError.code !== 'Canceled') {
+                    throw new Error(paymentError.message);
+                }
+                // User canceled payment
+                return;
+            }
+
+            // Payment successful - confirm with backend
+            const confirmResponse = await fetch(`${API_BASE_URL}/api/bookings/confirm-payment`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    payment_intent_id: payment_intent.payment_intent_id,
+                }),
+            });
+
+            const confirmData = await confirmResponse.json();
+
+            if (confirmData.success) {
+                Alert.alert(
+                    'Payment Successful!',
+                    `Your booking for ${serviceName} has been confirmed and payment processed successfully.\n\nReference: ${booking?.reference || 'N/A'}`,
+                    [
+                        {
+                            text: 'OK',
+                            onPress: () => {
+                                try {
+                                    navigation.navigate('BookingConfirmationScreen', {
+                                        bookingId: booking?.id || data.data.id
+                                    });
+                                } catch (navError) {
+                                    console.error('Navigation error:', navError);
+                                    navigation.navigate('Home');
+                                }
+                            },
+                        },
+                    ]
+                );
+            } else {
+                throw new Error(confirmData.message || 'Failed to confirm payment');
+            }
+
+        } catch (error: any) {
+            console.error('Card payment booking error:', error);
+            Alert.alert('Payment Failed', error.message || 'There was an error processing your payment. Please try again.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleSubmitBooking = async () => {
+        Keyboard.dismiss();
+        
+        if (paymentMethod === 'bank_transfer') {
+            await handleBankTransferBooking();
+        } else {
+            await handleCardPaymentBooking();
         }
     };
 
@@ -882,6 +1060,11 @@ const BookingCheckoutScreen = () => {
                             <Text style={styles.detailLabel}>Time:</Text>
                             <Text style={styles.detailValue}>{selectedTime}</Text>
                         </View>
+                    </View>
+
+                    {/* Payment Method Selection */}
+                    <View style={styles.card}>
+                        <PaymentMethodSelector />
                     </View>
 
                     {/* COUPON CODE SECTION */}
@@ -1228,7 +1411,12 @@ const BookingCheckoutScreen = () => {
                             </View>
                         ) : (
                             <Text style={styles.confirmButtonText}>
-                                {!isAddressValid ? 'Address Outside Service Area' : `Confirm Booking - £${finalPrice.toFixed(2)}`}
+                                {!isAddressValid 
+                                    ? 'Address Outside Service Area' 
+                                    : paymentMethod === 'bank_transfer'
+                                        ? `Submit Booking Request - £${finalPrice.toFixed(2)}`
+                                        : `Pay Now - £${finalPrice.toFixed(2)}`
+                                }
                             </Text>
                         )}
                     </TouchableOpacity>
@@ -1376,39 +1564,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: '#E53E3E',
-    },
-    discountBadge: {
-        position: 'absolute',
-        top: -8,
-        right: -8,
-        backgroundColor: '#E53E3E',
-        borderRadius: 10,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-    },
-    discountBadgeText: {
-        color: '#fff',
-        fontSize: 10,
-        fontWeight: 'bold',
-    },
-    savingsRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        paddingVertical: 4,
-        backgroundColor: '#F0FFF4',
-        paddingHorizontal: 8,
-        borderRadius: 4,
-        marginTop: 4,
-    },
-    savingsLabel: {
-        fontSize: 14,
-        color: '#2D5A3D',
-        fontWeight: '500',
-    },
-    savingsAmount: {
-        fontSize: 14,
-        color: '#2D5A3D',
-        fontWeight: '600',
     },
     // COUPON STYLES
     couponInputContainer: {
