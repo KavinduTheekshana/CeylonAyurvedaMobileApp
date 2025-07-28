@@ -273,7 +273,7 @@ const BookingTherapistScreen = () => {
 
         return (
             <TouchableOpacity
-                className={`bg-white rounded-2xl p-5 m-2 border-2 relative ${isSelected ? 'border-amber-700 bg-orange-50' : 'border-transparent'
+                className={`bg-white rounded-2xl p-5 m-2 border-2 relative ${isSelected ? 'border-[#9A563A] bg-orange-50' : 'border-transparent'
                     }`}
                 style={{
                     shadowColor: '#000',
@@ -287,7 +287,7 @@ const BookingTherapistScreen = () => {
             >
                 {/* Selection indicator */}
                 {isSelected && (
-                    <View className="absolute top-4 right-4 bg-amber-700 w-7 h-7 rounded-full justify-center items-center z-10">
+                    <View className="absolute top-4 right-4 bg-[#9A563A] w-7 h-7 rounded-full justify-center items-center z-10">
                         <Feather name="check" size={16} color="#fff" />
                     </View>
                 )}
@@ -303,7 +303,7 @@ const BookingTherapistScreen = () => {
                                 resizeMode="cover"
                             />
                         ) : (
-                            <View className="w-20 h-20 rounded-full bg-amber-700 justify-center items-center">
+                            <View className="w-20 h-20 rounded-full bg-[#9A563A] justify-center items-center">
                                 <Text className="text-white text-2xl font-bold">
                                     {item.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                                 </Text>
@@ -401,7 +401,7 @@ const BookingTherapistScreen = () => {
                                         className="bg-gray-100 px-3 py-2 rounded-lg mr-2 mb-2 items-center"
                                         style={{ minWidth: 80, flexBasis: 'auto' }}
                                     >
-                                        <Text className="text-xs font-semibold text-amber-700 mb-0.5">
+                                        <Text className="text-xs font-semibold text-[#9A563A] mb-0.5">
                                             {slot.day_of_week.charAt(0).toUpperCase() + slot.day_of_week.slice(1, 3)}
                                         </Text>
                                         <Text className="text-xs text-gray-500">
@@ -416,7 +416,7 @@ const BookingTherapistScreen = () => {
                 {/* View Profile Button - Bottom Right Corner */}
                 <View className="mt-4 flex-row justify-end">
                     <TouchableOpacity
-                        className="bg-white border border-amber-700 px-4 py-2 rounded-lg flex-row items-center shadow-md"
+                        className="bg-white border border-[#9A563A] px-4 py-2 rounded-lg flex-row items-center shadow-md"
                         onPress={() => handleViewProfile(item)}
                         activeOpacity={0.7}
                         style={{
@@ -428,7 +428,7 @@ const BookingTherapistScreen = () => {
                         }}
                     >
                         <Feather name="eye" size={16} color="#9A563A" />
-                        <Text className="text-amber-700 text-sm font-semibold ml-2">View Profile</Text>
+                        <Text className="text-[#9A563A] text-sm font-semibold ml-2">View Profile</Text>
                     </TouchableOpacity>
                 </View>
             </TouchableOpacity>
@@ -456,7 +456,7 @@ const BookingTherapistScreen = () => {
                 <Text className="text-xl font-bold text-red-600 mt-4 mb-2">Oops! Something went wrong</Text>
                 <Text className="text-base text-gray-500 text-center mb-6 leading-6">{error}</Text>
                 <TouchableOpacity
-                    className="bg-amber-700 py-3.5 px-7 rounded-xl"
+                    className="bg-[#9A563A] py-3.5 px-7 rounded-xl"
                     onPress={fetchTherapists}
                 >
                     <Text className="text-white text-base font-semibold">Try Again</Text>
@@ -515,7 +515,7 @@ const BookingTherapistScreen = () => {
             {/* Continue Button */}
             <View className="p-4 bg-white border-t border-gray-200">
                 <TouchableOpacity
-                    className={`py-4 px-6 rounded-xl flex-row items-center justify-center ${selectedTherapist ? 'bg-amber-700' : 'bg-gray-300'
+                    className={`py-4 px-6 rounded-xl flex-row items-center justify-center ${selectedTherapist ? 'bg-[#9A563A]' : 'bg-gray-300'
                         }`}
                     disabled={!selectedTherapist}
                     onPress={handleContinue}

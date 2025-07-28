@@ -396,10 +396,10 @@ export default function MessageHistoryScreen() {
                                 ) : (
                                     <View className="items-center p-6 mb-16 bg-amber-50 rounded-xl border border-orange-200">
                                         <Feather name="clock" size={24} color="#FFC107" />
-                                        <Text className="text-base font-semibold text-amber-800 mt-3 mb-2">
+                                        <Text className="text-base font-semibold text-[#9A563A] mt-3 mb-2">
                                             Waiting for Response
                                         </Text>
-                                        <Text className="text-sm text-amber-700 text-center leading-5">
+                                        <Text className="text-sm text-[#9A563A] text-center leading-5">
                                             Our admin team will respond to your message within 24 hours.
                                         </Text>
                                     </View>

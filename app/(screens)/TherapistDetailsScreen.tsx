@@ -222,7 +222,7 @@ const TherapistDetailsScreen = () => {
                 <Text className="text-xl font-bold text-red-600 mt-4 mb-2">Oops! Something went wrong</Text>
                 <Text className="text-base text-gray-500 text-center mb-6 leading-6">{error}</Text>
                 <TouchableOpacity
-                    className="bg-amber-700 py-3.5 px-7 rounded-xl"
+                    className="bg-[#9A563A] py-3.5 px-7 rounded-xl"
                     onPress={fetchTherapistDetails}
                 >
                     <Text className="text-white text-base font-semibold">Try Again</Text>
@@ -243,7 +243,7 @@ const TherapistDetailsScreen = () => {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Hero Section with Gradient Background */}
-                <View className="bg-gradient-to-br from-amber-700 to-amber-800 pt-6 pb-8 px-6 relative overflow-hidden">
+                <View className="bg-gradient-to-br from-[#9A563A] to-[#9A563A] pt-6 pb-8 px-6 relative overflow-hidden">
                     {/* Decorative circles */}
                     <View className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
                     <View className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/5 rounded-full" />
@@ -279,7 +279,7 @@ const TherapistDetailsScreen = () => {
                                     }
                                 </Text>
                             </View>
-                            <Text className="text-amber-700 mt-2 text-sm">
+                            <Text className="text-[#9A563A] mt-2 text-sm">
                                 {therapist.available_days}
                             </Text>
                         </View>
@@ -306,7 +306,7 @@ const TherapistDetailsScreen = () => {
                 <View className={`px-4 ${isFutureDate ? 'mb-6' : '-mt-4 mb-6'}`}>
                     <View className="bg-white rounded-2xl p-4 flex-row shadow-lg">
                         <View className="flex-1 items-center">
-                            <Text className="text-2xl font-bold text-amber-700">{therapist.availability_stats.available_dates_count}</Text>
+                            <Text className="text-2xl font-bold text-[#9A563A]">{therapist.availability_stats.available_dates_count}</Text>
                             <Text className="text-xs text-gray-500 text-center">Available Days</Text>
                         </View>
                         <View className="w-px bg-gray-200 mx-4" />
@@ -325,7 +325,7 @@ const TherapistDetailsScreen = () => {
                 {/* Contact Buttons */}
                 <View className="flex-row px-4 mb-6 space-x-3">
                     <TouchableOpacity
-                        className="flex-1 bg-amber-700 py-4 m-2 rounded-xl flex-row items-center justify-center"
+                        className="flex-1 bg-[#9A563A] py-4 m-2 rounded-xl flex-row items-center justify-center"
                         onPress={handlePhoneCall}
                     >
                         <Feather name="phone" size={18} color="#fff" />
@@ -363,7 +363,7 @@ const TherapistDetailsScreen = () => {
                                         {service.duration} minutes
                                     </Text>
                                 </View>
-                                <Text className="text-lg font-bold text-amber-700">
+                                <Text className="text-lg font-bold text-[#9A563A]">
                                     £{parseFloat(service.price).toFixed(0)}
                                 </Text>
                             </View>
@@ -378,7 +378,7 @@ const TherapistDetailsScreen = () => {
                         {therapist.schedule.map((slot, index) => (
                             <View key={index} className="flex-row items-center justify-between mb-2 py-3 px-4 bg-gray-50 rounded-xl">
                                 <View className="flex-row items-center">
-                                    <View className="w-10 h-10 bg-amber-700 rounded-full items-center justify-center mr-3">
+                                    <View className="w-10 h-10 bg-[#9A563A] rounded-full items-center justify-center mr-3">
                                         <Text className="text-white font-bold text-xs">
                                             {formatDayName(slot.day_of_week)}
                                         </Text>
@@ -401,8 +401,8 @@ const TherapistDetailsScreen = () => {
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} className="space-x-3">
                         <View className="flex-row space-x-3">
                             {therapist.availability_stats.next_available_dates.map((date, index) => (
-                                <View key={index} className="bg-gradient-to-b from-amber-100 to-amber-50 m-1 px-4 py-3 rounded-xl border border-amber-700 min-w-[80px] items-center">
-                                    <Text className="text-amber-700 font-bold text-xs">
+                                <View key={index} className="bg-gradient-to-b from-amber-100 to-amber-50 m-1 px-4 py-3 rounded-xl border border-[#9A563A] min-w-[80px] items-center">
+                                    <Text className="text-[#9A563A] font-bold text-xs">
                                         {formatDate(date)}
                                     </Text>
                                 </View>

@@ -100,6 +100,7 @@ export const bookingService = {
 
             if (token) {
                 headers['Authorization'] = `Bearer ${token}`;
+                console.log("token",token);
             }
 
             const response = await fetch(`${COUPON_API_URL}/validate`, {
@@ -134,6 +135,7 @@ export const bookingService = {
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
+            console.log(JSON.stringify(bookingData));
             const response = await fetch(BOOKING_API_URL, {
                 method: 'POST',
                 headers,

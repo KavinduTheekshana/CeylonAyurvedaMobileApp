@@ -333,7 +333,7 @@ const BookingDateScreen = () => {
                 {therapistName && (
                     <View className="bg-white p-3 rounded-lg mb-4 shadow-sm">
                         <Text className="text-sm text-gray-600 mb-1">Selected Therapist:</Text>
-                        <Text className="text-base font-semibold text-amber-800">{therapistName}</Text>
+                        <Text className="text-base font-semibold text-[#9A563A]">{therapistName}</Text>
                         {therapistData && (
                             <Text className="text-xs text-gray-500 mt-1">
                                 {getWorkStatusMessage()}
@@ -405,7 +405,7 @@ const BookingDateScreen = () => {
                         {/* Legend */}
                         <View className="flex-row justify-center mt-4 gap-5">
                             <View className="flex-row items-center">
-                                <View className="w-3 h-3 rounded-full bg-amber-800 mr-1.5" />
+                                <View className="w-3 h-3 rounded-full bg-[#9A563A] mr-1.5" />
                                 <Text className="text-xs text-gray-600">Available</Text>
                             </View>
                             <View className="flex-row items-center">
@@ -416,7 +416,7 @@ const BookingDateScreen = () => {
 
                         {/* Show selected date info */}
                         {selectedDate && (
-                            <View className="bg-amber-800 p-3 rounded-lg mt-4">
+                            <View className="bg-[#9A563A] p-3 rounded-lg mt-4">
                                 <Text className="text-white text-center font-semibold">
                                     Selected: {formatDate(selectedDate)}
                                 </Text>
@@ -428,7 +428,7 @@ const BookingDateScreen = () => {
 
             <View className="p-4 bg-white border-t border-gray-200">
                 <TouchableOpacity
-                    className={`p-4 rounded-lg items-center ${(!selectedDate || loading) ? 'bg-gray-300' : 'bg-amber-800'
+                    className={`p-4 rounded-lg items-center ${(!selectedDate || loading) ? 'bg-gray-300' : 'bg-[#9A563A]'
                         }`}
                     disabled={!selectedDate || loading}
                     onPress={handleContinue}

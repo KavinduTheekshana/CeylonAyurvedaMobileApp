@@ -477,11 +477,11 @@ console.log('Basic location endpoint response:', data);
 
       {/* Card Payment Option */}
       <TouchableOpacity
-        className={`flex-row items-center p-4 mb-3 border-2 rounded-lg ${paymentMethod === 'card' ? 'border-amber-700 bg-orange-50' : 'border-gray-200 bg-white'
+        className={`flex-row items-center p-4 mb-3 border-2 rounded-lg ${paymentMethod === 'card' ? 'border-[#9A563A] bg-orange-50' : 'border-gray-200 bg-white'
           }`}
         onPress={() => setPaymentMethod('card')}
       >
-        <View className={`w-5 h-5 rounded-full border-2 mr-3 ${paymentMethod === 'card' ? 'border-amber-700 bg-amber-700' : 'border-gray-400'
+        <View className={`w-5 h-5 rounded-full border-2 mr-3 ${paymentMethod === 'card' ? 'border-[#9A563A] bg-[#9A563A]' : 'border-gray-400'
           }`}>
           {paymentMethod === 'card' && (
             <View className="w-full h-full flex items-center justify-center">
@@ -500,11 +500,11 @@ console.log('Basic location endpoint response:', data);
 
       {/* Bank Transfer Option */}
       <TouchableOpacity
-        className={`flex-row items-center p-4 border-2 rounded-lg ${paymentMethod === 'bank_transfer' ? 'border-amber-700 bg-orange-50' : 'border-gray-200 bg-white'
+        className={`flex-row items-center p-4 border-2 rounded-lg ${paymentMethod === 'bank_transfer' ? 'border-[#9A563A] bg-orange-50' : 'border-gray-200 bg-white'
           }`}
         onPress={() => setPaymentMethod('bank_transfer')}
       >
-        <View className={`w-5 h-5 rounded-full border-2 mr-3 ${paymentMethod === 'bank_transfer' ? 'border-amber-700 bg-amber-700' : 'border-gray-400'
+        <View className={`w-5 h-5 rounded-full border-2 mr-3 ${paymentMethod === 'bank_transfer' ? 'border-[#9A563A] bg-[#9A563A]' : 'border-gray-400'
           }`}>
           {paymentMethod === 'bank_transfer' && (
             <View className="w-full h-full flex items-center justify-center">
@@ -527,8 +527,8 @@ console.log('Basic location endpoint response:', data);
           <View className="flex-row items-start">
             <MaterialIcons name="info" size={16} color="#9A563A" />
             <View className="flex-1 ml-2">
-              <Text className="text-sm text-amber-800 font-medium mb-1">Bank Transfer Process:</Text>
-              <Text className="text-xs text-amber-700">
+              <Text className="text-sm text-[#9A563A] font-medium mb-1">Bank Transfer Process:</Text>
+              <Text className="text-xs text-[#9A563A]">
                 1. Submit your investment request{'\n'}
                 2. Our team will contact you within 24 hours{'\n'}
                 3. Complete bank transfer using provided details{'\n'}
@@ -560,7 +560,7 @@ console.log('Basic location endpoint response:', data);
           <Text className="text-xl font-bold text-red-600 mt-4 mb-2">Failed to Load Details</Text>
           <Text className="text-base text-gray-500 text-center mb-6">Please try again later</Text>
           <TouchableOpacity
-            className="bg-amber-700 px-6 py-3 rounded-lg"
+            className="bg-[#9A563A] px-6 py-3 rounded-lg"
             onPress={loadLocationDetails}
           >
             <Text className="text-white text-base font-semibold">Retry</Text>
@@ -613,11 +613,11 @@ console.log('Basic location endpoint response:', data);
           {/* View More Details Button - Compact and Centered */}
           <View className="flex-row justify-center mb-4 self-start">
             <TouchableOpacity
-              className="border border-amber-700 rounded-lg px-4 py-2 flex-row items-center bg-white "
+              className="border border-[#9A563A] rounded-lg px-4 py-2 flex-row items-center bg-white "
               onPress={handleViewMoreDetails}
             >
               <MaterialIcons name="info" size={16} color="#9A563A" />
-              <Text className="text-amber-700 text-sm font-medium ml-2">View More Details</Text>
+              <Text className="text-[#9A563A] text-sm font-medium ml-2">View More Details</Text>
             </TouchableOpacity>
           </View>
           <Text className="text-2xl font-bold text-gray-800 mb-2">{locationDetails.name}</Text>
@@ -639,19 +639,19 @@ console.log('Basic location endpoint response:', data);
 
           <View className="flex-row justify-around mb-5">
             <View className="items-center">
-              <Text className="text-xl font-bold text-amber-700 mb-1">
+              <Text className="text-xl font-bold text-[#9A563A] mb-1">
                 £{locationDetails.investment_stats.total_invested.toLocaleString()}
               </Text>
               <Text className="text-xs text-gray-500">Raised</Text>
             </View>
             <View className="items-center">
-              <Text className="text-xl font-bold text-amber-700 mb-1">
+              <Text className="text-xl font-bold text-[#9A563A] mb-1">
                 {locationDetails.investment_stats.total_investors}
               </Text>
               <Text className="text-xs text-gray-500">Investors</Text>
             </View>
             <View className="items-center">
-              <Text className="text-xl font-bold text-amber-700 mb-1">
+              <Text className="text-xl font-bold text-[#9A563A] mb-1">
                 {locationDetails.investment_stats.progress_percentage.toFixed(0)}%
               </Text>
               <Text className="text-xs text-gray-500">Complete</Text>
@@ -661,7 +661,7 @@ console.log('Basic location endpoint response:', data);
           <View className="mb-4">
             <View className="h-2 bg-gray-200 rounded-full mb-2">
               <View
-                className="h-full bg-amber-700 rounded-full"
+                className="h-full bg-[#9A563A] rounded-full"
                 style={{ width: `${Math.min(locationDetails.investment_stats.progress_percentage, 100)}%` }}
               />
             </View>
@@ -680,7 +680,7 @@ console.log('Basic location endpoint response:', data);
                 className="px-3 py-1.5 bg-gray-100 rounded"
                 onPress={handleViewAllInvestors}
               >
-                <Text className="text-sm text-amber-700 font-medium">View All</Text>
+                <Text className="text-sm text-[#9A563A] font-medium">View All</Text>
               </TouchableOpacity>
             </View>
 
@@ -698,7 +698,7 @@ console.log('Basic location endpoint response:', data);
                     <Text className="text-xs text-gray-400">Ref: {investment.reference}</Text>
                   </View>
                   <View className="items-end">
-                    <Text className="text-base font-bold text-amber-700 mb-1.5">£{investment.amount.toLocaleString()}</Text>
+                    <Text className="text-base font-bold text-[#9A563A] mb-1.5">£{investment.amount.toLocaleString()}</Text>
                     <View className={`px-2 py-1 rounded ${investment.status === 'completed' ? 'bg-green-500' :
                       investment.status === 'pending' ? 'bg-yellow-500' : 'bg-red-500'
                       }`}>
@@ -749,7 +749,7 @@ console.log('Basic location endpoint response:', data);
             </View>
 
             <TouchableOpacity
-              className={`py-4 rounded-lg items-center mt-2 ${(!investmentAmount || investing) ? 'bg-gray-300' : 'bg-amber-700'}`}
+              className={`py-4 rounded-lg items-center mt-2 ${(!investmentAmount || investing) ? 'bg-gray-300' : 'bg-[#9A563A]'}`}
               onPress={handleInvestNow}
               disabled={!investmentAmount || investing}
             >
@@ -782,7 +782,7 @@ console.log('Basic location endpoint response:', data);
 
             <View className="mb-6">
               <Text className="text-base text-gray-600 leading-6 text-center">
-                You are about to {paymentMethod === 'bank_transfer' ? 'submit an investment request for' : 'invest'} <Text className="font-bold text-amber-700">£{investmentAmount}</Text> in <Text className="font-bold text-gray-800">{locationDetails.name}</Text>
+                You are about to {paymentMethod === 'bank_transfer' ? 'submit an investment request for' : 'invest'} <Text className="font-bold text-[#9A563A]">£{investmentAmount}</Text> in <Text className="font-bold text-gray-800">{locationDetails.name}</Text>
               </Text>
 
               {/* Payment Method Display */}
@@ -821,7 +821,7 @@ console.log('Basic location endpoint response:', data);
               </TouchableOpacity>
 
               <TouchableOpacity
-                className="flex-1 py-3 rounded-lg bg-amber-700 items-center"
+                className="flex-1 py-3 rounded-lg bg-[#9A563A] items-center"
                 onPress={confirmInvestment}
               >
                 <Text className="text-base text-white font-bold">

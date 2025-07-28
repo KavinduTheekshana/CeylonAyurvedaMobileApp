@@ -275,7 +275,7 @@ const LocationDetailsScreen = () => {
             {error || 'Unknown error occurred'}
           </Text>
           <TouchableOpacity
-            className="bg-amber-800 px-6 py-3 rounded-lg"
+            className="bg-[#9A563A] px-6 py-3 rounded-lg"
             onPress={loadLocationDetails}
           >
             <Text className="text-white text-base font-semibold">Retry</Text>
@@ -393,25 +393,25 @@ const LocationDetailsScreen = () => {
           <Text className="text-xl font-bold text-gray-800 mb-4">Branch Management</Text>
           <View className="flex-row flex-wrap justify-between mb-5">
             <View className="w-[48%] items-center bg-gray-50 rounded-xl p-4 mb-3">
-              <Text className="text-2xl font-bold text-amber-800 mb-1">
+              <Text className="text-2xl font-bold text-[#9A563A] mb-1">
                 £{locationData.total_invested.toLocaleString()}
               </Text>
               <Text className="text-xs text-gray-600 text-center font-medium">Total Invested</Text>
             </View>
             <View className="w-[48%] items-center bg-gray-50 rounded-xl p-4 mb-3">
-              <Text className="text-2xl font-bold text-amber-800 mb-1">
+              <Text className="text-2xl font-bold text-[#9A563A] mb-1">
                 £{locationData.investment_limit.toLocaleString()}
               </Text>
               <Text className="text-xs text-gray-600 text-center font-medium">Investment Limit</Text>
             </View>
             <View className="w-[48%] items-center bg-gray-50 rounded-xl p-4 mb-3">
-              <Text className="text-2xl font-bold text-amber-800 mb-1">
+              <Text className="text-2xl font-bold text-[#9A563A] mb-1">
                 {locationData.total_investors}
               </Text>
               <Text className="text-xs text-gray-600 text-center font-medium">Total Investors</Text>
             </View>
             <View className="w-[48%] items-center bg-gray-50 rounded-xl p-4 mb-3">
-              <Text className="text-2xl font-bold text-amber-800 mb-1">
+              <Text className="text-2xl font-bold text-[#9A563A] mb-1">
                 {locationData.progress_percentage.toFixed(1)}%
               </Text>
               <Text className="text-xs text-gray-600 text-center font-medium">Progress</Text>
@@ -422,7 +422,7 @@ const LocationDetailsScreen = () => {
           <View className="mt-2">
             <View className="h-2.5 bg-gray-200 rounded-full mb-2">
               <View
-                className="h-full bg-amber-800 rounded-full"
+                className="h-full bg-[#9A563A] rounded-full"
                 style={{ width: `${Math.min(locationData.progress_percentage, 100)}%` }}
               />
             </View>
@@ -462,7 +462,7 @@ const LocationDetailsScreen = () => {
         {locationData.is_open_for_investment && (
           <View className="bg-white mt-2 px-5 py-5">
             <TouchableOpacity
-              className="flex-row items-center justify-center bg-amber-800 rounded-xl py-4 px-6"
+              className="flex-row items-center justify-center bg-[#9A563A] rounded-xl py-4 px-6"
               onPress={handleInvestNow}
             >
               <Text className="text-lg font-bold text-white mr-2">Invest Now</Text>

@@ -146,7 +146,7 @@ const AllInvestorsScreen = () => {
             </Text>
           </View>
           <View className="items-end">
-            <Text className="text-lg font-bold text-amber-700 mb-2">
+            <Text className="text-lg font-bold text-[#9A563A] mb-2">
               £{item.amount.toLocaleString()}
             </Text>
             <View className={`px-3 py-1 rounded-full ${
@@ -174,7 +174,7 @@ const AllInvestorsScreen = () => {
         
         <View className="flex-row justify-between mb-4">
           <View className="items-center flex-1">
-            <Text className="text-xl font-bold text-amber-700 mb-1">
+            <Text className="text-xl font-bold text-[#9A563A] mb-1">
               {investors.length}
             </Text>
             <Text className="text-xs text-gray-500 text-center">Total Investors</Text>
@@ -197,7 +197,7 @@ const AllInvestorsScreen = () => {
           <Text className="text-center text-sm text-gray-600">
             Total Investment Amount
           </Text>
-          <Text className="text-center text-2xl font-bold text-amber-700 mt-1">
+          <Text className="text-center text-2xl font-bold text-[#9A563A] mt-1">
             £{totalInvestment.toLocaleString()}
           </Text>
         </View> */}

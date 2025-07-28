@@ -162,7 +162,7 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
                             </Text>
                             <Text style={{ fontSize: 12, color: '#B45309', lineHeight: 16 }}>
                                 1. Submit your booking request{'\n'}
-                                2. Our team will contact you within 24 hours{'\n'}
+                                2. We'll email your booking reference and bank details.{'\n'}
                                 3. Complete bank transfer using provided details{'\n'}
                                 4. Booking confirmed after payment verification
                             </Text>
