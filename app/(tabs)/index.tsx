@@ -15,6 +15,7 @@ import GuestNotification from "../components/GuestNotification";
 import OffersBadge from "../components/OffersBadge";
 import LocationSwitcher from "../components/LocationSwitcher";
 import { useLocation } from "../contexts/LocationContext";
+import { MaterialIcons } from "@expo/vector-icons";
 
 // Define API endpoint
 const API_URL = `${API_BASE_URL}/api/treatments`;
@@ -96,6 +97,10 @@ const TreatmentsScreen = () => {
     setShowGuestNotification(false);
   };
 
+  const handleOnlineTherapistPress = () => {
+    router.push('/(screens)/OnlineTherapistScreen');
+  };
+
   if (loading) {
     return (
       <View className="flex-1 justify-center items-center bg-gray-100">
@@ -119,6 +124,37 @@ const TreatmentsScreen = () => {
       <Text className="w-full text-3xl pb-3 text-black font-bold">
         Treatments
       </Text>
+
+      {/* Online Therapist Card */}
+      <TouchableOpacity
+        className="rounded-[14px] mb-4 p-4 shadow-lg flex-row items-center"
+        style={{
+          backgroundColor: '#9A563A', // Your primary color
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 3.84,
+          elevation: 5,
+        }}
+        onPress={handleOnlineTherapistPress}
+      >
+        <View className="flex-1">
+          <View className="flex-row items-center mb-2">
+            <MaterialIcons name="video-call" size={24} color="white" />
+            <Text className="text-white text-lg font-bold ml-2">
+              Online Therapist
+            </Text>
+          </View>
+          <Text className="text-white text-sm opacity-90">
+            Connect with certified therapists online
+          </Text>
+          <View className="flex-row items-center mt-2">
+            <View className="w-2 h-2 bg-green-400 rounded-full mr-2" />
+            <Text className="text-white text-xs">Available Now</Text>
+          </View>
+        </View>
+        <MaterialIcons name="arrow-forward-ios" size={20} color="white" />
+      </TouchableOpacity>
       
       <FlatList
         data={treatments}
