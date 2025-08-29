@@ -103,26 +103,14 @@ export default function TherapistDetailScreen() {
 
     if (!therapist) return;
 
-    Alert.alert(
-      'Start Session',
-      `Would you like to start a session with ${therapist.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Start Session', 
-          onPress: () => {
-            // Navigate to video call or session screen
-            router.push({
-              pathname: '/(screens)/TherapySessionScreen',
-              params: {
-                therapistId: therapist.id.toString(),
-                therapistName: therapist.name
-              }
-            });
-          }
-        }
-      ]
-    );
+    // Navigate to therapist services screen instead of showing alert
+    router.push({
+      pathname: '/(screens)/TherapistServicesScreen',
+      params: {
+        therapistId: therapist.id.toString(),
+        therapistName: therapist.name
+      }
+    });
   };
 
   // Handle call therapist
@@ -169,26 +157,6 @@ export default function TherapistDetailScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#FAFAFA]">
-      {/* Header */}
-      <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="mr-3"
-        >
-          <MaterialIcons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        
-        <View className="flex-1">
-          <Text className="text-xl font-bold text-black">Therapist Profile</Text>
-        </View>
-
-        {therapist.online_status && (
-          <View className="flex-row items-center">
-            <View className="w-2 h-2 bg-green-500 rounded-full mr-2" />
-            <Text className="text-sm text-green-600 font-medium">Online</Text>
-          </View>
-        )}
-      </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Therapist Header */}
@@ -285,11 +253,11 @@ export default function TherapistDetailScreen() {
       </ScrollView>
 
       {/* Action Buttons */}
-      <View className="bg-white p-4 border-t border-gray-100">
-        <View className="flex-row space-x-3">
+      <View className="bg-white p-5 border-t border-gray-100">
+        <View className="flex-row gap-3">
           {/* Start Session Button */}
           <TouchableOpacity
-            className={`flex-1 py-4 px-4 rounded-xl flex-row items-center justify-center ${
+            className={`flex-1 py-5 px-4 rounded-xl flex-row items-center justify-center ${
               therapist.online_status 
                 ? '' 
                 : 'bg-gray-300'
@@ -312,7 +280,7 @@ export default function TherapistDetailScreen() {
           
           {/* Call Button */}
           <TouchableOpacity
-            className="py-4 px-4 rounded-xl flex-row items-center justify-center"
+            className="py-5 px-4 rounded-xl flex-row items-center justify-center"
             style={{ borderColor: '#9A563A', borderWidth: 1 }}
             onPress={handleCallTherapist}
           >
