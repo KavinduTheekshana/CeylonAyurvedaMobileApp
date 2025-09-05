@@ -1,11 +1,12 @@
 {
   "expo": {
     "name": "CeylonAyurveda",
-    "slug": "CeylonAyurveda",
+    "slug": "CeylonAyurveda-kanishka",
     "version": "1.4.6",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "ceylonayurveda",
+    "owner": "kanishka50",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/icon.png",
@@ -33,7 +34,19 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.theekshana9.CeylonAyurvedaHealthUk"
+      "package": "com.theekshana9.CeylonAyurvedaHealthUk",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "ceylonayurveda"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -42,6 +55,7 @@
     },
     "plugins": [
       "expo-router",
+      "@react-native-google-signin/google-signin",
       [
         "expo-build-properties",
         {
@@ -61,7 +75,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "ac18d1bd-0b4a-40b3-bf60-0a805d3061eb"
+        "projectId": "ffd38c77-4320-41b9-a7c9-73f5dfe6b44b"
       }
     }
   }
