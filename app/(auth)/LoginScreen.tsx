@@ -13,7 +13,7 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "expo-router";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Feather, FontAwesome } from "@expo/vector-icons";
@@ -22,16 +22,14 @@ import Logo from "@/app/components/Logo";
 import BottomLeftImage from "@/app/components/BottomLeftImage";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Google from 'expo-auth-session/providers/google';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import * as WebBrowser from 'expo-web-browser';
-import * as AuthSession from 'expo-auth-session';
+import {
+  GoogleSignin,
+  statusCodes,
+  User,
+} from '@react-native-google-signin/google-signin';
 
-// You should create this file to store your API URLs
 import { API_BASE_URL } from "@/config/api";
-
-// Complete the auth session for Google
-WebBrowser.maybeCompleteAuthSession();
 
 // Define TypeScript interfaces
 interface UserData {
@@ -40,8 +38,9 @@ interface UserData {
   email: string;
   profile_photo_path?: string;
   phone?: string;
-  [key: string]: any; // Allow for additional properties
+  [key: string]: any;
 }
+
 interface LoginErrors {
   email: string;
   password: string;
@@ -67,14 +66,6 @@ export default function Login() {
   const router = useRouter();
   const { width, height } = Dimensions.get("window");
 
-    React.useEffect(() => {
-    console.log('=== GOOGLE OAUTH DEBUG ===');
-    console.log('Android Client ID:', process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID);
-    console.log('iOS Client ID:', process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
-    console.log('Web Client ID:', process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
-    console.log('========================');
-  }, []);
-
   // Form state
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -90,33 +81,29 @@ export default function Login() {
     password: "",
   });
 
-  
+  // Configure Google Sign-In (Fixed configuration)
+  useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+      // Remove androidClientId and iosClientId - use only webClientId
+      scopes: ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile'],
+      offlineAccess: false,
+      hostedDomain: '',
+      forceCodeForRefreshToken: true,
+    });
 
-  // Google OAuth configuration
-  const [googleRequest, googleResponse, googlePromptAsync] = Google.useAuthRequest({
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || 'your-android-client-id.apps.googleusercontent.com',
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '754805117963-f8japisp2qr7nukjb2b77nm385h0gofm.apps.googleusercontent.com',
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '754805117963-dt9ttk8idoisn63i0dhubstriq91nos9.apps.googleusercontent.com',
-    scopes: ['profile', 'email'],
-  });
-
-  // Handle Google OAuth response
-  React.useEffect(() => {
-    if (googleResponse?.type === 'success') {
-      handleGoogleSignIn(googleResponse.authentication?.accessToken);
-    }
-  }, [googleResponse]);
+    console.log('=== GOOGLE SIGNIN CONFIGURATION ===');
+    console.log('Web Client ID:', process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
+    console.log('===================================');
+  }, []);
 
   // Store all user data function
   const storeUserData = async (userData: UserData): Promise<void> => {
     try {
-      // Store each piece of user data separately for easier access
       await AsyncStorage.setItem("user_id", userData.id.toString());
       await AsyncStorage.setItem("user_name", userData.name || "");
       await AsyncStorage.setItem("user_email", userData.email || "");
 
-      // Optional fields - check if they exist
-      // Updated to use profile_photo_path instead of profile_image
       if (userData.profile_photo_path) {
         await AsyncStorage.setItem(
           "user_profile_photo_path",
@@ -128,9 +115,7 @@ export default function Login() {
         await AsyncStorage.setItem("user_phone", userData.phone);
       }
 
-      // Also store the complete user object for any additional fields
       await AsyncStorage.setItem("user_data", JSON.stringify(userData));
-
       console.log("All user data stored successfully");
     } catch (error) {
       console.error("Error storing user data:", error);
@@ -141,26 +126,17 @@ export default function Login() {
   const handleSocialLoginSuccess = async (response: LoginResponse) => {
     try {
       if (response.access_token) {
-        // Store token
         await AsyncStorage.setItem("access_token", response.access_token);
 
-        // Store user data
         if (response.user) {
           await storeUserData(response.user);
         }
 
-        // Set session expiration (90 days from now)
         const expirationDate = new Date();
         expirationDate.setDate(expirationDate.getDate() + 90);
-        await AsyncStorage.setItem(
-          "session_expiry",
-          expirationDate.toISOString()
-        );
-
-        // Set user mode to logged in
+        await AsyncStorage.setItem("session_expiry", expirationDate.toISOString());
         await AsyncStorage.setItem("user_mode", "logged_in");
 
-        // Navigate to home
         router.replace("/(tabs)");
       }
     } catch (error) {
@@ -169,36 +145,44 @@ export default function Login() {
     }
   };
 
-  // Google Sign In
-  const handleGoogleSignIn = async (token?: string) => {
-    if (!token) {
-      Alert.alert("Error", "Failed to get Google authentication token");
-      setSocialLoading(null);
-      return;
-    }
-
+  // Fixed Modern Native Google Sign-In Handler
+  const handleGoogleSignIn = async () => {
     try {
       setSocialLoading('google');
+      console.log('Starting Google Sign-In...');
 
-      // Get user info from Google
-      const userInfoResponse = await fetch(
-        `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${token}`
-      );
-      const userInfo = await userInfoResponse.json();
+      // Check if device has Google Play Services
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      console.log('Google Play Services available');
 
-      if (!userInfo.email) {
-        throw new Error("Failed to get user email from Google");
+      // Sign in with Google (Fixed user access)
+      const signInResult = await GoogleSignin.signIn();
+      console.log('Google Sign-In successful:', signInResult);
+
+      // Access user data correctly (without strict typing)
+      const user: any = signInResult.data?.user || signInResult.user;
+      
+      if (!user) {
+        throw new Error("Failed to get user information from Google");
       }
 
-      // Prepare data for your backend
+      // Get access token
+      const tokens = await GoogleSignin.getTokens();
+      console.log('Got access token');
+
+      // Prepare data for backend (using actual user object properties)
       const socialAuthData: SocialAuthData = {
-        token,
-        email: userInfo.email,
-        name: userInfo.name || userInfo.email,
+        token: tokens.accessToken,
+        email: user.email,
+        name: user.name || (user.givenName && user.familyName 
+          ? `${user.givenName} ${user.familyName}`.trim()
+          : user.email),
         provider: 'google',
-        provider_id: userInfo.id,
-        avatar_url: userInfo.picture,
+        provider_id: user.id,
+        avatar_url: user.photo || undefined,
       };
+
+      console.log('Sending to backend:', { ...socialAuthData, token: '[HIDDEN]' });
 
       // Send to your backend
       const response = await axios.post<LoginResponse>(
@@ -206,26 +190,45 @@ export default function Login() {
         socialAuthData
       );
 
+      console.log('Backend response received');
+
       if (response.data.access_token) {
         await handleSocialLoginSuccess(response.data);
       } else {
         throw new Error("No access token received from server");
       }
-    } catch (error) {
-      console.error("Google sign in error:", error);
-      let errorMessage = "Google sign in failed. Please try again.";
 
-      if (axios.isAxiosError(error)) {
-        errorMessage = error.response?.data?.message || errorMessage;
+    } catch (error: any) {
+      console.error("Google Sign-In Error:", error);
+
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        console.log('User cancelled Google Sign-In');
+        return; // Don't show error for user cancellation
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        console.log('Google Sign-In already in progress');
+        Alert.alert("Please wait", "Sign-in is already in progress");
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert("Error", "Google Play Services not available on this device");
+      } else if (error.code === statusCodes.SIGN_IN_REQUIRED) {
+        console.log('User not signed in, starting fresh sign-in');
+        Alert.alert("Error", "Please try signing in again");
+      } else {
+        // Handle network or backend errors
+        let errorMessage = "Google sign in failed. Please try again.";
+        
+        if (axios.isAxiosError(error)) {
+          errorMessage = error.response?.data?.message || errorMessage;
+          console.log('Backend error:', error.response?.data);
+        }
+
+        Alert.alert("Google Sign In Error", errorMessage);
       }
-
-      Alert.alert("Google Sign In Error", errorMessage);
     } finally {
       setSocialLoading(null);
     }
   };
 
-  // Apple Sign In
+  // Fixed Apple Sign In (with proper error typing)
   const handleAppleSignIn = async () => {
     try {
       setSocialLoading('apple');
@@ -241,7 +244,6 @@ export default function Login() {
         throw new Error("Failed to get user data from Apple");
       }
 
-      // Prepare data for your backend
       const socialAuthData: SocialAuthData = {
         email: credential.email || `${credential.user}@privaterelay.appleid.com`,
         name: credential.fullName ?
@@ -251,7 +253,6 @@ export default function Login() {
         provider_id: credential.user,
       };
 
-      // Send to your backend
       const response = await axios.post<LoginResponse>(
         `${API_BASE_URL}/api/auth/social/login`,
         socialAuthData
@@ -262,16 +263,14 @@ export default function Login() {
       } else {
         throw new Error("No access token received from server");
       }
-    } catch (error) {
+    } catch (error: any) { // Fixed error typing
       console.error("Apple sign in error:", error);
 
       if (error.code === 'ERR_CANCELED') {
-        // User canceled the sign-in flow
         return;
       }
 
       let errorMessage = "Apple sign in failed. Please try again.";
-
       if (axios.isAxiosError(error)) {
         errorMessage = error.response?.data?.message || errorMessage;
       }
@@ -282,12 +281,10 @@ export default function Login() {
     }
   };
 
-  // Handle regular login
+  // Regular login handler (unchanged)
   const handleLogin = async (): Promise<void> => {
-    // Reset errors
     setErrors({ email: "", password: "" });
 
-    // Basic validation
     let hasError = false;
     const newErrors: LoginErrors = { email: "", password: "" };
 
@@ -309,41 +306,23 @@ export default function Login() {
       return;
     }
 
-    // Perform login
     setIsLoading(true);
     try {
-      console.log(`${API_BASE_URL}`);
       const response = await axios.post<LoginResponse>(
         `${API_BASE_URL}/api/login`,
-        {
-          email,
-          password,
-        }
+        { email, password }
       );
 
-      // Check if email verification is required
       if (response.data.requires_verification) {
-        // Store email for verification screen
         await AsyncStorage.setItem("user_email", email);
-
-        // Show alert about verification
         Alert.alert(
           "Verification Required",
           "Please verify your email to continue. A new verification code has been sent to your email.",
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                // Navigate to verification screen
-                router.push("/VerifyScreen");
-              },
-            },
-          ]
+          [{ text: "OK", onPress: () => router.push("/VerifyScreen") }]
         );
         return;
       }
 
-      // Normal login flow
       if (response.data.access_token) {
         await handleSocialLoginSuccess(response.data);
       } else {
@@ -383,24 +362,20 @@ export default function Login() {
     }
   };
 
-  // Handle continue as guest
+  // Handle continue as guest (unchanged)
   const handleContinueAsGuest = async (): Promise<void> => {
     try {
-      // Clear any existing user data just to be safe
       await AsyncStorage.removeItem("access_token");
       await AsyncStorage.removeItem("user_id");
       await AsyncStorage.removeItem("user_name");
       await AsyncStorage.removeItem("user_email");
 
-      // Set user mode to guest
       await AsyncStorage.setItem("user_mode", "guest");
 
-      // Set a temporary guest session (1 day)
       const expirationDate = new Date();
       expirationDate.setDate(expirationDate.getDate() + 1);
       await AsyncStorage.setItem("session_expiry", expirationDate.toISOString());
 
-      // Navigate to home
       router.replace("/(tabs)");
     } catch (error) {
       console.error("Error continuing as guest:", error);
@@ -411,7 +386,6 @@ export default function Login() {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View className="flex-1 px-6 pt-10 bg-[#FAFAFA]">
-        {/* Top Right SVG */}
         <TopRightImage />
 
         <SafeAreaProvider>
@@ -428,9 +402,8 @@ export default function Login() {
                 showsHorizontalScrollIndicator={false}
               >
                 <View className="flex-1 justify-center">
-                  {/* Logo */}
                   <Logo />
-                  {/* Header text */}
+                  
                   <Text className="text-2xl font-bold text-black mt-[-10px] text-center">
                     Login Account
                   </Text>
@@ -438,16 +411,15 @@ export default function Login() {
                     Please login into your account
                   </Text>
 
-
-
                   {/* Email Input */}
                   <View
-                    className={`flex-row items-center bg-[#FFFFFF] mb-4 rounded-[14px] p-4 py-5 border ${emailFocus
-                      ? "border-primary"
-                      : errors.email
+                    className={`flex-row items-center bg-[#FFFFFF] mb-4 rounded-[14px] p-4 py-5 border ${
+                      emailFocus
+                        ? "border-primary"
+                        : errors.email
                         ? "border-red-500"
                         : "border-[#DFDFDF]"
-                      }`}
+                    }`}
                   >
                     <FontAwesome
                       name="envelope"
@@ -456,8 +428,8 @@ export default function Login() {
                         emailFocus
                           ? "#9A563A"
                           : errors.email
-                            ? "red"
-                            : "#DFDFDF"
+                          ? "red"
+                          : "#DFDFDF"
                       }
                       className="mr-3"
                     />
@@ -470,13 +442,13 @@ export default function Login() {
                       placeholderTextColor="gray"
                       value={email}
                       style={{
-                        height: Platform.OS === "ios" ? 24 : "auto", // Fixed height for iOS
-                        paddingVertical: Platform.OS === "ios" ? 0 : 2, // Remove padding on iOS
-                        paddingBottom: Platform.OS === "ios" ? 2 : 2, // Add small bottom padding on iOS
+                        height: Platform.OS === "ios" ? 24 : "auto",
+                        paddingVertical: Platform.OS === "ios" ? 0 : 2,
+                        paddingBottom: Platform.OS === "ios" ? 2 : 2,
                       }}
                       onChangeText={setEmail}
-                      autoCapitalize="none" // Ensures all lowercase
-                      autoCorrect={false} // Prevents autocorrection
+                      autoCapitalize="none"
+                      autoCorrect={false}
                     />
                   </View>
                   {errors.email ? (
@@ -487,12 +459,13 @@ export default function Login() {
 
                   {/* Password Input */}
                   <View
-                    className={`flex-row items-center bg-[#FFFFFF] mb-4 rounded-[14px] p-4 py-5 border ${passwordFocus
-                      ? "border-primary"
-                      : errors.password
+                    className={`flex-row items-center bg-[#FFFFFF] mb-4 rounded-[14px] p-4 py-5 border ${
+                      passwordFocus
+                        ? "border-primary"
+                        : errors.password
                         ? "border-red-500"
                         : "border-[#DFDFDF]"
-                      }`}
+                    }`}
                   >
                     <FontAwesome
                       name="key"
@@ -501,8 +474,8 @@ export default function Login() {
                         passwordFocus
                           ? "#9A563A"
                           : errors.password
-                            ? "red"
-                            : "#DFDFDF"
+                          ? "red"
+                          : "#DFDFDF"
                       }
                       className="mr-3"
                     />
@@ -511,9 +484,9 @@ export default function Login() {
                       secureTextEntry={!showPassword}
                       className="flex-1 text-black mb-0.5"
                       style={{
-                        height: Platform.OS === "ios" ? 24 : "auto", // Fixed height for iOS
-                        paddingVertical: Platform.OS === "ios" ? 0 : 2, // Remove padding on iOS
-                        paddingBottom: Platform.OS === "ios" ? 2 : 2, // Add small bottom padding on iOS
+                        height: Platform.OS === "ios" ? 24 : "auto",
+                        paddingVertical: Platform.OS === "ios" ? 0 : 2,
+                        paddingBottom: Platform.OS === "ios" ? 2 : 2,
                       }}
                       onFocus={() => setPasswordFocus(true)}
                       onBlur={() => setPasswordFocus(false)}
@@ -571,10 +544,10 @@ export default function Login() {
                   {/* Social Login Buttons */}
                   <View className="mb-6">
                     <View className="flex-row space-x-3 gap-3">
-                      {/* Google Sign In Button */}
+                      {/* Native Google Sign In Button */}
                       <TouchableOpacity
                         className="flex-1 flex-row items-center justify-center bg-white border border-gray-300 py-4 px-3 rounded-[14px]"
-                        onPress={() => googlePromptAsync()}
+                        onPress={handleGoogleSignIn}
                         disabled={socialLoading !== null}
                       >
                         {socialLoading === 'google' ? (
@@ -592,7 +565,7 @@ export default function Login() {
                       {/* Apple Sign In Button - Only show on iOS */}
                       {Platform.OS === 'ios' ? (
                         <TouchableOpacity
-                          className="flex-1 flex-row items-center justify-center bg-black py-3 px-3 rounded-[14px]"
+                          className="flex-1 flex-row items-center justify-center bg-black py-4 px-3 rounded-[14px]"
                           onPress={handleAppleSignIn}
                           disabled={socialLoading !== null}
                         >
@@ -608,33 +581,15 @@ export default function Login() {
                           )}
                         </TouchableOpacity>
                       ) : (
-                        /* Placeholder for Android to keep Google button centered */
                         <View className="flex-1" />
                       )}
                     </View>
                   </View>
 
-
-
-                  {/* Continue as guest */}
-                  {/* <TouchableOpacity
-                    className="bg-white border border-[#9A563A] mt-4 py-5 items-center rounded-[14px]"
-                    onPress={handleContinueAsGuest}
-                    disabled={socialLoading !== null}
-                  >
-                    <Text className="text-[#9A563A] text-lg font-semibold">
-                      Continue as Guest
-                    </Text>
-                  </TouchableOpacity> */}
-
                   {/* Register Link */}
                   <View className="flex-row justify-center items-center mt-6">
-                    <Text className="text-gray-400">
-                      Don't have an account?
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => router.push("/RegisterScreen")}
-                    >
+                    <Text className="text-gray-400">Don't have an account?</Text>
+                    <TouchableOpacity onPress={() => router.push("/RegisterScreen")}>
                       <Text className="text-brown-700 font-semibold color-primary ml-1">
                         Create Account
                       </Text>
@@ -647,26 +602,19 @@ export default function Login() {
                     <View className="flex-1 h-px bg-gray-300" />
                   </View>
 
-
                   <View className="flex-row justify-center items-center mt-3">
-
-                    <TouchableOpacity
-                      onPress={handleContinueAsGuest}
-                    >
+                    <TouchableOpacity onPress={handleContinueAsGuest}>
                       <Text className="text-brown-700 font-semibold color-primary ml-1">
                         Continue as Guest
                       </Text>
                     </TouchableOpacity>
                   </View>
-
-
                 </View>
               </ScrollView>
             </KeyboardAvoidingView>
           </SafeAreaView>
         </SafeAreaProvider>
 
-        {/* Bottom Left SVG */}
         <BottomLeftImage />
       </View>
     </TouchableWithoutFeedback>

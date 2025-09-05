@@ -63,6 +63,27 @@ const Layout = () => {
             gestureEnabled: false,
           }}
         />
+        <Stack.Screen
+          name="OnlineTherapistScreen"
+          options={{ 
+            headerShown: true,
+            title: "Online Therapist"
+          }}
+        />
+        <Stack.Screen
+          name="TherapistDetailScreen"
+          options={{ 
+            headerShown: true,
+            title: "Therapist Details"
+          }}
+        />
+        <Stack.Screen
+          name="TherapistServicesScreen"
+          options={{ 
+            headerShown: true,
+            title: "Therapist Services"
+          }}
+          />
       </Stack>
     </>
   );

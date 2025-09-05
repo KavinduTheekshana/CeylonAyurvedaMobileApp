@@ -131,40 +131,29 @@ export default function OnlineTherapistScreen() {
   };
 
   // Start session directly
-  const handleStartSession = (therapist: Therapist) => {
-    if (isGuest) {
-      Alert.alert(
-        'Login Required',
-        'Please login to start a therapy session',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Login', onPress: () => router.push('/(auth)/LoginScreen') }
-        ]
-      );
-      return;
-    }
-
+ // Start session directly
+const handleStartSession = (therapist: Therapist) => {
+  if (isGuest) {
     Alert.alert(
-      'Start Session',
-      `Would you like to start a session with ${therapist.name}?`,
+      'Login Required',
+      'Please login to start a therapy session',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Start Session', 
-          onPress: () => {
-            // Navigate to video call or session screen
-            router.push({
-              pathname: '/(screens)/TherapySessionScreen',
-              params: {
-                therapistId: therapist.id.toString(),
-                therapistName: therapist.name
-              }
-            });
-          }
-        }
+        { text: 'Login', onPress: () => router.push('/(auth)/LoginScreen') }
       ]
     );
-  };
+    return;
+  }
+
+  // Navigate directly to therapist services screen
+  router.push({
+    pathname: '/(screens)/TherapistServicesScreen',
+    params: {
+      therapistId: therapist.id.toString(),
+      therapistName: therapist.name
+    }
+  });
+};
 
   // Calculate years of experience
   const getYearsOfExperience = (workStartDate?: string) => {
@@ -279,27 +268,6 @@ export default function OnlineTherapistScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-[#FAFAFA]">
-      {/* Header */}
-      <View className="flex-row items-center px-4 py-3 bg-white border-b border-gray-100">
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className="mr-3"
-        >
-          <MaterialIcons name="arrow-back" size={24} color="#333" />
-        </TouchableOpacity>
-        
-        <View className="flex-1">
-          <Text className="text-xl font-bold text-black">Online Therapists</Text>
-          <Text className="text-sm text-gray-500">
-            {therapists.length} therapist{therapists.length !== 1 ? 's' : ''} available
-          </Text>
-        </View>
-        
-        <View className="flex-row items-center">
-          <View className="w-2 h-2 bg-green-500 rounded-full mr-2" />
-          <Text className="text-sm text-green-600 font-medium">Live</Text>
-        </View>
-      </View>
 
       {/* Content */}
       {loading ? (
