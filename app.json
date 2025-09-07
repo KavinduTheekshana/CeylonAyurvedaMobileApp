@@ -17,6 +17,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.theekshana9.CeylonAyurveda",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "entitlements": {
         "com.apple.developer.applesignin": []
       },
@@ -35,6 +36,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.theekshana9.CeylonAyurvedaHealthUk",
+      "googleServicesFile": "./google-services.json",
       "intentFilters": [
         {
           "action": "VIEW",

@@ -1,10 +1,12 @@
+// app/(tabs)/_layout.tsx
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import {Tabs} from 'expo-router';
 import TabBar from "@/constants/TabBar";
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import {StatusBar} from "react-native";
+import {StatusBar, View} from "react-native";
 import React from "react";
 import HeaderMessageButton from '../components/HeaderMessageButton';
+import HeaderNotificationButton from '../components/HeaderNotificationButton'; // Add this import
 
 export default function TabLayout() {
     return (
@@ -28,13 +30,17 @@ export default function TabLayout() {
                 },
                 headerTintColor: '#333',
                 headerRight: () => (
-                    <HeaderMessageButton
-                        size={24}
-                        color="#9A563A"
-                    />
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <HeaderNotificationButton />
+                        <HeaderMessageButton
+                            size={24}
+                            color="#9A563A"
+                        />
+                    </View>
                 ),
             }}
         >
+            {/* Your existing tab screens */}
             <Tabs.Screen
                 name="index"
                 options={{
