@@ -92,8 +92,8 @@ android {
         applicationId 'com.theekshana9.CeylonAyurvedaHealthUk'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
-        versionName "1.4.6"
+        versionCode 1
+        versionName "1.4.7"
     }
     signingConfigs {
         debug {
