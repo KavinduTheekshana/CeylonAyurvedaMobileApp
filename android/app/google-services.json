@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "620734709390",
+    "project_id": "ceylonayurveda",
+    "storage_bucket": "ceylonayurveda.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:620734709390:android:a9cdb3af62d131c45dd3df",
+        "android_client_info": {
+          "package_name": "com.ceylonayurveda.dev.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "620734709390-15vn7ohv0cg7beapivl8a1uuqjlk9k8j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ceylonayurveda.dev.app",
+            "certificate_hash": "785e88b94035f646312fd95ea0d03b63e4921c03"
+          }
+        },
+        {
+          "client_id": "620734709390-skgf0knd9m3dndhloc7dp0rk77g3lmoh.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWh0xNIAENX2e5ADxpPd6bOgD1lo8cYn0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "620734709390-1lr2oddqol00p8ofkor08be43mgeupeu.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "620734709390-rta0q913bn8tbe8lnfa9t3pedqc3ecpg.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.ceylonayurveda.dev.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
