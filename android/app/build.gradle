@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.ceylonayurveda.dev.app'
+    namespace 'com.theekshana9.CeylonAyurvedaHealthUk'
     defaultConfig {
-        applicationId 'com.ceylonayurveda.dev.app'
+        applicationId 'com.theekshana9.CeylonAyurvedaHealthUk'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
@@ -97,10 +97,10 @@ android {
     }
     signingConfigs {
         debug {
-            storeFile file('debug.keystore')
-            storePassword 'android'
-            keyAlias 'androiddebugkey'
-            keyPassword 'android'
+            storeFile file("my-release-key.keystore")  // Adjust path as needed
+            storePassword "Kavindu1997"  // Replace with the password you entered
+            keyAlias "my-key-alias"
+            keyPassword "Kavindu1997"  // Replace with the key password you entered
         }
     }
     buildTypes {
