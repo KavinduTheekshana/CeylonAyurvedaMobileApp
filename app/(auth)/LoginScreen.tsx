@@ -152,6 +152,14 @@ export default function Login() {
       // Check if device has Google Play Services
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       console.log('Google Play Services available');
+      
+      try {
+      await GoogleSignin.signOut();
+      console.log('Previous Google session cleared');
+    } catch (signOutError) {
+      // It's okay if sign out fails (user might not be signed in)
+      console.log('No previous Google session to clear');
+    }
 
       // Sign in with Google
       const signInResult = await GoogleSignin.signIn();

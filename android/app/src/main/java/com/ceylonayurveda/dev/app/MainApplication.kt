@@ -1,4 +1,4 @@
-package com.theekshana9.CeylonAyurvedaHealthUk
+package com.ceylonayurveda.dev.app
 
 import android.app.Application
 import android.content.res.Configuration
