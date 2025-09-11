@@ -4,6 +4,7 @@ import { View, Text, StatusBar } from "react-native";
 import React from "react";
 import { Stack } from "expo-router";
 
+
 const Layout = () => {
   return (
     <>
@@ -85,6 +86,14 @@ const Layout = () => {
             title: "Therapist Services"
           }}
           />
+          {/* Add Notification Screen */}
+        <Stack.Screen
+          name="NotificationsScreen"
+          options={{ 
+            headerShown: true,
+            title: "Notifications"
+          }}
+        />
       </Stack>
     </>
   );

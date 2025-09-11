@@ -1,12 +1,13 @@
 import { Stack } from "expo-router";
 import "./globals.css";
-import { StatusBar, View, ActivityIndicator } from "react-native";
+import { StatusBar, View, ActivityIndicator,Platform } from "react-native";
 import React, { useEffect, useState } from "react";
 import * as SplashScreen from 'expo-splash-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useSegments } from "expo-router";
 import { LocationProvider } from './contexts/LocationContext';
 import { StripeProvider } from '@stripe/stripe-react-native';
+import notificationService from './services/notificationService';
 
 // Keep splash visible while loading
 SplashScreen.preventAutoHideAsync();
@@ -83,6 +84,22 @@ export default function RootLayout() {
     }
 
     prepare();
+  }, []);
+
+  useEffect(() => {
+    // Initialize notifications when app starts
+    const initializeNotifications = async () => {
+      if (Platform.OS !== 'web') {
+        await notificationService.initialize();
+      }
+    };
+
+    initializeNotifications();
+
+    // Cleanup on unmount
+    return () => {
+      notificationService.cleanup();
+    };
   }, []);
 
   if (!isReady) {
