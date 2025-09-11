@@ -67,7 +67,8 @@ const Layout = () => {
           name="OnlineTherapistScreen"
           options={{ 
             headerShown: true,
-            title: "Online Therapist"
+            title: "Online Therapist",
+            headerBackVisible: true
           }}
         />
         <Stack.Screen

@@ -90,9 +90,9 @@ export default function Login() {
       forceCodeForRefreshToken: true,
     });
 
-    console.log('=== GOOGLE SIGNIN CONFIGURATION ===');
-    console.log('Web Client ID:', process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
-    console.log('===================================');
+    // console.log('=== GOOGLE SIGNIN CONFIGURATION ===');
+    // console.log('Web Client ID:', process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
+    // console.log('===================================');
   }, []);
 
   // Store all user data function

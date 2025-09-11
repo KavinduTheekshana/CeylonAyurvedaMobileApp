@@ -10,8 +10,9 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useNavigation } from 'expo-router';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
+import { HeaderBackButton } from "@react-navigation/elements";
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@/config/api';
@@ -38,10 +39,30 @@ interface ApiResponse {
 
 export default function OnlineTherapistScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const [therapists, setTherapists] = useState<Therapist[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [isGuest, setIsGuest] = useState<boolean>(false);
+
+  // Configure header with back button
+  useEffect(() => {
+    navigation.setOptions({
+      title: "Online Therapists",
+      headerLeft: () => (
+        <HeaderBackButton
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              router.back();
+            }
+          }}
+          tintColor="black"
+        />
+      ),
+    });
+  }, [navigation, router]);
 
   // Check if user is guest
   useEffect(() => {
@@ -268,7 +289,6 @@ const handleStartSession = (therapist: Therapist) => {
 
   return (
     <SafeAreaView className="flex-1 bg-[#FAFAFA]">
-
       {/* Content */}
       {loading ? (
         <View className="flex-1 justify-center items-center">

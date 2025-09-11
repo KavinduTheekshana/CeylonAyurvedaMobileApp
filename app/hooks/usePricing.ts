@@ -63,3 +63,5 @@ export const usePricing = (serviceDetails: Service | null) => {
         getTotalSavings
     };
 };
+
+export default usePricing;

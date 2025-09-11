@@ -110,3 +110,11 @@ export async function validateAddressLocation(postcode: string, selectedLocation
         return { isValid: true };
     }
 }
+
+const locationUtils = {
+    calculateDistance,
+    getPostcodeCoordinates,
+    validateAddressLocation
+};
+
+export default locationUtils;

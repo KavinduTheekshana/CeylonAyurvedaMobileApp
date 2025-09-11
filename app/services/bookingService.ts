@@ -180,3 +180,5 @@ export const bookingService = {
         }
     }
 };
+
+export default bookingService;

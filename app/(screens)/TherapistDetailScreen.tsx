@@ -9,8 +9,9 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
+import { HeaderBackButton } from "@react-navigation/elements";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Therapist {
@@ -29,10 +30,30 @@ interface Therapist {
 
 export default function TherapistDetailScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { therapistId, therapistData } = useLocalSearchParams();
   const [therapist, setTherapist] = useState<Therapist | null>(null);
   const [isGuest, setIsGuest] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+
+  // Configure header with back button
+  useEffect(() => {
+    navigation.setOptions({
+      title: "Therapist Details",
+      headerLeft: () => (
+        <HeaderBackButton
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              router.back();
+            }
+          }}
+          tintColor="black"
+        />
+      ),
+    });
+  }, [navigation, router]);
 
   useEffect(() => {
     const checkGuestStatus = async () => {

@@ -7,9 +7,9 @@ let API_BASE_URL = 'https://app.ceylonayurvedahealth.co.uk';
 // let API_BASE_URL = 'http://10.0.2.2:8000';
 // let API_BASE_URL = 'http://192.168.0.213:8000';
 
-console.log('=== API CONFIG LOADED ===');
-console.log('API_BASE_URL:', API_BASE_URL);
-console.log('========================');
+// console.log('=== API CONFIG LOADED ===');
+// console.log('API_BASE_URL:', API_BASE_URL);
+// console.log('========================');
 
 
 
