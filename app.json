@@ -2,7 +2,7 @@
   "expo": {
     "name": "CeylonAyurveda",
     "slug": "CeylonAyurveda-kanishka",
-    "version": "1.4.6",
+    "version": "1.4.7",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "ceylonayurveda",
@@ -15,6 +15,7 @@
     },
     "newArchEnabled": true,
     "ios": {
+      "googleServicesFile": "./GoogleService-Info.plist",
       "supportsTablet": true,
       "bundleIdentifier": "com.theekshana9.CeylonAyurveda",
       "googleServicesFile": "./GoogleService-Info.plist",
@@ -71,6 +72,9 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "updates": {
+      "enabled": false
     },
     "extra": {
       "router": {

@@ -173,3 +173,5 @@ export const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         </View>
     );
 };
+
+export default PaymentMethodSelector;

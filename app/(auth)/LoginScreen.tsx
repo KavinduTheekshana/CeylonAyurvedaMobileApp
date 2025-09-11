@@ -22,7 +22,6 @@ import Logo from "@/app/components/Logo";
 import BottomLeftImage from "@/app/components/BottomLeftImage";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as AppleAuthentication from 'expo-apple-authentication';
 import {
   GoogleSignin,
   statusCodes,
@@ -57,7 +56,7 @@ interface SocialAuthData {
   token?: string;
   email: string;
   name: string;
-  provider: 'google' | 'apple';
+  provider: 'google';
   provider_id: string;
   avatar_url?: string;
 }
@@ -75,26 +74,25 @@ export default function Login() {
   const [passwordFocus, setPasswordFocus] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
+  const [socialLoading, setSocialLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<LoginErrors>({
     email: "",
     password: "",
   });
 
-  // Configure Google Sign-In (Fixed configuration)
+  // Configure Google Sign-In
   useEffect(() => {
     GoogleSignin.configure({
       webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-      // Remove androidClientId and iosClientId - use only webClientId
       scopes: ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile'],
       offlineAccess: false,
       hostedDomain: '',
       forceCodeForRefreshToken: true,
     });
 
-    console.log('=== GOOGLE SIGNIN CONFIGURATION ===');
-    console.log('Web Client ID:', process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
-    console.log('===================================');
+    // console.log('=== GOOGLE SIGNIN CONFIGURATION ===');
+    // console.log('Web Client ID:', process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
+    // console.log('===================================');
   }, []);
 
   // Store all user data function
@@ -145,21 +143,29 @@ export default function Login() {
     }
   };
 
-  // Fixed Modern Native Google Sign-In Handler
+  // Google Sign-In Handler
   const handleGoogleSignIn = async () => {
     try {
-      setSocialLoading('google');
+      setSocialLoading(true);
       console.log('Starting Google Sign-In...');
 
       // Check if device has Google Play Services
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       console.log('Google Play Services available');
+      
+      try {
+      await GoogleSignin.signOut();
+      console.log('Previous Google session cleared');
+    } catch (signOutError) {
+      // It's okay if sign out fails (user might not be signed in)
+      console.log('No previous Google session to clear');
+    }
 
-      // Sign in with Google (Fixed user access)
+      // Sign in with Google
       const signInResult = await GoogleSignin.signIn();
       console.log('Google Sign-In successful:', signInResult);
 
-      // Access user data correctly (without strict typing)
+      // Access user data correctly
       const user: any = signInResult.data?.user || signInResult.user;
       
       if (!user) {
@@ -170,7 +176,7 @@ export default function Login() {
       const tokens = await GoogleSignin.getTokens();
       console.log('Got access token');
 
-      // Prepare data for backend (using actual user object properties)
+      // Prepare data for backend
       const socialAuthData: SocialAuthData = {
         token: tokens.accessToken,
         email: user.email,
@@ -224,64 +230,11 @@ export default function Login() {
         Alert.alert("Google Sign In Error", errorMessage);
       }
     } finally {
-      setSocialLoading(null);
+      setSocialLoading(false);
     }
   };
 
-  // Fixed Apple Sign In (with proper error typing)
-  const handleAppleSignIn = async () => {
-    try {
-      setSocialLoading('apple');
-
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-      });
-
-      if (!credential.user) {
-        throw new Error("Failed to get user data from Apple");
-      }
-
-      const socialAuthData: SocialAuthData = {
-        email: credential.email || `${credential.user}@privaterelay.appleid.com`,
-        name: credential.fullName ?
-          `${credential.fullName.givenName || ''} ${credential.fullName.familyName || ''}`.trim() :
-          credential.email || 'Apple User',
-        provider: 'apple',
-        provider_id: credential.user,
-      };
-
-      const response = await axios.post<LoginResponse>(
-        `${API_BASE_URL}/api/auth/social/login`,
-        socialAuthData
-      );
-
-      if (response.data.access_token) {
-        await handleSocialLoginSuccess(response.data);
-      } else {
-        throw new Error("No access token received from server");
-      }
-    } catch (error: any) { // Fixed error typing
-      console.error("Apple sign in error:", error);
-
-      if (error.code === 'ERR_CANCELED') {
-        return;
-      }
-
-      let errorMessage = "Apple sign in failed. Please try again.";
-      if (axios.isAxiosError(error)) {
-        errorMessage = error.response?.data?.message || errorMessage;
-      }
-
-      Alert.alert("Apple Sign In Error", errorMessage);
-    } finally {
-      setSocialLoading(null);
-    }
-  };
-
-  // Regular login handler (unchanged)
+  // Regular login handler
   const handleLogin = async (): Promise<void> => {
     setErrors({ email: "", password: "" });
 
@@ -362,7 +315,7 @@ export default function Login() {
     }
   };
 
-  // Handle continue as guest (unchanged)
+  // Handle continue as guest
   const handleContinueAsGuest = async (): Promise<void> => {
     try {
       await AsyncStorage.removeItem("access_token");
@@ -523,7 +476,7 @@ export default function Login() {
                   <TouchableOpacity
                     className="bg-primary py-5 items-center rounded-[14px]"
                     onPress={handleLogin}
-                    disabled={isLoading || socialLoading !== null}
+                    disabled={isLoading || socialLoading}
                   >
                     {isLoading ? (
                       <ActivityIndicator color="white" />
@@ -541,49 +494,24 @@ export default function Login() {
                     <View className="flex-1 h-px bg-gray-300" />
                   </View>
 
-                  {/* Social Login Buttons */}
+                  {/* Google Sign In Button */}
                   <View className="mb-6">
-                    <View className="flex-row space-x-3 gap-3">
-                      {/* Native Google Sign In Button */}
-                      <TouchableOpacity
-                        className="flex-1 flex-row items-center justify-center bg-white border border-gray-300 py-4 px-3 rounded-[14px]"
-                        onPress={handleGoogleSignIn}
-                        disabled={socialLoading !== null}
-                      >
-                        {socialLoading === 'google' ? (
-                          <ActivityIndicator size="small" color="#DB4437" />
-                        ) : (
-                          <>
-                            <FontAwesome name="google" size={18} color="#DB4437" />
-                            <Text className="text-gray-700 font-medium ml-2 text-sm">
-                              Google
-                            </Text>
-                          </>
-                        )}
-                      </TouchableOpacity>
-
-                      {/* Apple Sign In Button - Only show on iOS */}
-                      {Platform.OS === 'ios' ? (
-                        <TouchableOpacity
-                          className="flex-1 flex-row items-center justify-center bg-black py-4 px-3 rounded-[14px]"
-                          onPress={handleAppleSignIn}
-                          disabled={socialLoading !== null}
-                        >
-                          {socialLoading === 'apple' ? (
-                            <ActivityIndicator size="small" color="#FFFFFF" />
-                          ) : (
-                            <>
-                              <FontAwesome name="apple" size={18} color="#FFFFFF" />
-                              <Text className="text-white font-medium ml-2 text-sm">
-                                Apple
-                              </Text>
-                            </>
-                          )}
-                        </TouchableOpacity>
+                    <TouchableOpacity
+                      className="flex-row items-center justify-center bg-white border border-gray-300 py-4 px-3 rounded-[14px]"
+                      onPress={handleGoogleSignIn}
+                      disabled={socialLoading || isLoading}
+                    >
+                      {socialLoading ? (
+                        <ActivityIndicator size="small" color="#DB4437" />
                       ) : (
-                        <View className="flex-1" />
+                        <>
+                          <FontAwesome name="google" size={18} color="#DB4437" />
+                          <Text className="text-gray-700 font-medium ml-2 text-sm">
+                            Continue with Google
+                          </Text>
+                        </>
                       )}
-                    </View>
+                    </TouchableOpacity>
                   </View>
 
                   {/* Register Link */}

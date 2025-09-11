@@ -65,3 +65,13 @@ export type RootStackParamList = {
 
 export type BookingCheckoutScreenRouteProp = import('@react-navigation/native').RouteProp<RootStackParamList, 'BookingCheckoutScreen'>;
 export type BookingCheckoutScreenNavigationProp = import('@react-navigation/stack').StackNavigationProp<RootStackParamList>;
+
+const bookingTypes = {
+    Service: {} as Service,
+    Address: {} as Address,
+    Coupon: {} as Coupon,
+    PaymentMethod: 'card' as PaymentMethod,
+    RootStackParamList: {} as RootStackParamList
+};
+
+export default bookingTypes;
