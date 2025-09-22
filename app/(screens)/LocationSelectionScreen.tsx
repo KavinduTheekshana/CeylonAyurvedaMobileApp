@@ -1,5 +1,5 @@
 // app/(screens)/LocationSelectionScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     View,
     Text,
@@ -11,7 +11,8 @@ import {
     Alert,
     StyleSheet,
     Dimensions,
-    StatusBar
+    StatusBar,
+    TextInput
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -27,6 +28,7 @@ const LocationSelectionScreen = () => {
     const [locations, setLocations] = useState<Location[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedLocationId, setSelectedLocationId] = useState<number | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         fetchLocations();
@@ -182,6 +184,21 @@ const LocationSelectionScreen = () => {
         }
     };
 
+    // Filter locations based on search query
+    const filteredLocations = useMemo(() => {
+        if (!searchQuery.trim()) {
+            return locations;
+        }
+
+        const query = searchQuery.toLowerCase().trim();
+        return locations.filter(location =>
+            location.name.toLowerCase().includes(query) ||
+            location.city.toLowerCase().includes(query) ||
+            location.address.toLowerCase().includes(query) ||
+            location.postcode.toLowerCase().includes(query)
+        );
+    }, [locations, searchQuery]);
+
     const renderLocationItem = ({ item }: { item: Location }) => {
         const isSelected = selectedLocationId === item.id;
         const hasCoordinates = item.latitude !== null && item.longitude !== null;
@@ -275,9 +292,40 @@ const LocationSelectionScreen = () => {
                     </Text>
                 </View>
 
+                {/* Search Bar */}
+                <View style={styles.searchContainer}>
+                    <View style={styles.searchInputContainer}>
+                        <Feather name="search" size={20} color="#9ca3af" style={styles.searchIcon} />
+                        <TextInput
+                            style={styles.searchInput}
+                            placeholder="Search locations by name, city, or address..."
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            placeholderTextColor="#9ca3af"
+                        />
+                        {searchQuery.length > 0 && (
+                            <TouchableOpacity
+                                onPress={() => setSearchQuery('')}
+                                style={styles.clearButton}
+                            >
+                                <Feather name="x" size={20} color="#9ca3af" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </View>
+
+                {/* Results count */}
+                {searchQuery.trim() && (
+                    <View style={styles.resultsCount}>
+                        <Text style={styles.resultsText}>
+                            {filteredLocations.length} location{filteredLocations.length !== 1 ? 's' : ''} found
+                        </Text>
+                    </View>
+                )}
+
                 {/* Locations List */}
                 <FlatList
-                    data={locations}
+                    data={filteredLocations}
                     renderItem={renderLocationItem}
                     keyExtractor={(item) => item.id.toString()}
                     showsVerticalScrollIndicator={false}
@@ -482,6 +530,47 @@ const styles = StyleSheet.create({
     },
     disabledButtonText: {
         color: '#9ca3af',
+    },
+    searchContainer: {
+        paddingHorizontal: 0,
+        marginBottom: 16,
+    },
+    searchInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+    },
+    searchIcon: {
+        marginRight: 12,
+    },
+    searchInput: {
+        flex: 1,
+        fontSize: 16,
+        color: '#1f2937',
+        paddingVertical: 0,
+    },
+    clearButton: {
+        padding: 4,
+        marginLeft: 8,
+    },
+    resultsCount: {
+        paddingHorizontal: 4,
+        marginBottom: 12,
+    },
+    resultsText: {
+        fontSize: 14,
+        color: '#6b7280',
+        fontWeight: '500',
     },
 });
 

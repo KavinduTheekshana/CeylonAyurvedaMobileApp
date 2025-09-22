@@ -10,12 +10,12 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
-import { useRouter, useNavigation } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
-import { HeaderBackButton } from "@react-navigation/elements";
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@/config/api';
+import { useLocation } from '../contexts/LocationContext';
 
 interface Therapist {
   id: number;
@@ -35,34 +35,17 @@ interface ApiResponse {
   success: boolean;
   data: Therapist[];
   message?: string;
+  count?: number;
 }
 
 export default function OnlineTherapistScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
+  const { selectedLocation } = useLocation();
   const [therapists, setTherapists] = useState<Therapist[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [isGuest, setIsGuest] = useState<boolean>(false);
-
-  // Configure header with back button
-  useEffect(() => {
-    navigation.setOptions({
-      title: "Online Therapists",
-      headerLeft: () => (
-        <HeaderBackButton
-          onPress={() => {
-            if (navigation.canGoBack()) {
-              navigation.goBack();
-            } else {
-              router.back();
-            }
-          }}
-          tintColor="black"
-        />
-      ),
-    });
-  }, [navigation, router]);
+  const [error, setError] = useState<string | null>(null);
 
   // Check if user is guest
   useEffect(() => {
@@ -82,10 +65,21 @@ export default function OnlineTherapistScreen() {
   const fetchOnlineTherapists = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
+
+      // Build API URL with location parameter if location is selected
+      let apiUrl = `${API_BASE_URL}/api/therapists/online`;
+
+      if (selectedLocation) {
+        apiUrl += `?location_id=${selectedLocation.id}`;
+        console.log(`Filtering online therapists by location: ${selectedLocation.name} (ID: ${selectedLocation.id})`);
+      }
+
+      console.log(`API URL: ${apiUrl}`);
 
       // Make API request to fetch only online therapists
       const response = await axios.get<ApiResponse>(
-        `${API_BASE_URL}/api/therapists/online`,
+        apiUrl,
         {
           headers: {
             'Content-Type': 'application/json',
@@ -93,6 +87,8 @@ export default function OnlineTherapistScreen() {
           },
         }
       );
+
+      console.log('API Response:', response.data);
 
       if (response.data.success) {
         // Process therapist data to include full image URLs
@@ -104,19 +100,39 @@ export default function OnlineTherapistScreen() {
         }));
 
         setTherapists(processedTherapists);
+        console.log('Online therapists loaded successfully:', processedTherapists.length);
+
+        if (processedTherapists.length === 0 && selectedLocation) {
+          console.log(`No online therapists found for location: ${selectedLocation.name}`);
+        }
       } else {
-        Alert.alert('Error', response.data.message || 'Failed to fetch therapists');
+        // Handle API error response
+        const errorMessage = response.data.message || 'Failed to fetch online therapists';
+        setError(errorMessage);
+        console.error('API Error:', errorMessage);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching online therapists:', error);
-      Alert.alert('Error', 'Failed to load online therapists. Please try again.');
+      
+      // Handle different types of errors
+      if (error.response) {
+        // Server responded with error status
+        const serverMessage = error.response.data?.message || 'Server error occurred';
+        setError(`Unable to load online therapists: ${serverMessage}`);
+      } else if (error.request) {
+        // Request was made but no response received
+        setError('Unable to connect to server. Please check your internet connection.');
+      } else {
+        // Something else happened
+        setError('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [selectedLocation]);
 
-  // Initial load
+  // Initial load and location dependency
   useEffect(() => {
     fetchOnlineTherapists();
   }, [fetchOnlineTherapists]);
@@ -143,7 +159,7 @@ export default function OnlineTherapistScreen() {
 
     // Navigate to therapist detail or session screen
     router.push({
-      pathname: '/(screens)/TherapistDetailScreen',
+      pathname: '/(screens)/TherapistDetailsScreen',
       params: {
         therapistId: therapist.id.toString(),
         therapistData: JSON.stringify(therapist)
@@ -152,29 +168,28 @@ export default function OnlineTherapistScreen() {
   };
 
   // Start session directly
- // Start session directly
-const handleStartSession = (therapist: Therapist) => {
-  if (isGuest) {
-    Alert.alert(
-      'Login Required',
-      'Please login to start a therapy session',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Login', onPress: () => router.push('/(auth)/LoginScreen') }
-      ]
-    );
-    return;
-  }
-
-  // Navigate directly to therapist services screen
-  router.push({
-    pathname: '/(screens)/TherapistServicesScreen',
-    params: {
-      therapistId: therapist.id.toString(),
-      therapistName: therapist.name
+  const handleStartSession = (therapist: Therapist) => {
+    if (isGuest) {
+      Alert.alert(
+        'Login Required',
+        'Please login to start a therapy session',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Login', onPress: () => router.push('/(auth)/LoginScreen') }
+        ]
+      );
+      return;
     }
-  });
-};
+
+    // Navigate directly to therapist services screen
+    router.push({
+      pathname: '/(screens)/TherapistServicesScreen',
+      params: {
+        therapistId: therapist.id.toString(),
+        therapistName: therapist.name
+      }
+    });
+  };
 
   // Calculate years of experience
   const getYearsOfExperience = (workStartDate?: string) => {
@@ -263,25 +278,55 @@ const handleStartSession = (therapist: Therapist) => {
     </TouchableOpacity>
   );
 
-  // Empty state
+  // Empty state component
   const renderEmptyState = () => {
     if (loading) return null;
 
     return (
       <View className="flex-1 justify-center items-center py-10">
         <MaterialIcons name="person-off" size={64} color="#9A563A" />
-        <Text className="text-lg font-bold mt-4 text-center">
-          No Online Therapists
+        <Text className="text-xl font-bold mt-4 text-center text-gray-800">
+          No Online Therapists Available
         </Text>
-        <Text className="text-gray-500 text-center mt-2 px-10">
-          There are currently no therapists available online. Please check back later.
+        <Text className="text-base text-gray-500 text-center mt-2 px-6 leading-6">
+          {selectedLocation
+            ? `There are currently no therapists available online in ${selectedLocation.name}. They may be offline or serving other clients.`
+            : "There are currently no therapists available online at this time."
+          }
+        </Text>
+        <Text className="text-sm text-gray-500 text-center mt-3 px-6">
+          Try refreshing or consider booking a regular appointment instead.
         </Text>
         <TouchableOpacity
-          className="bg-primary py-3 px-6 rounded-full mt-6 flex-row items-center"
+          className="py-3.5 px-6 rounded-xl mt-6 flex-row items-center"
+          style={{ backgroundColor: '#9A563A' }}
           onPress={fetchOnlineTherapists}
         >
           <Feather name="refresh-cw" size={18} color="white" />
-          <Text className="text-white font-bold ml-2">Refresh</Text>
+          <Text className="text-white font-semibold ml-2">Refresh</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  // Error state component
+  const renderErrorState = () => {
+    return (
+      <View className="flex-1 justify-center items-center py-10">
+        <MaterialIcons name="error-outline" size={64} color="#DC2626" />
+        <Text className="text-xl font-bold mt-4 text-center text-red-600">
+          Oops! Something went wrong
+        </Text>
+        <Text className="text-base text-gray-500 text-center mt-2 px-6 leading-6">
+          {error}
+        </Text>
+        <TouchableOpacity
+          className="py-3.5 px-6 rounded-xl mt-6 flex-row items-center"
+          style={{ backgroundColor: '#9A563A' }}
+          onPress={fetchOnlineTherapists}
+        >
+          <Feather name="refresh-cw" size={18} color="white" />
+          <Text className="text-white font-semibold ml-2">Try Again</Text>
         </TouchableOpacity>
       </View>
     );
@@ -293,8 +338,15 @@ const handleStartSession = (therapist: Therapist) => {
       {loading ? (
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#9A563A" />
-          <Text className="mt-2 text-gray-500">Loading online therapists...</Text>
+          <Text className="mt-2 text-base text-gray-500">Loading online therapists...</Text>
+          {selectedLocation && (
+            <Text className="mt-1 text-sm text-gray-400">
+              Searching in {selectedLocation.name}
+            </Text>
+          )}
         </View>
+      ) : error ? (
+        renderErrorState()
       ) : (
         <FlatList
           data={therapists}
@@ -315,7 +367,7 @@ const handleStartSession = (therapist: Therapist) => {
       )}
 
       {/* Guest banner */}
-      {isGuest && (
+      {isGuest && !loading && (
         <View className="p-4 m-4 rounded-xl" style={{ backgroundColor: '#9A563A' }}>
           <Text className="text-white font-bold text-center mb-2">
             Join to Connect with Therapists
@@ -324,7 +376,7 @@ const handleStartSession = (therapist: Therapist) => {
             Create an account to start online therapy sessions
           </Text>
           <TouchableOpacity
-            className="bg-white py-2 px-4 rounded-lg"
+            className="bg-white py-2.5 px-4 rounded-lg"
             onPress={() => router.push('/(auth)/LoginScreen')}
           >
             <Text className="font-bold text-center" style={{ color: '#9A563A' }}>Get Started</Text>

@@ -398,11 +398,13 @@ export default function ProfileScreen() {
             title: 'General',
             items: [
                 {
-                    icon: <Ionicons name="settings-outline" size={24} color="#ccc" />,
+                    icon: <Feather name="settings" size={20} color="#666" />,
                     label: 'Preferences',
-                    color: "#ccc",
-                    rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc" />,
-                    visibleForGuest: true
+                    rightIcon: <Feather name="chevron-right" size={20} color="#ccc" />,
+                    onPress: () => {
+                        // Replace this with:
+                        router.push('/UserPreferencesScreen');
+                    }
                 },
                 {
                     icon: <Ionicons name="eye-outline" size={24} color="#ccc" />,

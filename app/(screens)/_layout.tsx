@@ -94,7 +94,15 @@ const Layout = () => {
             title: "Notifications"
           }}
         />
+        <Stack.Screen
+          name="UserPreferencesScreen"
+          options={{ 
+            headerShown: true,
+            title: "UserPreferences"
+          }}
+          />
       </Stack>
+      
     </>
   );
 };
