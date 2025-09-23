@@ -7,6 +7,15 @@ import {StatusBar, View} from "react-native";
 import React from "react";
 import HeaderMessageButton from '../components/HeaderMessageButton';
 import HeaderNotificationButton from '../components/HeaderNotificationButton'; // Add this import
+import { Ionicons } from '@expo/vector-icons'; 
+
+// Create TabBarIcon component
+function TabBarIcon(props: {
+  name: React.ComponentProps<typeof Ionicons>['name'];
+  color: string;
+}) {
+  return <Ionicons size={24} style={{ marginBottom: -3 }} {...props} />;
+}
 
 export default function TabLayout() {
     return (
@@ -69,6 +78,19 @@ export default function TabLayout() {
                     headerShown: true,
                 }}
             />
+            <Tabs.Screen
+                    name="messages"
+                    options={{
+                        title: 'Messages',
+                        headerShown: true,
+                        tabBarIcon: ({ color, focused }) => (
+                            <TabBarIcon
+                                name={focused ? 'chatbubble' : 'chatbubble-outline'}
+                                color={color}
+                            />
+                        ),
+                    }}
+                />
         </Tabs>
         </>
     );

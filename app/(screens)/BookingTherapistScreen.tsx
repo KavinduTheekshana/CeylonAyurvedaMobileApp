@@ -17,6 +17,7 @@ import { API_BASE_URL } from "@/config/api";
 import withAuthGuard from '../components/AuthGuard';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { useLocation } from '../contexts/LocationContext'; // Import location context
+import { useRouter } from 'expo-router';
 
 // Define Therapist type with all availability data including work_start_date
 type Therapist = {
@@ -112,6 +113,7 @@ const BookingTherapistScreen = () => {
     const [therapists, setTherapists] = useState<Therapist[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const router = useRouter();
 
     useEffect(() => {
         // Fetch available therapists for the service from the API
@@ -242,12 +244,15 @@ const BookingTherapistScreen = () => {
 
     // Handle view profile
     const handleViewProfile = (therapist: Therapist) => {
-        // Navigate to therapist details screen
-        navigation.navigate('TherapistDetailsScreen', {
-            therapistId: therapist.id,
+    // Use Expo Router instead of React Navigation
+    router.push({
+        pathname: '/(screens)/TherapistDetailsScreen',
+        params: {
+            therapistId: therapist.id.toString(),
             therapistName: therapist.name
-        });
-    };
+        }
+    });
+};
 
     const handleContinue = () => {
         if (!selectedTherapist) {
@@ -325,12 +330,12 @@ const BookingTherapistScreen = () => {
                         <MaterialIcons 
                             name="work" 
                             size={16} 
-                            color={hasStartedWork ? "#10B981" : "#3B82F6"} 
+                            color={hasStartedWork ? "#10B981" : "#9A563A"} 
                         />
                         <Text className="text-sm text-gray-500 ml-2 mr-2 flex-1">
                             {hasStartedWork ? 'Started Work' : 'Will Start Work'}
                         </Text>
-                        <Text className={`text-sm font-semibold ${hasStartedWork ? 'text-green-600' : 'text-blue-600'}`}>
+                        <Text className={`text-sm font-semibold ${hasStartedWork ? 'text-green-600' : 'text-[#9A563A]'}`}>
                             {formatWorkStartDate(item.work_start_date)}
                         </Text>
                     </View>

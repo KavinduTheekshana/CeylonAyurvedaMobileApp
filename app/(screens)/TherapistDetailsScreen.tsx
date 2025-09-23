@@ -9,7 +9,8 @@ import {
     Image,
     Alert,
     Linking,
-    Dimensions
+    Dimensions,
+    StyleSheet
 } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -17,6 +18,8 @@ import { HeaderBackButton } from '@react-navigation/elements';
 import { API_BASE_URL } from "@/config/api";
 import { Feather, MaterialIcons, Ionicons } from '@expo/vector-icons';
 import BookingProgressBar from '../components/BookingProgressBar';
+import { chatService } from '../services/chatService';
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -75,11 +78,13 @@ type TherapistDetailsScreenNavigationProp = StackNavigationProp<RootStackParamLi
 const TherapistDetailsScreen = () => {
     const route = useRoute<TherapistDetailsScreenRouteProp>();
     const navigation = useNavigation<TherapistDetailsScreenNavigationProp>();
+    const router = useRouter();
     const { therapistId, therapistName } = route.params;
 
     const [therapist, setTherapist] = useState<TherapistDetails | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const [chatLoading, setChatLoading] = useState<boolean>(false); 
     const [bookingData, setBookingData] = useState<{ count: number, max: number }>({
         count: 0,
         max: 80
@@ -177,6 +182,39 @@ const TherapistDetailsScreen = () => {
                 .catch((err) => console.error('An error occurred', err));
         }
     };
+    
+ const startChat = async () => {
+        if (!therapist) {
+            Alert.alert('Error', 'Therapist information not available');
+            return;
+        }
+
+        try {
+            setChatLoading(true);
+            const result = await chatService.createOrAccessChat(therapist.id);
+            
+            if (result.success && result.data) {
+                router.push({
+                    pathname: '/(screens)/ChatScreen',
+                    params: { 
+                        roomId: result.data.chat_room_id.toString(), 
+                        therapistName: therapist.name 
+                    }
+                });
+            } else {
+                Alert.alert(
+                    'Unable to Start Chat', 
+                    result.message || 'You need to book a session with this therapist first to start chatting.'
+                );
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Failed to start chat. Please try again.');
+            console.error('Chat start error:', error);
+        } finally {
+            setChatLoading(false);
+        }
+    };
+
 
     // Handle email
     const handleEmail = () => {
@@ -302,6 +340,24 @@ const TherapistDetailsScreen = () => {
                     </View>
                 )}
 
+                 {/* Chat Button - Fixed with proper styling */}
+                <View className="px-4 mb-6">
+                    <TouchableOpacity 
+                        style={styles.chatButton} 
+                        onPress={startChat}
+                        disabled={chatLoading}
+                    >
+                        {chatLoading ? (
+                            <ActivityIndicator size="small" color="#9A563A" />
+                        ) : (
+                            <Ionicons name="chatbubble-outline" size={20} color="#9A563A" />
+                        )}
+                        <Text style={styles.chatButtonText}>
+                            {chatLoading ? 'Loading...' : `Message ${therapist.name}`}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
                 {/* Quick Stats Cards */}
                 <View className={`px-4 ${isFutureDate ? 'mb-6' : '-mt-4 mb-6'}`}>
                     <View className="bg-white rounded-2xl p-4 flex-row shadow-lg">
@@ -316,7 +372,7 @@ const TherapistDetailsScreen = () => {
                         </View>
                         <View className="w-px bg-gray-200 mx-4" />
                         <View className="flex-1 items-center">
-                            <Text className="text-2xl font-bold text-blue-600">{therapist.availability_stats.today_slots_count}</Text>
+                            <Text className="text-2xl font-bold text-[#9A563A]">{therapist.availability_stats.today_slots_count}</Text>
                             <Text className="text-xs text-gray-500 text-center">Today's Slots</Text>
                         </View>
                     </View>
@@ -416,8 +472,8 @@ const TherapistDetailsScreen = () => {
                     <Text className="text-xl font-bold text-gray-800 mb-4">Contact Information</Text>
                     <View className="space-y-4">
                         <View className="flex-row items-center">
-                            <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-3">
-                                <Feather name="mail" size={16} color="#3B82F6" />
+                            <View className="w-10 h-10 bg-orange-100 rounded-full items-center justify-center mr-3">
+                                <Feather name="mail" size={16} color="#9A563A" />
                             </View>
                             <Text className="text-gray-700 flex-1">{therapist.email}</Text>
                         </View>
@@ -434,5 +490,34 @@ const TherapistDetailsScreen = () => {
         </SafeAreaView>
     );
 };
+
+// Styles for the chat button
+const styles = StyleSheet.create({
+    chatButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FFFFFF',
+        borderWidth: 2,
+        borderColor: '#9A563A',
+        borderRadius: 12,
+        paddingVertical: 14,
+        paddingHorizontal: 20,
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 3.84,
+        elevation: 5,
+    },
+    chatButtonText: {
+        color: '#9A563A',
+        fontSize: 16,
+        fontWeight: '600',
+        marginLeft: 8,
+    },
+});
 
 export default TherapistDetailsScreen;
