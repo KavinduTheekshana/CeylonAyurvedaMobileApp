@@ -24,6 +24,7 @@ import {
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "@/config/api";
+import TreatmentHistoryService from '../services/treatmentHistoryService';
 
 // Types
 interface Booking {
@@ -254,10 +255,40 @@ export default function MyBookings() {
   );
 
   // Show options modal
-  const showOptionsModal = useCallback((booking: Booking) => {
-    setSelectedBooking(booking);
-    setModalVisible(true);
-  }, []);
+const showOptionsModal = useCallback((booking: Booking) => {
+  setSelectedBooking(booking);
+  setModalVisible(true);
+}, []);
+
+// Add this new function right after showOptionsModal
+const handleViewTreatmentHistory = useCallback(async (booking: Booking) => {
+  try {
+    setModalVisible(false); // Close the options modal first
+    
+    // Check if treatment history exists
+    const hasHistory = await TreatmentHistoryService.checkTreatmentHistoryExists(booking.id);
+    
+    if (hasHistory) {
+      router.push({
+        pathname: '/(screens)/TreatmentHistoryDetailsScreen',
+        params: {
+          bookingId: booking.id.toString(),
+          bookingReference: booking.reference,
+        },
+      });
+    } else {
+      Alert.alert(
+        'No Treatment History',
+        'Treatment history is not available for this booking yet.',
+        [{ text: 'OK' }]
+      );
+    }
+  } catch (error) {
+    console.error('Error checking treatment history:', error);
+    Alert.alert('Error', 'Unable to load treatment history. Please try again.');
+  }
+}, [router]);
+
 
   // Status badge color
   const getStatusColor = (status: string) => {
@@ -465,21 +496,19 @@ export default function MyBookings() {
                 {/* Modal Body */}
                 {selectedBooking && (
                   <>
-                    {/* Only show reschedule option if booking is not cancelled */}
-                    {/* {selectedBooking.status !== "cancelled" && (
-                        <TouchableOpacity
-                          style={styles.modalOption}
-                          onPress={() =>
-                            handleRescheduleBooking(selectedBooking.id)
-                          }
-                        >
-                          <Feather name="calendar" size={20} color="#9A563A" />
-                          <Text style={styles.modalOptionText}>Reschedule</Text>
-                        </TouchableOpacity>
-                      )} */}
+                    {/* Treatment History option for completed bookings */}
+                    {selectedBooking.status === "completed" && (
+                      <TouchableOpacity
+                        style={styles.modalOption}
+                        onPress={() => handleViewTreatmentHistory(selectedBooking)}
+                      >
+                        <MaterialIcons name="history" size={20} color="#9A563A" />
+                        <Text style={styles.modalOptionText}>View Treatment History</Text>
+                      </TouchableOpacity>
+                    )}
 
-
-                    {selectedBooking.status !== "cancelled" && (
+                    {/* Only show cancel option if booking is not cancelled and not completed */}
+                    {selectedBooking.status !== "cancelled" && selectedBooking.status !== "completed" && (
                       <TouchableOpacity
                         style={[styles.modalOption, styles.lastOption]}
                         onPress={() => handleCancelBooking(selectedBooking.id)}
@@ -493,7 +522,7 @@ export default function MyBookings() {
                       </TouchableOpacity>
                     )}
 
-                    {/* If booking is already cancelled, show message */}
+                    {/* If booking is cancelled, show message */}
                     {selectedBooking.status === "cancelled" && (
                       <Text style={styles.noOptionsText}>
                         No actions available for cancelled bookings.

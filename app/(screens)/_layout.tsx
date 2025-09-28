@@ -101,6 +101,20 @@ const Layout = () => {
             title: "UserPreferences"
           }}
           />
+          <Stack.Screen
+            name="TreatmentHistoryDetailsScreen"
+            options={{
+              headerShown: false,
+              title: "Treatment History"
+            }}
+          />
+          <Stack.Screen
+          name="TreatmentHistoryListScreen"
+          options={{
+            headerShown: false,
+            title: "All Treatment History"
+          }}
+        />
       </Stack>
       
     </>

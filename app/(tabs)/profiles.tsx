@@ -168,6 +168,22 @@ export default function ProfileScreen() {
         }, [])
     );
 
+    // Navigate to Treatment History
+const handleTreatmentHistoryPress = (): void => {
+    if (isGuest) {
+        Alert.alert(
+            'Login Required',
+            'Please login to view your treatment history',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Login', onPress: () => router.push('/(auth)/LoginScreen') }
+            ]
+        );
+        return;
+    }
+    router.push('/(screens)/TreatmentHistoryListScreen');
+};
+
     // Handle login
     const handleLogin = (): void => {
         router.push('/(auth)/LoginScreen');
@@ -351,6 +367,20 @@ export default function ProfileScreen() {
                 },
             ],
             visibleForGuest: true
+        },
+        {
+        title: 'Medical History',
+        items: [
+            {
+                icon: <MaterialIcons name="history" size={24} color="#9A563A" />,
+                label: 'Treatment History',
+                color: "#9A563A",
+                rightIcon: <MaterialIcons name="keyboard-arrow-right" size={24} color="#ccc" />,
+                onPress: handleTreatmentHistoryPress,
+                visibleForGuest: true
+            },
+        ],
+        visibleForGuest: true
         },
         {
             title: 'Activity',
