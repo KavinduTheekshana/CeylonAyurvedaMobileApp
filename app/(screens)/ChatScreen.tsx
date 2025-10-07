@@ -125,7 +125,8 @@ const ChatScreen = () => {
       content: messageText,
       sender: {
         id: currentUserId!,
-        name: 'You'
+        name: 'You',
+        type: 'patient' 
       },
       message_type: 'text',
       is_read: false,
@@ -213,7 +214,7 @@ const ChatScreen = () => {
   };
 
   const renderMessage = ({ item, index }: { item: ChatMessage; index: number }) => {
-    const isMyMessage = item.sender.id === currentUserId;
+    const isMyMessage = item.sender.type === 'patient';
     const previousMessage = index > 0 ? messages[index - 1] : null;
     const showDateHeader = shouldShowDateHeader(item, previousMessage);
     

@@ -13,6 +13,7 @@ export interface ChatRoom {
     content: string;
     sent_at: string;
     sender_name: string;
+    sender_type: 'patient' | 'therapist'; 
   } | null;
   unread_count: number;
   last_message_at: string | null;
@@ -25,6 +26,7 @@ export interface ChatMessage {
   sender: {
     id: number;
     name: string;
+    type: 'patient' | 'therapist'; 
   };
   message_type: 'text' | 'image' | 'file';
   is_read: boolean;
