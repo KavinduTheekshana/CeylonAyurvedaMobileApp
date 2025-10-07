@@ -14,6 +14,8 @@ interface PaymentSummaryProps {
     getServiceDiscountAmount: () => number;
     getServiceDiscountPercentage: () => number;
     getTotalSavings: () => number;
+    visitType: 'home' | 'branch';  
+    homeVisitFee: number; 
 }
 
 export const PaymentSummary: React.FC<PaymentSummaryProps> = ({
@@ -25,7 +27,9 @@ export const PaymentSummary: React.FC<PaymentSummaryProps> = ({
     hasServiceDiscount,
     getServiceDiscountAmount,
     getServiceDiscountPercentage,
-    getTotalSavings
+    getTotalSavings,
+    visitType,      
+    homeVisitFee  
 }) => {
     if (!serviceDetails) return null;
 
@@ -62,6 +66,15 @@ export const PaymentSummary: React.FC<PaymentSummaryProps> = ({
                         Coupon ({appliedCoupon.code}):
                     </Text>
                     <Text style={styles.discountAmount}>-£{couponDiscount.toFixed(2)}</Text>
+                </View>
+            )}
+             {/* Home Visit Fee */}
+            {visitType === 'home' && homeVisitFee > 0 && (
+                <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Home Visit Fee:</Text>
+                    <Text style={[styles.totalValue, { color: '#9A563A' }]}>
+                        +£{homeVisitFee.toFixed(2)}
+                    </Text>
                 </View>
             )}
 

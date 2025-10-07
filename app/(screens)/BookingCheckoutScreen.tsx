@@ -44,6 +44,8 @@ import { CustomerInfoForm } from '../components/booking/CustomerInfoForm';
 import { AddressForm } from '../components/booking/AddressForm';
 import { PaymentSummary } from '../components/booking/PaymentSummary';
 
+const HOME_VISIT_FEE = 19.99;
+
 const BookingCheckoutScreen = () => {
     const route = useRoute<BookingCheckoutScreenRouteProp>();
     const navigation = useNavigation<BookingCheckoutScreenNavigationProp>();
@@ -57,7 +59,8 @@ const BookingCheckoutScreen = () => {
         selectedTime,
         duration,
         therapistId,
-        therapistName
+        therapistName,
+        visitType
     } = route.params;
 
     // Main states
@@ -90,19 +93,24 @@ const BookingCheckoutScreen = () => {
     // Payment method state
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card');
 
-    // Use pricing hook
+    const getHomeVisitFee = () => {
+    return visitType === 'home' ? HOME_VISIT_FEE : 0;
+    };
+
     const {
         appliedCoupon,
         setAppliedCoupon,
         couponDiscount,
         setCouponDiscount,
-        finalPrice,
+        finalPrice: baseFinalPrice,
         getBasePrice,
         hasServiceDiscount,
         getServiceDiscountAmount,
         getServiceDiscountPercentage,
         getTotalSavings
     } = usePricing(serviceDetails);
+
+    const finalPrice = baseFinalPrice + getHomeVisitFee();
 
     // Initialize data
     useEffect(() => {
@@ -256,8 +264,8 @@ const BookingCheckoutScreen = () => {
             return false;
         }
 
-        if (!addressLine1.trim() || !city.trim() || !postcode.trim()) {
-            Alert.alert('Error', 'Please enter your complete address');
+        if (visitType === 'home' && (!addressLine1.trim() || !city.trim() || !postcode.trim())) {
+            Alert.alert('Error', 'Please enter your complete address for home visit');
             return false;
         }
 
@@ -297,7 +305,8 @@ const BookingCheckoutScreen = () => {
             therapist_name: therapistName,
             location_id: selectedLocation?.id,
             payment_method: 'bank_transfer',
-            coupon_code: appliedCoupon ? appliedCoupon.code : null
+            coupon_code: appliedCoupon ? appliedCoupon.code : null,
+            visit_type: visitType 
         };
 
         try {
@@ -368,7 +377,8 @@ const BookingCheckoutScreen = () => {
                 therapist_name: therapistName,
                 location_id: selectedLocation?.id,
                 payment_method: 'card',
-                coupon_code: appliedCoupon ? appliedCoupon.code : null
+                coupon_code: appliedCoupon ? appliedCoupon.code : null,
+                visit_type: visitType
             };
 
             // Create booking and get payment intent
@@ -622,7 +632,7 @@ const BookingCheckoutScreen = () => {
                     </View>
 
                     {/* Saved Addresses */}
-                    <View style={styles.card}>
+                    {/* <View style={styles.card}>
                         <SavedAddresses
                             savedAddresses={savedAddresses}
                             selectedAddressId={selectedAddressId}
@@ -632,7 +642,7 @@ const BookingCheckoutScreen = () => {
                             showAddressForm={showAddressForm}
                             isAuthenticated={isAuthenticated}
                         />
-                    </View>
+                    </View> */}
 
                     {/* Customer Information Form */}
                     <View style={styles.card}>
@@ -647,25 +657,90 @@ const BookingCheckoutScreen = () => {
                     </View>
 
                     {/* Address Form */}
-                    {(showAddressForm || savedAddresses.length === 0) && (
-                        <View style={styles.card}>
-                            <AddressForm
-                                addressLine1={addressLine1}
-                                setAddressLine1={setAddressLine1}
-                                addressLine2={addressLine2}
-                                setAddressLine2={setAddressLine2}
-                                city={city}
-                                setCity={setCity}
-                                postcode={postcode}
-                                setPostcode={setPostcode}
-                                saveAddress={saveAddress}
-                                setSaveAddress={setSaveAddress}
-                                isAuthenticated={isAuthenticated}
-                                isAddressValid={isAddressValid}
-                                addressValidationMessage={addressValidationMessage}
-                                validatingLocation={validatingLocation}
-                            />
-                        </View>
+                    {/* Address Section - Conditional based on visit type */}
+                    {visitType === 'home' ? (
+                        <>
+                            {/* Saved Addresses */}
+                            <View style={styles.card}>
+                                <SavedAddresses
+                                    savedAddresses={savedAddresses}
+                                    selectedAddressId={selectedAddressId}
+                                    onSelectAddress={selectAddress}
+                                    onAddNewAddress={navigateToAddAddressScreen}
+                                    onToggleAddressForm={() => setShowAddressForm(!showAddressForm)}
+                                    showAddressForm={showAddressForm}
+                                    isAuthenticated={isAuthenticated}
+                                />
+                            </View>
+
+                            {/* Customer Information Form */}
+                            <View style={styles.card}>
+                                <CustomerInfoForm
+                                    name={name}
+                                    setName={setName}
+                                    email={email}
+                                    setEmail={setEmail}
+                                    phone={phone}
+                                    setPhone={setPhone}
+                                />
+                            </View>
+
+                            {/* Address Form */}
+                            {(showAddressForm || savedAddresses.length === 0) && (
+                                <View style={styles.card}>
+                                    <AddressForm
+                                        addressLine1={addressLine1}
+                                        setAddressLine1={setAddressLine1}
+                                        addressLine2={addressLine2}
+                                        setAddressLine2={setAddressLine2}
+                                        city={city}
+                                        setCity={setCity}
+                                        postcode={postcode}
+                                        setPostcode={setPostcode}
+                                        saveAddress={saveAddress}
+                                        setSaveAddress={setSaveAddress}
+                                        isAuthenticated={isAuthenticated}
+                                        isAddressValid={isAddressValid}
+                                        addressValidationMessage={addressValidationMessage}
+                                        validatingLocation={validatingLocation}
+                                    />
+                                </View>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            {/* Branch Visit - Show Location */}
+                            <View style={styles.card}>
+                                <Text style={styles.sectionTitle}>Visit Location</Text>
+                                <View style={styles.locationDisplay}>
+                                    {selectedLocation ? (
+                                        <>
+                                            <Feather name="map-pin" size={20} color="#9A563A" />
+                                            <View style={styles.locationDetails}>
+                                                <Text style={styles.locationName}>{selectedLocation.name}</Text>
+                                                <Text style={styles.locationAddress}>
+                                                    {selectedLocation.address}, {selectedLocation.city}
+                                                </Text>
+                                            </View>
+                                        </>
+                                    ) : (
+                                        <Text style={styles.noLocationText}>No location selected</Text>
+                                    )}
+                                </View>
+                            </View>
+
+                            {/* Customer Information Form */}
+                            <View style={styles.card}>
+                                <CustomerInfoForm
+                                    name={name}
+                                    setName={setName}
+                                    email={email}
+                                    setEmail={setEmail}
+                                    phone={phone}
+                                    setPhone={setPhone}
+                                />
+                            </View>
+                        </>
                     )}
 
                     {/* Additional Notes */}
@@ -694,6 +769,8 @@ const BookingCheckoutScreen = () => {
                             getServiceDiscountAmount={getServiceDiscountAmount}
                             getServiceDiscountPercentage={getServiceDiscountPercentage}
                             getTotalSavings={getTotalSavings}
+                            visitType={visitType}
+                            homeVisitFee={HOME_VISIT_FEE}
                         />
                     </View>
 
@@ -912,6 +989,29 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 8,
         fontStyle: 'italic',
+    },
+    locationDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    },
+    locationDetails: {
+        marginLeft: 12,
+        flex: 1,
+    },
+    noLocationText: {
+        fontSize: 14,
+        color: '#9CA3AF',
+        fontStyle: 'italic',
+    },
+    locationAddress: {
+        fontSize: 14,
+        color: '#6B7280',
+        lineHeight: 20,
     },
 });
 

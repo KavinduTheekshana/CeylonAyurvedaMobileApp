@@ -56,6 +56,7 @@ export type RootStackParamList = {
         duration: number;
         therapistId: number;
         therapistName: string;
+        visitType: 'home' | 'branch';
     };
     BookingConfirmationScreen: {
         bookingId: number;

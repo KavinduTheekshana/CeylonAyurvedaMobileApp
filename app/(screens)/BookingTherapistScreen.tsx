@@ -63,11 +63,13 @@ type RootStackParamList = {
         therapistId: number;
         therapistName: string;
         therapistWorkStartDate: string; // Added work start date parameter
+        visitType: 'home' | 'branch';
     };
     BookingTherapistScreen: {
         serviceId: number;
         serviceName: string;
         duration: number;
+        visitType: 'home' | 'branch';
     };
     TherapistDetailsScreen: {
         therapistId: number;
@@ -104,7 +106,7 @@ const API_URL = `${API_BASE_URL}/api/services`;
 const BookingTherapistScreen = () => {
     const route = useRoute<BookingTherapistScreenRouteProp>();
     const navigation = useNavigation<BookingTherapistScreenNavigationProp>();
-    const { serviceId, serviceName, duration } = route.params;
+    const { serviceId, serviceName, duration, visitType } = route.params;
     
     // Get selected location from context
     const { selectedLocation } = useLocation();
@@ -127,12 +129,18 @@ const BookingTherapistScreen = () => {
         try {
             // console.log(`Fetching therapists for service ${serviceId}`);
             
-            // Build API URL with location parameter if location is selected
             let apiUrl = `${API_URL}/${serviceId}/therapists`;
-            
+
+            const params = new URLSearchParams();
             if (selectedLocation) {
-                apiUrl += `?location_id=${selectedLocation.id}`;
-                // console.log(`Filtering by location: ${selectedLocation.name} (ID: ${selectedLocation.id})`);
+                params.append('location_id', selectedLocation.id.toString());
+            }
+            if (visitType) {
+                params.append('visit_type', visitType);
+            }
+
+            if (params.toString()) {
+                apiUrl += `?${params.toString()}`;
             }
             
             // console.log(`API URL: ${apiUrl}`);
@@ -267,7 +275,8 @@ const BookingTherapistScreen = () => {
             duration,
             therapistId: selectedTherapist.id,
             therapistName: selectedTherapist.name,
-            therapistWorkStartDate: selectedTherapist.work_start_date // Pass work start date
+            therapistWorkStartDate: selectedTherapist.work_start_date,  // Pass work start date
+            visitType: visitType 
         });
     };
 

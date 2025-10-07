@@ -231,7 +231,7 @@ const ServiceDetailsScreen = () => {
 
         // Navigate to therapist selection screen
         router.push({
-            pathname: "/(screens)/BookingTherapistScreen",
+            pathname: "/(screens)/BookingVisitTypeScreen",
             params: {
                 serviceId: service.id,
                 serviceName: service.title,

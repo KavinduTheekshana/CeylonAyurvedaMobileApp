@@ -72,6 +72,7 @@ type RootStackParamList = {
         duration: number;
         therapistId: number;
         therapistName: string;
+        visitType: 'home' | 'branch';
     };
     BookingCheckoutScreen: {
         serviceId: number;
@@ -81,6 +82,7 @@ type RootStackParamList = {
         duration: number;
         therapistId: number;
         therapistName: string;
+        visitType: 'home' | 'branch';
     };
 };
 
@@ -99,7 +101,8 @@ const BookingTimeScreen = () => {
         selectedDate,
         duration,
         therapistId,
-        therapistName
+        therapistName,
+        visitType
     } = route.params;
 
     const [selectedTime, setSelectedTime] = useState<string>('');
@@ -335,7 +338,8 @@ const BookingTimeScreen = () => {
             selectedTime,
             duration,
             therapistId,
-            therapistName
+            therapistName,
+            visitType: visitType
         });
     };
 
