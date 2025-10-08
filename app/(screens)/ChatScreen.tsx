@@ -16,6 +16,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { chatService, ChatMessage, MessagePagination } from '../services/chatService';
+import { useNavigation } from 'expo-router';
 
 const ChatScreen = () => {
   const { roomId, therapistName } = useLocalSearchParams<{
@@ -31,6 +32,7 @@ const ChatScreen = () => {
   const [pagination, setPagination] = useState<MessagePagination | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const navigation = useNavigation();
   
   const flatListRef = useRef<FlatList>(null);
   const router = useRouter();
@@ -55,6 +57,16 @@ const ChatScreen = () => {
       keyboardDidHideListener.remove();
     };
   }, [roomId]);
+
+
+  // Set navigation header with therapist name
+useEffect(() => {
+  if (therapistName) {
+    navigation.setOptions({
+      title: therapistName,
+    });
+  }
+}, [navigation, therapistName]);
 
   const loadCurrentUser = async () => {
     try {
@@ -271,13 +283,13 @@ const ChatScreen = () => {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
+        {/* <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="chevron-back" size={28} color="#9A563A" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{therapistName || 'Chat'}</Text>
           <View style={styles.placeholder} />
-        </View>
+        </View> */}
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color="#9A563A" />
           <Text style={styles.loadingText}>Loading messages...</Text>
@@ -293,7 +305,7 @@ const ChatScreen = () => {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
     >
       {/* Header */}
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="chevron-back" size={28} color="#9A563A" />
         </TouchableOpacity>
@@ -301,7 +313,7 @@ const ChatScreen = () => {
           {therapistName || 'Chat'}
         </Text>
         <View style={styles.placeholder} />
-      </View>
+      </View> */}
 
       {/* Messages List */}
       <FlatList
@@ -376,32 +388,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#8E8E93',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 50,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#C6C6C8',
-  },
-  backButton: {
-    padding: 8,
-    marginLeft: -8,
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#000000',
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 16,
-  },
-  placeholder: {
-    width: 44,
-  },
+  // header: {
+  //   flexDirection: 'row',
+  //   alignItems: 'center',
+  //   justifyContent: 'space-between',
+  //   paddingTop: 50,
+  //   paddingHorizontal: 16,
+  //   paddingBottom: 12,
+  //   backgroundColor: '#FFFFFF',
+  //   borderBottomWidth: 0.5,
+  //   borderBottomColor: '#C6C6C8',
+  // },
+  // backButton: {
+  //   padding: 8,
+  //   marginLeft: -8,
+  // },
+  // headerTitle: {
+  //   fontSize: 17,
+  //   fontWeight: '600',
+  //   color: '#000000',
+  //   flex: 1,
+  //   textAlign: 'center',
+  //   marginHorizontal: 16,
+  // },
+  // placeholder: {
+  //   width: 44,
+  // },
   messagesList: {
     paddingHorizontal: 16,
     paddingTop: 10,

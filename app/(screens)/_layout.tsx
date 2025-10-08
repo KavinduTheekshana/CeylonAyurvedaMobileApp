@@ -115,6 +115,13 @@ const Layout = () => {
             title: "All Treatment History"
           }}
         />
+              <Stack.Screen
+        name="ChatScreen"
+        options={{ 
+          headerShown: true,
+          headerBackVisible: true
+        }}
+      />
       </Stack>
       
     </>
