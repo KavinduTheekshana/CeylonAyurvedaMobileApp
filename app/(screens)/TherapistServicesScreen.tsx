@@ -43,6 +43,7 @@ interface Service {
 interface TherapistInfo {
   id: number;
   name: string;
+  nickname?: string;
   email: string;
   phone: string;
   image?: string;

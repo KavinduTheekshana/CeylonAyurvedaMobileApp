@@ -14,6 +14,7 @@ import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from "@/config/api";
+import { getTherapistDisplayName } from '../utils/therapistUtils';
 
 // Define booking type - UPDATED to include therapist information
 type Booking = {
@@ -39,6 +40,7 @@ type Booking = {
     status: string;
     therapist_id?: number;
     therapist_name?: string;
+    therapist_nickname?: string | null;
     service?: {
         id: number;
         service_name: string;
@@ -202,7 +204,12 @@ const BookingConfirmationScreen = () => {
                         {booking.therapist_name && (
                             <View style={styles.detailRow}>
                                 <Text style={styles.detailLabel}>Therapist:</Text>
-                                <Text style={styles.detailValue}>{booking.therapist_name}</Text>
+                                <Text style={styles.detailValue}>
+                                    {getTherapistDisplayName({
+                                        name: booking.therapist_name,
+                                        nickname: booking.therapist_nickname
+                                    })}
+                                </Text>
                             </View>
                         )}
                         <View style={styles.detailRow}>
@@ -281,7 +288,10 @@ const BookingConfirmationScreen = () => {
                     {/* NEW: Additional information about therapist */}
                     {booking?.therapist_name && (
                         <Text style={styles.infoText}>
-                            Your appointment is scheduled with {booking.therapist_name}. Please arrive 10 minutes early for your session.
+                            Your appointment is scheduled with {getTherapistDisplayName({
+                                name: booking.therapist_name,
+                                nickname: booking.therapist_nickname
+                            })}. Please arrive 10 minutes early for your session.
                         </Text>
                     )}
                 </View>

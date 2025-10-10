@@ -16,10 +16,12 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@/config/api';
 import { useLocation } from '../contexts/LocationContext';
+import { getTherapistDisplayName } from '../utils/therapistUtils'; 
 
 interface Therapist {
   id: number;
   name: string;
+   nickname?: string;
   email: string;
   phone: string;
   image?: string;
@@ -232,7 +234,9 @@ export default function OnlineTherapistScreen() {
 
           {/* Therapist Info */}
           <View className="flex-1">
-            <Text className="text-lg font-bold text-black mb-1">{item.name}</Text>
+             <Text className="text-lg font-bold text-black mb-1">
+                {getTherapistDisplayName(item)}
+              </Text>
             
             {item.bio && (
               <Text className="text-sm text-gray-600 mb-2" numberOfLines={2}>

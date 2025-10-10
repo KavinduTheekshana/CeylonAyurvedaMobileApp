@@ -17,6 +17,7 @@ import {
 import { useRouter } from 'expo-router';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import TreatmentHistoryService, { TreatmentHistory } from '../services/treatmentHistoryService';
+import { getTherapistDisplayName } from '../utils/therapistUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -109,7 +110,12 @@ const ExpandableCard: React.FC<ExpandableCardProps> = ({ treatment, isExpanded, 
           <View style={styles.headerInfoRow}>
             <Text style={styles.timeText}>{treatment.treatment_time}</Text>
             <Text style={styles.dotSeparator}>•</Text>
-            <Text style={styles.therapistText}>Dr. {treatment.therapist_name}</Text>
+            <Text style={styles.therapistText}>
+              Dr. {getTherapistDisplayName({
+                name: treatment.therapist_name,
+                nickname: treatment.therapist_nickname
+              })}
+            </Text>
           </View>
         </View>
         
@@ -205,10 +211,10 @@ const ExpandableCard: React.FC<ExpandableCardProps> = ({ treatment, isExpanded, 
               <View style={styles.detailSection}>
                 <Text style={styles.detailSectionTitle}>Next Treatment Plan</Text>
                 <View style={styles.nextTreatmentContent}>
-                  <MaterialIcons name="next-plan" size={16} color="#9A563A" />
+                  <MaterialIcons name="event-note" size={16} color="#9A563A" />
                   <Text style={styles.fullRecommendationText}>
                     {treatment.next_treatment_plan}
-                    </Text>
+                  </Text>
                 </View>
               </View>
             )}

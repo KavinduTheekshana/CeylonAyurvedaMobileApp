@@ -9,6 +9,7 @@ export interface TreatmentHistory {
   booking_reference: string;
   service_title: string;
   therapist_name: string;
+  therapist_nickname?: string | null;
   treatment_date: string;
   treatment_time: string;
   formatted_date: string;
@@ -58,6 +59,7 @@ export interface TreatmentHistoryDetail {
   };
   therapist: {
     name: string;
+    nickname?: string | null;
   };
   treatment_details: {
     treatment_notes: string;

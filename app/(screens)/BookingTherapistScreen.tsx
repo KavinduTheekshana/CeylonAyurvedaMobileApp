@@ -18,11 +18,13 @@ import withAuthGuard from '../components/AuthGuard';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { useLocation } from '../contexts/LocationContext'; // Import location context
 import { useRouter } from 'expo-router';
+import { getTherapistDisplayName } from '../utils/therapistUtils';
 
 // Define Therapist type with all availability data including work_start_date
 type Therapist = {
     id: number;
     name: string;
+    nickname?: string; 
     email: string;
     phone: string;
     image: string | null;
@@ -274,7 +276,7 @@ const BookingTherapistScreen = () => {
             serviceName,
             duration,
             therapistId: selectedTherapist.id,
-            therapistName: selectedTherapist.name,
+            therapistName: getTherapistDisplayName(selectedTherapist), 
             therapistWorkStartDate: selectedTherapist.work_start_date,  // Pass work start date
             visitType: visitType 
         });
@@ -327,7 +329,9 @@ const BookingTherapistScreen = () => {
 
                     {/* Therapist Info */}
                     <View className="flex-1 justify-center">
-                        <Text className="text-xl font-bold text-gray-800 mb-1">{item.name}</Text>
+                        <Text className="text-xl font-bold text-gray-800 mb-1">
+                        {getTherapistDisplayName(item)}
+                        </Text>
                         <Text className="text-sm text-gray-500 mb-0.5">{item.email}</Text>
                         <Text className="text-sm text-gray-500">{item.phone}</Text>
                     </View>

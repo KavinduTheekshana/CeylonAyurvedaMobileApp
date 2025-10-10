@@ -20,6 +20,7 @@ import { Feather, MaterialIcons, Ionicons } from '@expo/vector-icons';
 import BookingProgressBar from '../components/BookingProgressBar';
 import { chatService } from '../services/chatService';
 import { useRouter } from 'expo-router';
+import { getTherapistDisplayName } from '../utils/therapistUtils'; 
 
 const { width } = Dimensions.get('window');
 
@@ -27,6 +28,7 @@ const { width } = Dimensions.get('window');
 type TherapistDetails = {
     id: number;
     name: string;
+     nickname?: string; 
     email: string;
     phone: string;
     image: string | null;
@@ -198,7 +200,7 @@ const TherapistDetailsScreen = () => {
                     pathname: '/(screens)/ChatScreen',
                     params: { 
                         roomId: result.data.chat_room_id.toString(), 
-                        therapistName: therapist.name 
+                        therapistName: getTherapistDisplayName(therapist) 
                     }
                 });
             } else {
@@ -306,7 +308,7 @@ const TherapistDetailsScreen = () => {
 
                         {/* Therapist Info */}
                         <View className="flex-1">
-                            <Text className="text-2xl font-bold text-black mb-1">{therapist.name}</Text>
+                            <Text className="text-2xl font-bold text-black mb-1"> {getTherapistDisplayName(therapist)}</Text>
                             <View className={`px-3 py-1 rounded-full self-start ${therapist.status ? 'bg-green-500' : 'bg-red-500'}`}>
                                 <Text className="text-white text-xs font-semibold">
                                     {therapist.status && !isFutureDate
@@ -353,7 +355,7 @@ const TherapistDetailsScreen = () => {
                             <Ionicons name="chatbubble-outline" size={20} color="#9A563A" />
                         )}
                         <Text style={styles.chatButtonText}>
-                            {chatLoading ? 'Loading...' : `Message ${therapist.name}`}
+                            {chatLoading ? 'Loading...' : `Message ${getTherapistDisplayName(therapist)}`}
                         </Text>
                     </TouchableOpacity>
                 </View>

@@ -15,6 +15,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
 import TreatmentHistoryService, { TreatmentHistoryDetail } from '../services/treatmentHistoryService';
+import { getTherapistDisplayName } from '../utils/therapistUtils';
 
 const { width } = Dimensions.get('window');
 
@@ -189,7 +190,12 @@ export default function TreatmentHistoryDetailsScreen() {
           <View style={styles.treatmentDetails}>
             <View style={styles.detailRow}>
               <MaterialIcons name="person" size={20} color="#666" />
-              <Text style={styles.detailText}>{treatmentHistory.therapist.name}</Text>
+              <Text style={styles.detailText}>
+                {getTherapistDisplayName({
+                  name: treatmentHistory.therapist.name,
+                  nickname: treatmentHistory.therapist.nickname
+                })}
+              </Text>
             </View>
             
             <View style={styles.detailRow}>
@@ -273,7 +279,7 @@ export default function TreatmentHistoryDetailsScreen() {
           <View style={styles.nextTreatmentCard}>
             <Text style={styles.sectionTitle}>Next Treatment Plan</Text>
             <View style={styles.nextTreatmentItem}>
-              <MaterialIcons name="next-plan" size={20} color="#9A563A" />
+              <MaterialIcons name="event-note" size={20} color="#9A563A" />
               <View style={styles.nextTreatmentContent}>
                 <Text style={styles.nextTreatmentText}>
                   {treatmentHistory.next_treatment_plan}

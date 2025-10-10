@@ -13,6 +13,7 @@ import {
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { chatService, ChatRoom } from '../services/chatService';
+import { getTherapistDisplayName } from '../utils/therapistUtils'; 
 
 const ChatListScreen = () => {
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
@@ -82,9 +83,9 @@ const ChatListScreen = () => {
       style={styles.chatRoomItem}
       onPress={() => router.push({
         pathname: '/(screens)/ChatScreen',
-        params: { 
-          roomId: item.id.toString(), 
-          therapistName: item.therapist.name 
+        params: {
+          roomId: item.id.toString(),
+          therapistName: getTherapistDisplayName(item.therapist)
         }
       })}
     >
@@ -114,7 +115,7 @@ const ChatListScreen = () => {
       <View style={styles.chatInfo}>
         <View style={styles.chatHeader}>
           <Text style={styles.therapistName} numberOfLines={1}>
-            {item.therapist.name}
+            {getTherapistDisplayName(item.therapist)}
           </Text>
           <Text style={styles.timestamp}>
             {formatTime(item.last_message_at)}

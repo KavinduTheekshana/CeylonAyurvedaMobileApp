@@ -6,6 +6,7 @@ export interface ChatRoom {
   therapist: {
     id: number;
     name: string;
+    nickname?: string | null;
     image: string | null;
     bio: string;
   };
