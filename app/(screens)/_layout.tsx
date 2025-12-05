@@ -66,37 +66,39 @@ const Layout = () => {
         />
         <Stack.Screen
           name="OnlineTherapistScreen"
-          options={{ 
+          options={{
             headerShown: true,
             title: "Online Therapist",
-            headerBackVisible: true
+            headerBackVisible: false
           }}
         />
         <Stack.Screen
           name="TherapistDetailScreen"
-          options={{ 
+          options={{
             headerShown: true,
             title: "Therapist Details"
           }}
         />
         <Stack.Screen
           name="TherapistServicesScreen"
-          options={{ 
+          options={{
             headerShown: true,
-            title: "Therapist Services"
+            title: "Therapist Services",
+            headerBackVisible: false
           }}
           />
           {/* Add Notification Screen */}
         <Stack.Screen
           name="NotificationsScreen"
-          options={{ 
+          options={{
             headerShown: true,
-            title: "Notifications"
+            title: "Notifications",
+            headerBackVisible: false
           }}
         />
         <Stack.Screen
           name="UserPreferencesScreen"
-          options={{ 
+          options={{
             headerShown: true,
             title: "UserPreferences"
           }}
@@ -117,9 +119,17 @@ const Layout = () => {
         />
               <Stack.Screen
         name="ChatScreen"
-        options={{ 
+        options={{
           headerShown: true,
-          headerBackVisible: true
+          headerBackVisible: false
+        }}
+      />
+      <Stack.Screen
+        name="LocationSelectionScreen"
+        options={{
+          headerShown: true,
+          title: "Choose Branch",
+          headerBackVisible: false
         }}
       />
       </Stack>

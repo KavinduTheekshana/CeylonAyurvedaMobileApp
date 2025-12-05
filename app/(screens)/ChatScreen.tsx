@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
   Keyboard,
+  SafeAreaView,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { chatService, ChatMessage, MessagePagination } from '../services/chatService';
 import { useNavigation } from 'expo-router';
 import { getTherapistDisplayName } from '../utils/therapistUtils';
+import { HeaderBackButton } from '@react-navigation/elements';
 
 const ChatScreen = () => {
   const { roomId, therapistName } = useLocalSearchParams<{
@@ -60,14 +62,26 @@ const ChatScreen = () => {
   }, [roomId]);
 
 
-  // Set navigation header with therapist name
+  // Set navigation header with therapist name and back button
 useEffect(() => {
   if (therapistName) {
-    navigation.setOptions({
+    (navigation as any).setOptions({
       title: therapistName,
+      headerLeft: () => (
+        <HeaderBackButton
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              router.back();
+            }
+          }}
+          tintColor="#000"
+        />
+      ),
     });
   }
-}, [navigation, therapistName]);
+}, [navigation, therapistName, router]);
 
   const loadCurrentUser = async () => {
     try {
@@ -300,77 +314,67 @@ useEffect(() => {
   }
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-    >
-      {/* Header */}
-      {/* <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color="#9A563A" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {therapistName || 'Chat'}
-        </Text>
-        <View style={styles.placeholder} />
-      </View> */}
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.flexContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        {/* Messages List */}
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          renderItem={renderMessage}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.messagesList}
+          onEndReached={loadMoreMessages}
+          onEndReachedThreshold={0.1}
+          ListHeaderComponent={renderLoadMoreHeader}
+          showsVerticalScrollIndicator={false}
+          maintainVisibleContentPosition={{
+            minIndexForVisible: 0,
+            autoscrollToTopThreshold: 10,
+          }}
+          ListEmptyComponent={() => (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="chatbubbles-outline" size={64} color="#C6C6C8" />
+              <Text style={styles.emptyText}>No messages yet</Text>
+              <Text style={styles.emptySubtext}>Start a conversation with your therapist</Text>
+            </View>
+          )}
+        />
 
-      {/* Messages List */}
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        renderItem={renderMessage}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={[
-          styles.messagesList,
-          { paddingBottom: Math.max(20, keyboardHeight * 0.1) }
-        ]}
-        onEndReached={loadMoreMessages}
-        onEndReachedThreshold={0.1}
-        ListHeaderComponent={renderLoadMoreHeader}
-        showsVerticalScrollIndicator={false}
-        maintainVisibleContentPosition={{
-          minIndexForVisible: 0,
-          autoscrollToTopThreshold: 10,
-        }}
-      />
-
-      {/* Message Input */}
-      <View style={[
-        styles.inputContainer,
-        Platform.OS === 'ios' && { paddingBottom: Math.max(20, keyboardHeight * 0.05) }
-      ]}>
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.textInput}
-            value={newMessage}
-            onChangeText={setNewMessage}
-            placeholder="Type a message..."
-            placeholderTextColor="#8E8E93"
-            multiline
-            maxLength={2000}
-            returnKeyType="send"
-            enablesReturnKeyAutomatically
-            onSubmitEditing={sendMessage}
-          />
-          <TouchableOpacity
-            style={[
-              styles.sendButton,
-              (!newMessage.trim() || sending) && styles.sendButtonDisabled
-            ]}
-            onPress={sendMessage}
-            disabled={!newMessage.trim() || sending}
-          >
-            {sending ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Ionicons name="send" size={20} color="#FFFFFF" />
-            )}
-          </TouchableOpacity>
+        {/* Message Input */}
+        <View style={styles.inputContainer}>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.textInput}
+              value={newMessage}
+              onChangeText={setNewMessage}
+              placeholder="Type a message..."
+              placeholderTextColor="#8E8E93"
+              multiline
+              maxLength={2000}
+              blurOnSubmit={false}
+            />
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                (!newMessage.trim() || sending) && styles.sendButtonDisabled
+              ]}
+              onPress={sendMessage}
+              disabled={!newMessage.trim() || sending}
+            >
+              {sending ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Ionicons name="send" size={20} color="#FFFFFF" />
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
@@ -378,6 +382,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F2F2F7',
+  },
+  flexContainer: {
+    flex: 1,
   },
   centerContainer: {
     flex: 1,
@@ -418,6 +425,25 @@ const styles = StyleSheet.create({
   messagesList: {
     paddingHorizontal: 16,
     paddingTop: 10,
+    paddingBottom: 100,
+    flexGrow: 1,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#8E8E93',
+    marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#C6C6C8',
+    marginTop: 8,
   },
   loadingMore: {
     flexDirection: 'row',

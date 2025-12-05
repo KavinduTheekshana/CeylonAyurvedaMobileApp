@@ -19,16 +19,38 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@/config/api';
 import { Feather } from '@expo/vector-icons';
 import { useLocation, type Location } from '../contexts/LocationContext';
+import { useNavigation } from '@react-navigation/native';
+import { HeaderBackButton } from '@react-navigation/elements';
 
 const { width } = Dimensions.get('window');
 
 const LocationSelectionScreen = () => {
     const router = useRouter();
+    const navigation = useNavigation();
     const { setSelectedLocation } = useLocation();
     const [locations, setLocations] = useState<Location[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedLocationId, setSelectedLocationId] = useState<number | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+
+    // Set up header with back button
+    useEffect(() => {
+        (navigation as any).setOptions({
+            title: 'Choose Branch',
+            headerLeft: () => (
+                <HeaderBackButton
+                    onPress={() => {
+                        if (navigation.canGoBack()) {
+                            navigation.goBack();
+                        } else {
+                            router.back();
+                        }
+                    }}
+                    tintColor="#000"
+                />
+            ),
+        });
+    }, [navigation, router]);
 
     useEffect(() => {
         fetchLocations();

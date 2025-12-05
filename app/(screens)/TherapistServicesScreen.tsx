@@ -17,6 +17,8 @@ import { MaterialIcons, Feather } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@/config/api';
 import { useLocation } from '../contexts/LocationContext';
+import { useNavigation } from '@react-navigation/native';
+import { HeaderBackButton } from '@react-navigation/elements';
 
 interface Service {
   id: number;
@@ -54,14 +56,34 @@ interface TherapistInfo {
 
 export default function TherapistServicesScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { therapistId, therapistName } = useLocalSearchParams();
   const { selectedLocation } = useLocation();
-  
+
   const [services, setServices] = useState<Service[]>([]);
   const [therapist, setTherapist] = useState<TherapistInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isGuest, setIsGuest] = useState(false);
+
+  // Set up header with back button
+  useEffect(() => {
+    (navigation as any).setOptions({
+      title: 'Therapist Services',
+      headerLeft: () => (
+        <HeaderBackButton
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              router.back();
+            }
+          }}
+          tintColor="#000"
+        />
+      ),
+    });
+  }, [navigation, router]);
 
   useEffect(() => {
     checkGuestStatus();

@@ -16,7 +16,9 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@/config/api';
 import { useLocation } from '../contexts/LocationContext';
-import { getTherapistDisplayName } from '../utils/therapistUtils'; 
+import { getTherapistDisplayName } from '../utils/therapistUtils';
+import { useNavigation } from '@react-navigation/native';
+import { HeaderBackButton } from '@react-navigation/elements'; 
 
 interface Therapist {
   id: number;
@@ -42,12 +44,32 @@ interface ApiResponse {
 
 export default function OnlineTherapistScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { selectedLocation } = useLocation();
   const [therapists, setTherapists] = useState<Therapist[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [isGuest, setIsGuest] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Set up header with back button
+  useEffect(() => {
+    (navigation as any).setOptions({
+      title: 'Online Therapists',
+      headerLeft: () => (
+        <HeaderBackButton
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              router.back();
+            }
+          }}
+          tintColor="#000"
+        />
+      ),
+    });
+  }, [navigation, router]);
 
   // Check if user is guest
   useEffect(() => {
@@ -59,7 +81,7 @@ export default function OnlineTherapistScreen() {
         console.error('Error checking guest status:', error);
       }
     };
-    
+
     checkGuestStatus();
   }, []);
 

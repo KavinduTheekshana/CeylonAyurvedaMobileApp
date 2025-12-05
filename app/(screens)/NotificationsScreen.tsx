@@ -15,6 +15,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@/config/api';
+import { useNavigation } from '@react-navigation/native';
+import { HeaderBackButton } from '@react-navigation/elements';
+import { useRouter } from 'expo-router';
 
 // Add proper TypeScript interfaces
 interface NotificationItem {
@@ -43,12 +46,34 @@ interface NotificationResponse {
 }
 
 const NotificationsScreen = () => {
+  const navigation = useNavigation();
+  const router = useRouter();
+
   // Fix state typing by providing explicit types
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [page, setPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(true);
+
+  // Set up header with back button
+  useEffect(() => {
+    (navigation as any).setOptions({
+      title: 'Notifications',
+      headerLeft: () => (
+        <HeaderBackButton
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              router.back();
+            }
+          }}
+          tintColor="#000"
+        />
+      ),
+    });
+  }, [navigation, router]);
 
   const fetchNotifications = useCallback(async (pageNum: number = 1, isRefresh: boolean = false) => {
     try {
@@ -195,9 +220,6 @@ const NotificationsScreen = () => {
   if (loading && notifications.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Notifications</Text>
-        </View>
         <View style={styles.loadingContainer}>
           <Text>Loading notifications...</Text>
         </View>
@@ -207,10 +229,6 @@ const NotificationsScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Notifications</Text>
-      </View>
-
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id.toString()}
@@ -228,23 +246,11 @@ const NotificationsScreen = () => {
   );
 };
 
-// Keep your existing styles
+// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
-  },
-  header: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#111827',
   },
   loadingContainer: {
     flex: 1,

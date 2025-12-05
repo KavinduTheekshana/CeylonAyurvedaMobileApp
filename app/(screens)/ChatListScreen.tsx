@@ -78,61 +78,66 @@ const ChatListScreen = () => {
     }
   };
 
-  const renderChatRoom = ({ item }: { item: ChatRoom }) => (
-    <TouchableOpacity
-      style={styles.chatRoomItem}
-      onPress={() => router.push({
-        pathname: '/(screens)/ChatScreen',
-        params: {
-          roomId: item.id.toString(),
-          therapistName: getTherapistDisplayName(item.therapist)
-        }
-      })}
-    >
-      <View style={styles.avatarContainer}>
-        {item.therapist.image ? (
-          <Image 
-            source={{ uri: item.therapist.image }} 
-            style={styles.avatar}
-            onError={() => console.warn('Failed to load therapist image')}
-          />
-        ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <Text style={styles.avatarText}>
-              {item.therapist.name.charAt(0).toUpperCase()}
+  const renderChatRoom = ({ item }: { item: ChatRoom }) => {
+    const hasUnread = item.unread_count > 0;
+
+    return (
+      <TouchableOpacity
+        style={styles.chatRoomItem}
+        onPress={() => router.push({
+          pathname: '/(screens)/ChatScreen',
+          params: {
+            roomId: item.id.toString(),
+            therapistName: getTherapistDisplayName(item.therapist)
+          }
+        })}
+        activeOpacity={0.7}
+      >
+        <View style={styles.avatarContainer}>
+          {item.therapist.image ? (
+            <Image
+              source={{ uri: item.therapist.image }}
+              style={styles.avatar}
+              onError={() => console.warn('Failed to load therapist image')}
+            />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+              <Text style={styles.avatarText}>
+                {item.therapist.name.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
+          {hasUnread && (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadText}>
+                {item.unread_count > 99 ? '99+' : item.unread_count}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.chatInfo}>
+          <View style={styles.chatHeader}>
+            <Text style={[styles.therapistName, hasUnread && styles.therapistNameUnread]} numberOfLines={1}>
+              {getTherapistDisplayName(item.therapist)}
+            </Text>
+            <Text style={[styles.timestamp, hasUnread && styles.timestampUnread]}>
+              {formatTime(item.last_message_at)}
             </Text>
           </View>
-        )}
-        {item.unread_count > 0 && (
-          <View style={styles.unreadBadge}>
-            <Text style={styles.unreadText}>
-              {item.unread_count > 99 ? '99+' : item.unread_count}
-            </Text>
-          </View>
-        )}
-      </View>
-      
-      <View style={styles.chatInfo}>
-        <View style={styles.chatHeader}>
-          <Text style={styles.therapistName} numberOfLines={1}>
-            {getTherapistDisplayName(item.therapist)}
-          </Text>
-          <Text style={styles.timestamp}>
-            {formatTime(item.last_message_at)}
+
+          <Text style={[styles.lastMessage, hasUnread && styles.lastMessageUnread]} numberOfLines={2}>
+            {item.last_message
+              ? item.last_message.content
+              : 'No messages yet - Start the conversation!'
+            }
           </Text>
         </View>
-        
-        <Text style={styles.lastMessage} numberOfLines={2}>
-          {item.last_message 
-            ? `${item.last_message.sender_name}: ${item.last_message.content}`
-            : 'No messages yet - Start the conversation!'
-          }
-        </Text>
-      </View>
-      
-      <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
-    </TouchableOpacity>
-  );
+
+        <Ionicons name="chevron-forward" size={20} color="#C7C7CC" />
+      </TouchableOpacity>
+    );
+  };
 
   const renderEmptyState = () => (
     <View style={styles.centerContainer}>
@@ -240,77 +245,108 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   emptyTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#000000',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
     textAlign: 'center',
-    marginTop: 20,
-    marginBottom: 10,
+    marginTop: 24,
+    marginBottom: 12,
   },
   emptySubtext: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: '#6B7280',
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 30,
+    lineHeight: 24,
+    marginBottom: 32,
+    paddingHorizontal: 20,
   },
   browseButton: {
     backgroundColor: '#9A563A',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    shadowColor: '#9A563A',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   browseButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   errorTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#FF3B30',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#EF4444',
     textAlign: 'center',
-    marginTop: 20,
-    marginBottom: 10,
+    marginTop: 24,
+    marginBottom: 12,
   },
   errorSubtext: {
     fontSize: 16,
-    color: '#8E8E93',
+    color: '#6B7280',
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 30,
+    lineHeight: 24,
+    marginBottom: 32,
+    paddingHorizontal: 20,
   },
   retryButton: {
-    backgroundColor: '#FF3B30',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+    backgroundColor: '#EF4444',
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    shadowColor: '#EF4444',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   retryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   listContainer: {
-    paddingVertical: 8,
+    paddingVertical: 12,
+    paddingBottom: 20,
   },
   chatRoomItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     backgroundColor: '#FFFFFF',
-    marginHorizontal: 0,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#C6C6C8',
+    marginHorizontal: 16,
+    marginVertical: 6,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   avatarContainer: {
     position: 'relative',
     marginRight: 12,
   },
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: '#F3F4F6',
   },
   avatarPlaceholder: {
     backgroundColor: '#9A563A',
@@ -319,26 +355,34 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 22,
+    fontWeight: '700',
   },
   unreadBadge: {
     position: 'absolute',
-    top: -5,
-    right: -5,
+    top: -4,
+    right: -4,
     backgroundColor: '#FF3B30',
     borderRadius: 12,
-    minWidth: 24,
-    height: 24,
+    minWidth: 22,
+    height: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: '#FFFFFF',
+    shadowColor: '#FF3B30',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   unreadText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
   },
   chatInfo: {
     flex: 1,
@@ -351,20 +395,32 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   therapistName: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#000000',
+    color: '#111827',
     flex: 1,
     marginRight: 8,
   },
   timestamp: {
-    fontSize: 15,
-    color: '#8E8E93',
+    fontSize: 13,
+    color: '#9CA3AF',
+    fontWeight: '500',
   },
   lastMessage: {
-    fontSize: 15,
-    color: '#8E8E93',
+    fontSize: 14,
+    color: '#6B7280',
     lineHeight: 20,
+  },
+  therapistNameUnread: {
+    fontWeight: '700',
+  },
+  timestampUnread: {
+    color: '#9A563A',
+    fontWeight: '600',
+  },
+  lastMessageUnread: {
+    color: '#000000',
+    fontWeight: '600',
   },
 });
 

@@ -282,46 +282,56 @@ const TherapistDetailsScreen = () => {
                 contentContainerStyle={{ paddingBottom: 20 }}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Hero Section with Gradient Background */}
-                <View className="bg-gradient-to-br from-[#9A563A] to-[#9A563A] pt-6 pb-8 px-6 relative overflow-hidden">
-                    {/* Decorative circles */}
-                    <View className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
-                    <View className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/5 rounded-full" />
-
-                    <View className="flex-row items-center">
-                        {/* Profile Image */}
-                        <View className="mr-4">
-                            {therapist.image ? (
-                                <Image
-                                    source={{ uri: therapist.image }}
-                                    className="w-24 h-24 rounded-full border-4 border-white/20"
-                                    resizeMode="cover"
-                                />
-                            ) : (
-                                <View className="w-24 h-24 rounded-full bg-white/20 justify-center items-center border-4 border-white/20">
-                                    <Text className="text-white text-2xl font-bold">
-                                        {therapist.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                    </Text>
-                                </View>
-                            )}
-                        </View>
-
-                        {/* Therapist Info */}
-                        <View className="flex-1">
-                            <Text className="text-2xl font-bold text-black mb-1"> {getTherapistDisplayName(therapist)}</Text>
-                            <View className={`px-3 py-1 rounded-full self-start ${therapist.status ? 'bg-green-500' : 'bg-red-500'}`}>
-                                <Text className="text-white text-xs font-semibold">
-                                    {therapist.status && !isFutureDate
-                                        ? 'Available'
-                                        : isFutureDate
-                                            ? `Available on: ${new Date(workStartDate).toLocaleDateString()}`
-                                            : 'Unavailable'
-                                    }
+                {/* Hero Section with Professional Design */}
+                <View style={styles.heroSection}>
+                    {/* Profile Image centered */}
+                    <View style={styles.profileContainer}>
+                        {therapist.image ? (
+                            <Image
+                                source={{ uri: therapist.image }}
+                                style={styles.profileImage}
+                                resizeMode="cover"
+                            />
+                        ) : (
+                            <View style={styles.profilePlaceholder}>
+                                <Text style={styles.profileInitials}>
+                                    {therapist.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                                 </Text>
                             </View>
-                            <Text className="text-[#9A563A] mt-2 text-sm">
-                                {therapist.available_days}
+                        )}
+                        {/* Status badge */}
+                        <View style={[styles.statusBadge, therapist.status && !isFutureDate ? styles.statusAvailable : styles.statusUnavailable]}>
+                            <View style={styles.statusDot} />
+                        </View>
+                    </View>
+
+                    {/* Therapist Info */}
+                    <View style={styles.heroInfo}>
+                        <Text style={styles.therapistName}>{getTherapistDisplayName(therapist)}</Text>
+
+                        <View style={styles.statusContainer}>
+                            <Text style={styles.statusText}>
+                                {therapist.status && !isFutureDate
+                                    ? 'Available for appointments'
+                                    : isFutureDate
+                                        ? `Joining ${new Date(workStartDate).toLocaleDateString()}`
+                                        : 'Currently unavailable'
+                                }
                             </Text>
+                        </View>
+
+                        {therapist.experience_years !== null && therapist.experience_years > 0 && (
+                            <View style={styles.experienceContainer}>
+                                <MaterialIcons name="work-outline" size={16} color="#9A563A" />
+                                <Text style={styles.experienceText}>
+                                    {therapist.experience_years} {therapist.experience_years === 1 ? 'year' : 'years'} of experience
+                                </Text>
+                            </View>
+                        )}
+
+                        <View style={styles.availabilityTag}>
+                            <MaterialIcons name="event-available" size={14} color="#9A563A" />
+                            <Text style={styles.availabilityText}>{therapist.available_days}</Text>
                         </View>
                     </View>
                 </View>
@@ -493,8 +503,120 @@ const TherapistDetailsScreen = () => {
     );
 };
 
-// Styles for the chat button
+// Styles
 const styles = StyleSheet.create({
+    heroSection: {
+        backgroundColor: '#FFFFFF',
+        paddingTop: 30,
+        paddingBottom: 24,
+        paddingHorizontal: 20,
+        alignItems: 'center',
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 3,
+    },
+    profileContainer: {
+        position: 'relative',
+        marginBottom: 16,
+    },
+    profileImage: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        borderWidth: 4,
+        borderColor: '#F3F4F6',
+    },
+    profilePlaceholder: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: '#9A563A',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 4,
+        borderColor: '#F3F4F6',
+    },
+    profileInitials: {
+        color: '#FFFFFF',
+        fontSize: 36,
+        fontWeight: 'bold',
+    },
+    statusBadge: {
+        position: 'absolute',
+        bottom: 4,
+        right: 4,
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        borderWidth: 3,
+        borderColor: '#FFFFFF',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    statusAvailable: {
+        backgroundColor: '#10B981',
+    },
+    statusUnavailable: {
+        backgroundColor: '#EF4444',
+    },
+    statusDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#FFFFFF',
+    },
+    heroInfo: {
+        alignItems: 'center',
+        width: '100%',
+    },
+    therapistName: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#111827',
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    statusContainer: {
+        marginBottom: 12,
+    },
+    statusText: {
+        fontSize: 14,
+        color: '#6B7280',
+        textAlign: 'center',
+    },
+    experienceContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FEF3C7',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+        marginBottom: 8,
+    },
+    experienceText: {
+        fontSize: 13,
+        color: '#9A563A',
+        fontWeight: '600',
+        marginLeft: 6,
+    },
+    availabilityTag: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F3F4F6',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+    },
+    availabilityText: {
+        fontSize: 13,
+        color: '#9A563A',
+        fontWeight: '500',
+        marginLeft: 6,
+    },
     chatButton: {
         flexDirection: 'row',
         alignItems: 'center',

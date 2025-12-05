@@ -306,8 +306,14 @@ const BookingCheckoutScreen = () => {
             location_id: selectedLocation?.id,
             payment_method: 'bank_transfer',
             coupon_code: appliedCoupon ? appliedCoupon.code : null,
-            visit_type: visitType 
+            visit_type: visitType
         };
+
+        console.log('==========================================');
+        console.log('BANK TRANSFER BOOKING DATA BEING SUBMITTED:');
+        console.log('==========================================');
+        console.log(JSON.stringify(bookingData, null, 2));
+        console.log('==========================================');
 
         try {
             const data = await bookingService.createBooking(bookingData);
@@ -380,6 +386,12 @@ const BookingCheckoutScreen = () => {
                 coupon_code: appliedCoupon ? appliedCoupon.code : null,
                 visit_type: visitType
             };
+
+            console.log('==========================================');
+            console.log('CARD PAYMENT BOOKING DATA BEING SUBMITTED:');
+            console.log('==========================================');
+            console.log(JSON.stringify(bookingData, null, 2));
+            console.log('==========================================');
 
             // Create booking and get payment intent
             const data = await bookingService.createBooking(bookingData);
