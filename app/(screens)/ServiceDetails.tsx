@@ -19,7 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import AuthRequiredModal from '../components/AuthRequiredModal';
 import { API_BASE_URL } from "@/config/api";
 import BookingProgressBar from '../components/BookingProgressBar';
-import { fetchBookingCountData } from '../utils/booking';
+import { fetchBookingCountData } from '@/utils/booking';
 
 // Define your Service type with offer field added
 type Service = {

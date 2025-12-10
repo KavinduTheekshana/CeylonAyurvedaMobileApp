@@ -16,7 +16,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@/config/api';
 import { useLocation } from '../contexts/LocationContext';
-import { getTherapistDisplayName } from '../utils/therapistUtils';
+import { getTherapistDisplayName } from '@/utils/therapistUtils';
 import { useNavigation } from '@react-navigation/native';
 import { HeaderBackButton } from '@react-navigation/elements'; 
 

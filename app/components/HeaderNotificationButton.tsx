@@ -1,9 +1,10 @@
 // app/components/HeaderNotificationButton.tsx
 import React, { useState, useEffect } from 'react';
-import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet, AppState } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 import { API_BASE_URL } from '@/config/api';
 
 const HeaderNotificationButton = () => {
@@ -32,9 +33,28 @@ const HeaderNotificationButton = () => {
   };
 
   useEffect(() => {
+    // Fetch once on mount
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
+
+    // Listen for new push notifications
+    const notificationListener = Notifications.addNotificationReceivedListener(() => {
+      // Update count when new notification arrives
+      fetchUnreadCount();
+    });
+
+    // Listen for app state changes (when app comes to foreground)
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        // Refresh when app becomes active
+        fetchUnreadCount();
+      }
+    });
+
+    // Cleanup listeners
+    return () => {
+      Notifications.removeNotificationSubscription(notificationListener);
+      subscription.remove();
+    };
   }, []);
 
   return (

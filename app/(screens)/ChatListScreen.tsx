@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { chatService, ChatRoom } from '../services/chatService';
-import { getTherapistDisplayName } from '../utils/therapistUtils'; 
+import { chatService, ChatRoom } from '@/services/chatService';
+import { getTherapistDisplayName } from '@/utils/therapistUtils'; 
 
 const ChatListScreen = () => {
   const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);

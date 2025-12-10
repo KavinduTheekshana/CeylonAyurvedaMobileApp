@@ -32,8 +32,8 @@ import {
 } from '../types/booking';
 
 // Import utilities and services
-import { validateAddressLocation } from '../utils/locationUtils';
-import { bookingService } from '../services/bookingService';
+import { validateAddressLocation } from '@/utils/locationUtils';
+import { bookingService } from '@/services/bookingService';
 import { usePricing } from '../hooks/usePricing';
 
 // Import components

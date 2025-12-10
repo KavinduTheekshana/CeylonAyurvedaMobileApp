@@ -199,6 +199,32 @@ class NotificationService {
       console.error('Error unregistering token:', error);
     }
   }
+
+  // Re-register token after login (when user wasn't authenticated during app start)
+  async reRegisterToken() {
+    try {
+      const userToken = await AsyncStorage.getItem('access_token');
+      if (!userToken) {
+        console.log('No user token, skipping re-registration');
+        return;
+      }
+
+      // If we already have a token, re-register it
+      if (this.token) {
+        await this.registerTokenWithServer(this.token);
+        return;
+      }
+
+      // Otherwise, get a new token
+      const token = await this.getExpoPushToken();
+      if (token) {
+        this.token = token;
+        await this.registerTokenWithServer(token);
+      }
+    } catch (error) {
+      console.error('Error re-registering token:', error);
+    }
+  }
 }
 
 export default new NotificationService();

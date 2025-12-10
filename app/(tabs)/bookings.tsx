@@ -24,7 +24,7 @@ import {
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "@/config/api";
-import TreatmentHistoryService from '../services/treatmentHistoryService';
+import TreatmentHistoryService from '@/services/treatmentHistoryService';
 
 // Types
 interface Booking {

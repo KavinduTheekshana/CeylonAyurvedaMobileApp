@@ -26,7 +26,7 @@ import axios from 'axios';
 import { API_BASE_URL } from '@/config/api';
 import GuestProfileHeader from '../components/GuestProfileHeader';
 import InvestmentProgress from '../components/InvestmentProgress';
-import investmentService from '../services/investmentService';
+import investmentService from '@/services/investmentService';
 
 // Define TypeScript interfaces
 interface UserData {

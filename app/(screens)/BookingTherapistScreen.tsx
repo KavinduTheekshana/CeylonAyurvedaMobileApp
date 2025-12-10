@@ -18,7 +18,7 @@ import withAuthGuard from '../components/AuthGuard';
 import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { useLocation } from '../contexts/LocationContext'; // Import location context
 import { useRouter } from 'expo-router';
-import { getTherapistDisplayName } from '../utils/therapistUtils';
+import { getTherapistDisplayName } from '@/utils/therapistUtils';
 
 // Define Therapist type with all availability data including work_start_date
 type Therapist = {

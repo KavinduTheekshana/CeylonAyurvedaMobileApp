@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useSegments } from "expo-router";
 import { LocationProvider } from './contexts/LocationContext';
 import { StripeProvider } from '@stripe/stripe-react-native';
-import notificationService from './services/notificationService';
+import notificationService from '@/services/notificationService';
 
 // Keep splash visible while loading
 SplashScreen.preventAutoHideAsync();

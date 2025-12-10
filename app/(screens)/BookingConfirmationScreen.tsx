@@ -14,7 +14,7 @@ import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from "@/config/api";
-import { getTherapistDisplayName } from '../utils/therapistUtils';
+import { getTherapistDisplayName } from '@/utils/therapistUtils';
 
 // Define booking type - UPDATED to include therapist information
 type Booking = {

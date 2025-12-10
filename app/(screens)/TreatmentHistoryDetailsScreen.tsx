@@ -14,8 +14,8 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { MaterialIcons, Feather } from '@expo/vector-icons';
-import TreatmentHistoryService, { TreatmentHistoryDetail } from '../services/treatmentHistoryService';
-import { getTherapistDisplayName } from '../utils/therapistUtils';
+import TreatmentHistoryService, { TreatmentHistoryDetail } from '@/services/treatmentHistoryService';
+import { getTherapistDisplayName } from '@/utils/therapistUtils';
 
 const { width } = Dimensions.get('window');
 

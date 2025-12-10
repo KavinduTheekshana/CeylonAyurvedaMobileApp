@@ -63,7 +63,18 @@ const TreatmentsScreen = () => {
         : API_URL;
 
     fetch(url)
-        .then((response) => response.json())
+        .then(async (response) => {
+          const text = await response.text();
+
+          // Check if response is HTML (error page)
+          if (text.startsWith('<')) {
+            console.error('Server returned HTML instead of JSON. Status:', response.status);
+            console.error('URL:', url);
+            throw new Error(`Server error: ${response.status}`);
+          }
+
+          return JSON.parse(text);
+        })
         .then((data) => {
           if (data.success && Array.isArray(data.data)) {
             const updatedData = data.data.map((item: Treatment) => ({
@@ -73,7 +84,10 @@ const TreatmentsScreen = () => {
             setTreatments(updatedData);
           }
         })
-        .catch((error) => console.error("Error fetching treatments:", error))
+        .catch((error) => {
+          console.error("Error fetching treatments:", error);
+          console.error("URL attempted:", url);
+        })
         .finally(() => {
           setLoading(false);
           setRefreshing(false);

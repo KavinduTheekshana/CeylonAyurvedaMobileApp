@@ -16,9 +16,9 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { chatService, ChatMessage, MessagePagination } from '../services/chatService';
+import { chatService, ChatMessage, MessagePagination } from '@/services/chatService';
 import { useNavigation } from 'expo-router';
-import { getTherapistDisplayName } from '../utils/therapistUtils';
+import { getTherapistDisplayName } from '@/utils/therapistUtils';
 import { HeaderBackButton } from '@react-navigation/elements';
 
 const ChatScreen = () => {

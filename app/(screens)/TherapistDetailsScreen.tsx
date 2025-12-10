@@ -18,9 +18,9 @@ import { HeaderBackButton } from '@react-navigation/elements';
 import { API_BASE_URL } from "@/config/api";
 import { Feather, MaterialIcons, Ionicons } from '@expo/vector-icons';
 import BookingProgressBar from '../components/BookingProgressBar';
-import { chatService } from '../services/chatService';
+import { chatService } from '@/services/chatService';
 import { useRouter } from 'expo-router';
-import { getTherapistDisplayName } from '../utils/therapistUtils'; 
+import { getTherapistDisplayName } from '@/utils/therapistUtils'; 
 
 const { width } = Dimensions.get('window');
 

@@ -13,7 +13,7 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
 import Slider from '@react-native-community/slider';
-import userPreferencesService, { UserPreferences } from '../services/userPreferencesService';
+import userPreferencesService, { UserPreferences } from '@/services/userPreferencesService';
 
 export default function UserPreferencesScreen() {
   const router = useRouter();
