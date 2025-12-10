@@ -23,6 +23,7 @@
       },
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "CeylonAyurveda needs access to your photo library to allow you to select and upload a profile picture for your account.",
+        "NSLocationWhenInUseUsageDescription": "CeylonAyurveda needs your location to automatically find and select the nearest branch for your convenience.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "config": {
@@ -37,6 +38,10 @@
       },
       "package": "com.theekshana9.CeylonAyurvedaHealthUk",
       "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ],
       "intentFilters": [
         {
           "action": "VIEW",

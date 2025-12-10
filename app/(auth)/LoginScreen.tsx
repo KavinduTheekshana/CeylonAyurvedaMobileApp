@@ -29,6 +29,8 @@ import {
 } from '@react-native-google-signin/google-signin';
 
 import { API_BASE_URL } from "@/config/api";
+import { useLocation } from "@/app/contexts/LocationContext";
+import { autoSelectNearestLocation } from "@/utils/locationService";
 
 // Define TypeScript interfaces
 interface UserData {
@@ -64,6 +66,7 @@ interface SocialAuthData {
 export default function Login() {
   const router = useRouter();
   const { width, height } = Dimensions.get("window");
+  const { setSelectedLocation } = useLocation();
 
   // Form state
   const [email, setEmail] = useState<string>("");
@@ -134,6 +137,17 @@ export default function Login() {
         expirationDate.setDate(expirationDate.getDate() + 90);
         await AsyncStorage.setItem("session_expiry", expirationDate.toISOString());
         await AsyncStorage.setItem("user_mode", "logged_in");
+
+        // Auto-select nearest location
+        console.log("Attempting to auto-select nearest location...");
+        const nearestLocation = await autoSelectNearestLocation();
+
+        if (nearestLocation) {
+          await setSelectedLocation(nearestLocation);
+          console.log("Nearest location set:", nearestLocation.name);
+        } else {
+          console.log("Could not auto-select location, user will need to select manually");
+        }
 
         router.replace("/(tabs)");
       }

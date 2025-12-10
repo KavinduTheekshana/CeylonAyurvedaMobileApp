@@ -22,6 +22,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "@/config/api";
 import axios from "axios";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocation } from "@/app/contexts/LocationContext";
+import { autoSelectNearestLocation } from "@/utils/locationService";
 
 // Interface for OTPInputRef
 interface OTPInputRef {
@@ -134,6 +136,7 @@ const OTPInput = React.forwardRef<OTPInputRef, OTPInputProps>(
 export default function Verify() {
   const router = useRouter();
   const navigation = useNavigation();
+  const { setSelectedLocation } = useLocation();
 
   // State variables
   const [email, setEmail] = useState<string>("");
@@ -227,6 +230,17 @@ export default function Verify() {
             JSON.stringify(response.data.user)
           );
         }
+      }
+
+      // Auto-select nearest location
+      console.log("Attempting to auto-select nearest location...");
+      const nearestLocation = await autoSelectNearestLocation();
+
+      if (nearestLocation) {
+        await setSelectedLocation(nearestLocation);
+        console.log("Nearest location set:", nearestLocation.name);
+      } else {
+        console.log("Could not auto-select location, user will need to select manually");
       }
 
       // Show success message

@@ -1,7 +1,6 @@
-// app/(screens)/_layout.tsx - Updated with Investment screens
+// app/(screens)/_layout.tsx
 
-import { View, Text, StatusBar } from "react-native";
-import React from "react";
+import { StatusBar } from "react-native";
 import { Stack } from "expo-router";
 
 
@@ -23,17 +22,7 @@ const Layout = () => {
           name="MessageHistoryScreen"
           options={{ headerShown: false }}
         />
-        
-        {/* Investment Screens */}
-        <Stack.Screen
-          name="InvestmentScreen"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="InvestmentDetailsScreen"
-          options={{ headerShown: false }}
-        />
-        
+
         {/* Booking Screens */}
         <Stack.Screen
           name="BookingTherapistScreen"

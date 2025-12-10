@@ -58,10 +58,10 @@ const TreatmentsScreen = () => {
 
   const fetchTreatments = useCallback(() => {
     // Filter treatments by location if location is selected
-    const url = selectedLocation 
-        ? `${API_URL}?location_id=${selectedLocation.id}`
+    const url = selectedLocation
+        ? `${API_URL}/location/${selectedLocation.id}`
         : API_URL;
-        
+
     fetch(url)
         .then((response) => response.json())
         .then((data) => {
